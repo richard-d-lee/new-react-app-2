@@ -1,0 +1,35 @@
+.home-page {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+  }
+  
+  .navbar {
+    background-color: #1877f2; /* Facebook-like blue */
+    color: white;
+    padding: 10px;
+    text-align: center;
+  }
+  
+  .main-content {
+    display: flex;
+    flex: 1;
+  }
+  
+  .sidebar {
+    width: 25%;
+    background-color: #f0f2f5; /* Light gray */
+    padding: 10px;
+  }
+  
+  .feed {
+    flex: 1;
+    background-color: white;
+    padding: 10px;
+  }
+  
+  .widgets {
+    width: 25%;
+    background-color: #f0f2f5; /* Light gray */
+    padding: 10px;
+  }
