@@ -25,30 +25,19 @@ connection.connect(err => {
 
 app.post('/login', (req, res) => {
   const { email, password } = req.body;
-
-  // Check if the user exists
   connection.query('SELECT * FROM USERS WHERE EMAIL = ?', [email], (err, results) => {
     if (err) {
       return res.status(500).json(err);
     }
-
-    // If no user found, return an error
     if (results.length === 0) {
       return res.status(401).json({ error: 'Invalid email or password.' });
     }
-
-    const tempword = results[0].password_hash; // Assuming password is in the first row
-
-    // Compare the password with the stored hash
+    const tempword = results[0].password_hash;
     bcrypt.compare(password, tempword, (err, isMatch) => {
       if (err || !isMatch) {
         return res.status(401).json({ error: 'Invalid email or password.' });
       }
-
-      // Generate JWT token
       const token = jwt.sign({ userId: results[0].id }, 'your_jwt_secret', { expiresIn: '1h' });
-
-      // Send the successful login response
       res.json({ message: 'Login successful', token });
     });
   });
@@ -56,31 +45,23 @@ app.post('/login', (req, res) => {
 
 app.post('/register', (req, res) => {
   const { email, password } = req.body;
-
-  // Check if the email is already registered
   connection.query('SELECT * FROM USERS WHERE EMAIL = ?', [email], (err, results) => {
     if (err) {
       return res.status(500).json({ error: 'Database error' });
     }
-
     if (results.length > 0) {
       return res.status(400).json({ error: 'Email is already registered' });
     }
-
-    // Hash the password before saving to the database
     bcrypt.hash(password, 10, (err, hashedPassword) => {
       if (err) {
         return res.status(500).json({ error: 'Error hashing password' });
       }
-
-      // Insert the user into the database
       const query = 'INSERT INTO USERS (USERNAME, EMAIL, PASSWORD_HASH) VALUES (?, ?, ?)';
       connection.query(query, [email, email, hashedPassword], (err, result) => {
         if (err) {
           console.log(err)
           return res.status(500).json({ error: 'Error saving user' });
         }
-
         res.status(200).json({ message: 'Account created successfully' });
       });
     });
