@@ -1,25 +1,38 @@
 import React, { useState } from 'react';
 import '../styles/Login.css';
+import axios from 'axios';
+import CreateAccount from './CreateAccount.jsx';
 
 const Login = ({updateLogged}) => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
-  
-    const handleLogin = (e) => {
-      e.preventDefault();
-      if (email === 'admin@admin.com' && password === 'password123') {
-        alert('Login successful!');
-        updateLogged(true)
-        // You can redirect the user or perform other actions here
-      } else {
-        setError('Invalid email or password.');
-      }
-    };
+    const [creating, setCreating] = useState(false)
+    
+    if (creating) {
+        return <CreateAccount setCreating={setCreating}/>
+    }
+
+    const handleLogin = async (e) => {
+        e.preventDefault();
+    
+        try {
+          // Make API call to backend
+          const response = await axios.post('http://localhost:5000/login', { email, password });
+    
+          // On success, store the token in localStorage (or cookies)
+          localStorage.setItem('authToken', response.data.token);
+    
+          alert('Login successful!');
+          updateLogged(true);
+          // You can redirect to a dashboard or other page
+        } catch (err) {
+          setError(err.response ? err.response.data.error : 'Something went wrong.');
+        }
+      };
   
     const handleCreateAccount = () => {
-      alert('Redirecting to create account page...');
-      // Redirect or show create account form (e.g., using React Router)
+      setCreating(true)
     };
   
     return (
