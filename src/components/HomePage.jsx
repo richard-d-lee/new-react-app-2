@@ -1,12 +1,12 @@
 import React from 'react';
+import Navbar from './Navbar.jsx';
 
 const HomePage = () => {
   return (
     <div className="home-page">
       {/* Navbar Placeholder */}
       <div className="navbar">
-        <h2>Navbar</h2>
-        {/* Replace this with the actual Navbar component later */}
+        <Navbar/>
       </div>
 
       <div className="main-content">
