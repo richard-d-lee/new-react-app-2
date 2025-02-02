@@ -1,6 +1,7 @@
 import React from 'react';
 import Navbar from './Navbar.jsx';
 import Sidebar from './Sidebar.jsx';
+import Feed from './Feed.jsx';
 
 const HomePage = () => {
   return (
@@ -8,15 +9,9 @@ const HomePage = () => {
       <div className="navbar">
         <Navbar/>
       </div>
-
       <div className="main-content">
-          <Sidebar/>
-          
-        {/* Feed Placeholder */}
-        <div className="feed">
-          <h2>Feed</h2>
-          {/* Replace this with the actual Feed component later */}
-        </div>
+        <Sidebar/>
+        <Feed/>
 
         {/* Widgets Placeholder */}
         <div className="widgets">
