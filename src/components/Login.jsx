@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import '../styles/Login.css';
 
-const Login = () => {
+const Login = ({updateLogged}) => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
@@ -10,6 +10,7 @@ const Login = () => {
       e.preventDefault();
       if (email === 'admin@admin.com' && password === 'password123') {
         alert('Login successful!');
+        updateLogged(true)
         // You can redirect the user or perform other actions here
       } else {
         setError('Invalid email or password.');

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 
-const UserProfile = () => {
+const UserProfile = ({updateLogged}) => {
   const [isDropdownOpen, setDropdownOpen] = useState(false);
 
   const toggleDropdown = () => {
@@ -19,7 +19,7 @@ const UserProfile = () => {
           <ul>
             <li>Profile</li>
             <li>Settings</li>
-            <li>Logout</li>
+            <li onClick={() => {updateLogged(false)}}>Logout</li>
           </ul>
         </div>
       )}

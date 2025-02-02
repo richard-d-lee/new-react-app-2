@@ -4,7 +4,7 @@ import SearchBar from './SearchBar.jsx';
 import NavLink from './NavLink.jsx';
 import UserProfile from './UserProfile.jsx';
 
-const Navbar = () => {
+const Navbar = ({updateLogged}) => {
   return (
     <div className="navbar">
       {/* Logo */}
@@ -26,7 +26,7 @@ const Navbar = () => {
 
       {/* User Profile Dropdown */}
       <div className="user-profile">
-        <UserProfile />
+        <UserProfile updateLogged={updateLogged}/>
       </div>
     </div>
   );

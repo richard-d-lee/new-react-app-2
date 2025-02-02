@@ -6,7 +6,7 @@ import Widgets from './Widgets.jsx';
 
 
 
-const HomePage = () => {
+const HomePage = ({updateLogged}) => {
   useEffect(() => {
     fetch("http://localhost:5000/data")
       .then(res => res.json())
@@ -16,7 +16,7 @@ const HomePage = () => {
   return (
     <div className="home-page">
       <div className="navbar">
-        <Navbar/>
+        <Navbar updateLogged={updateLogged}/>
       </div>
       <div className="main-content">
         <Sidebar/>

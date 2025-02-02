@@ -4,16 +4,19 @@ import Login from './components/Login.jsx'
 import './styles/app.css'
 
 const App = () => {
-  const [isLogged, setIslogged] = useState(false);
+  const [isLogged, setIsLogged] = useState(false);
+  const updateLogged = (logged) => {
+    setIsLogged(logged);
+  };
   if (isLogged) {
     return (
       <div>
-        <HomePage />
+        <HomePage updateLogged={updateLogged}/>
       </div>
     );
   } else return (
     <div>
-      <Login />
+      <Login updateLogged={updateLogged}/>
     </div>
   )
 };
