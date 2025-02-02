@@ -2,6 +2,7 @@ import React from 'react';
 import Navbar from './Navbar.jsx';
 import Sidebar from './Sidebar.jsx';
 import Feed from './Feed.jsx';
+import Widgets from './Widgets.jsx';
 
 const HomePage = () => {
   return (
@@ -12,12 +13,7 @@ const HomePage = () => {
       <div className="main-content">
         <Sidebar/>
         <Feed/>
-
-        {/* Widgets Placeholder */}
-        <div className="widgets">
-          <h2>Widgets</h2>
-          {/* Replace this with the actual Widgets component later */}
-        </div>
+        <Widgets />
       </div>
     </div>
   );
