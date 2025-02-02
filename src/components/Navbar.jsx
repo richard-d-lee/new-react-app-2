@@ -1,5 +1,5 @@
 import React from 'react';
-import '../styles/Navbar.css'; // Import the CSS file
+import '../styles/Navbar.css';
 import SearchBar from './SearchBar.jsx';
 import NavLink from './NavLink.jsx';
 import UserProfile from './UserProfile.jsx';
