@@ -1,7 +1,7 @@
 /* Navbar Styles */
 .navbar {
     display: flex;
-    justify-content: space-between;
+    justify-content: center;
     align-items: center;
     background-color: #1877f2; /* Facebook-like blue */
     color: white;
