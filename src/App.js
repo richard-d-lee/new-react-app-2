@@ -8,7 +8,8 @@ const App = () => {
   const updateLogged = (logged) => {
     setIsLogged(logged);
   };
-  if (isLogged) {
+  const token = localStorage.getItem('authToken')
+  if (isLogged || token) {
     return (
       <div>
         <HomePage updateLogged={updateLogged}/>

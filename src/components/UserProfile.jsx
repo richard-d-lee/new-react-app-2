@@ -19,7 +19,10 @@ const UserProfile = ({updateLogged}) => {
           <ul>
             <li>Profile</li>
             <li>Settings</li>
-            <li onClick={() => {updateLogged(false)}}>Logout</li>
+            <li onClick={() => {
+              localStorage.removeItem('authToken');
+              updateLogged(false);
+              }}>Logout</li>
           </ul>
         </div>
       )}

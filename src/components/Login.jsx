@@ -15,17 +15,10 @@ const Login = ({updateLogged}) => {
 
     const handleLogin = async (e) => {
         e.preventDefault();
-    
         try {
-          // Make API call to backend
           const response = await axios.post('http://localhost:5000/login', { email, password });
-    
-          // On success, store the token in localStorage (or cookies)
           localStorage.setItem('authToken', response.data.token);
-    
-          alert('Login successful!');
           updateLogged(true);
-          // You can redirect to a dashboard or other page
         } catch (err) {
           setError(err.response ? err.response.data.error : 'Something went wrong.');
         }
