@@ -1,6 +1,5 @@
 import React from 'react';
 const BirthdayReminder = () => {
-    // Example data (replace with real data later)
     const birthdays = [
       { id: 1, name: 'Jane Doe', date: 'Tomorrow' },
       { id: 2, name: 'Alice', date: 'In 2 days' },
