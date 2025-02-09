@@ -4,7 +4,7 @@ import BirthdayReminder from './BirthdayReminder.jsx';
 import SponsoredContent from './SponsoredContent.jsx';
 import SuggestedFriends from './SuggestedFriends.jsx';
 
-const Widgets = () => {
+const Widgets = ({email}) => {
   return (
     <div className="widgets">
       {/* Birthday Reminders */}
@@ -22,7 +22,7 @@ const Widgets = () => {
       {/* Suggested Friends */}
       <div className="widget">
         <h3>Suggested Friends</h3>
-        <SuggestedFriends />
+        <SuggestedFriends email={email}/>
       </div>
     </div>
   );

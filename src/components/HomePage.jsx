@@ -6,7 +6,7 @@ import Widgets from './Widgets.jsx';
 
 
 
-const HomePage = ({updateLogged}) => {
+const HomePage = ({updateLogged, email}) => {
   return (
     <div className="home-page">
       <div className="navbar">
@@ -15,7 +15,7 @@ const HomePage = ({updateLogged}) => {
       <div className="main-content">
         <Sidebar/>
         <Feed/>
-        <Widgets />
+        <Widgets email={email}/>
       </div>
     </div>
   );

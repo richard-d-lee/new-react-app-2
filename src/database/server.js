@@ -68,11 +68,59 @@ app.post('/register', (req, res) => {
   });
 });
 
+app.post('/add-friend', (req, res) => {
+  const { friendEmail, email } = req.body;
+  let myId;
+  let theirId;
+  let myIdQuery = 'SELECT USER_ID FROM USERS WHERE EMAIL = ?'
+  connection.query(myIdQuery, [email], (err, result) => {
+    if (err) {
+      console.log(err)
+      return res.status(500).json({ error: 'Error sending request' });
+    }
+    myId = result[0].USER_ID;
+    let theirIdQuery = 'SELECT USER_ID FROM USERS WHERE EMAIL = ?'
+    connection.query(theirIdQuery, [friendEmail], (err, result) => {
+      if (err) {
+        console.log(err)
+        return res.status(500).json({ error: 'Error sending request' });
+      }
+      theirId = result[0].USER_ID;
+      const query = 'INSERT INTO FRIENDS (USER_ID_1, USER_ID_2, STATUS) VALUES (?, ?, ?)';
+      connection.query(query, [myId, theirId, 'pending'], (err, result) => {
+        if (err) {
+          console.log(err)
+          return res.status(500).json({ error: 'Error sending request' });
+        }
+        res.status(200).json({ message: 'Friend Request Sent!' });
+      });
+    })
+  })
+});
+
 app.get("/data", (req, res) => {
   connection.query("SELECT * FROM POSTS", (err, results) => {
     if (err) return res.status(500).json(err);
     res.json(results);
   });
 });
+
+app.post("/possible-friends", (req, res) => {
+  const { email } = req.body;
+  let myId;
+  let myIdQuery = 'SELECT USER_ID FROM USERS WHERE EMAIL = ?'
+  connection.query(myIdQuery, [email], (err, result) => {
+    if (err) {
+      console.log(err)
+      return res.status(500).json({ error: 'Error sending request' });
+    }
+    myId = result[0].USER_ID;
+    connection.query("SELECT USERNAME, EMAIL, FIRST_NAME, LAST_NAME FROM USERS WHERE USER_ID NOT IN (SELECT USER_ID_2 FROM FRIENDS WHERE USER_ID_1 = ?)", [myId], (err, results) => {
+      if (err) return res.status(500).json(err);
+      res.json(results);
+    });
+  })
+});
+
 
 app.listen(5000, () => console.log("Server running on port 5000"));

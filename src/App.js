@@ -5,19 +5,23 @@ import './styles/app.css'
 
 const App = () => {
   const [isLogged, setIsLogged] = useState(false);
+  const [email, setEmail] = useState(localStorage.getItem('email'));
   const updateLogged = (logged) => {
     setIsLogged(logged);
+  };
+  const updateEmail = (email) => {
+    setEmail(email);
   };
   const token = localStorage.getItem('authToken')
   if (isLogged || token) {
     return (
       <div>
-        <HomePage updateLogged={updateLogged}/>
+        <HomePage updateLogged={updateLogged} email={email}/>
       </div>
     );
   } else return (
     <div>
-      <Login updateLogged={updateLogged}/>
+      <Login updateLogged={updateLogged} updateEmail={updateEmail} email={email}/>
     </div>
   )
 };
