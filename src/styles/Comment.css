@@ -1,0 +1,12 @@
+.comment {
+    background-color: #f0f2f5;
+    padding: 8px 12px;
+    border-radius: 16px;
+    font-size: 14px;
+  }
+  
+  .comment-author {
+    font-weight: 600;
+    margin-right: 5px;
+  }
+  

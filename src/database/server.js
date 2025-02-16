@@ -68,10 +68,9 @@ app.get('/possible-friends', authenticateToken, (req, res) => {
 // Register a new user
 app.post('/register', (req, res) => {
   const { username, email, password, first_name, last_name } = req.body;
-  console.log(req.body)
   bcrypt.hash(password, 10, (err, hashedPassword) => {
     if (err) return res.status(500).json({ error: 'Error hashing password' });
-    const query = 'INSERT INTO users (username, email, password_hash, first_name, last_name) VALUES ("test", ?, ?, "test", "test")';
+    const query = 'INSERT INTO users (username, email, password_hash, first_name, last_name) VALUES ("testy", ?, ?, "test", "test")';
     connection.query(query, [email, hashedPassword], (err, results) => {
       if (err) {
         return res.status(500).json({ error: 'Error saving user' });
@@ -123,7 +122,6 @@ app.get('/posts', authenticateToken, (req, res) => {
     if (err) {
       return res.status(500).json({ error: 'Error fetching posts' });
     }
-    console.log(results)
     // results will contain fields: post_id, user_id, content, created_at, username, profile_picture_url
     res.json(results);
   });
@@ -165,7 +163,7 @@ app.get('/posts/:id/comments', authenticateToken, (req, res) => {
   const query = `
     SELECT c.*, u.username 
     FROM comments c 
-    JOIN users u ON c.user_id = u.id 
+    JOIN users u ON c.user_id = u.user_id 
     WHERE c.post_id = ? 
     ORDER BY c.created_at ASC`;
   connection.query(query, [postId], (err, results) => {
@@ -189,6 +187,22 @@ app.post('/posts/:id/comments', authenticateToken, (req, res) => {
 /*==============================
         Likes Endpoints
 ===============================*/
+
+// GET endpoint: /posts/:id/likes/count
+app.get('/posts/:id/likes/count', authenticateToken, (req, res) => {
+  const postId = req.params.id;
+  
+  const query = 'SELECT COUNT(*) AS likeCount FROM likes WHERE post_id = ?';
+  
+  connection.query(query, [postId], (err, results) => {
+    if (err) {
+      console.error("Error fetching like count:", err);
+      return res.status(500).json({ error: 'Error fetching like count' });
+    }
+    // results[0].likeCount will be the number of likes for the post
+    res.json({ likeCount: results[0].likeCount });
+  });
+});
 
 // Like a post
 app.post('/posts/:id/like', authenticateToken, (req, res) => {

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import axios from 'axios';
+import '../styles/CreatePost.css';
 
 const CreatePost = ({ onNewPost }) => {
   const [content, setContent] = useState('');
@@ -8,27 +9,24 @@ const CreatePost = ({ onNewPost }) => {
   const handlePost = async () => {
     if (!content.trim()) return;
     try {
-      // Call the /posts endpoint
       const res = await axios.post(
         'http://localhost:5000/posts',
         { content },
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
-      // Construct a temporary post object for the front-end
+      // Construct a new post object – in a real app, the API would return full post data.
       const newPost = {
-        id: res.data.postId,
+        post_id: res.data.postId,
         content,
-        user_id: null, // or the logged-in user ID if you want
-        username: 'You', // Optional placeholder
-        profile_picture_url: '', // Optional placeholder
+        user_id: null, // Optionally assign the logged-in user ID
+        username: 'You',
+        profile_picture_url: '', // Provide a default or actual URL if available
         created_at: new Date().toISOString(),
+        likes: 0
       };
 
-      // Update the Feed immediately
       onNewPost(newPost);
-
-      // Clear input
       setContent('');
     } catch (err) {
       console.error('Error creating post:', err);

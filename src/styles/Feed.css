@@ -1,17 +1,8 @@
-/* Feed container */
 .feed {
   display: flex;
   flex-direction: column;
   gap: 20px;
-  width: auto;        /* Fixed width or you can use max-width */
   max-width: 800px;
-  margin: 0 auto;      /* Center the feed in the container */
-  padding: 20px 0;     /* Vertical padding */
-}
-
-/* Example: Adjust for smaller screens */
-@media (max-width: 768px) {
-  .feed {
-    width: 95%;
-  }
+  margin: 0 auto;
+  padding: 20px 0;
 }
