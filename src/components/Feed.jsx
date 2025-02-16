@@ -1,40 +1,43 @@
-import React, { useState } from 'react';
-import '../styles/Feed.css'; // Import the CSS file
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
 import CreatePost from './CreatePost.jsx';
 import Post from './Post.jsx';
 
 const Feed = () => {
-  // Example posts data (replace with real data later)
-  const [posts, setPosts] = useState([
-    {
-      id: 1,
-      author: 'John Doe',
-      authorAvatar: 'https://via.placeholder.com/40',
-      content: 'This is a sample post. Hello, world!',
-      likes: 10,
-      comments: [
-        { id: 1, author: 'Jane Doe', text: 'Nice post!' },
-        { id: 2, author: 'Alice', text: 'Great job!' },
-      ],
-    },
-    {
-      id: 2,
-      author: 'Jane Doe',
-      authorAvatar: 'https://via.placeholder.com/40',
-      content: 'Another sample post. How are you all doing?',
-      likes: 5,
-      comments: [],
-    },
-  ]);
+  const [posts, setPosts] = useState([]);
+  const token = localStorage.getItem('authToken'); // Or get from context/props
+
+  // Fetch posts from /posts
+  const fetchPosts = async () => {
+    try {
+      const res = await axios.get('http://localhost:5000/posts', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setPosts(res.data); // Each post includes { id, user_id, content, created_at, username, profile_picture_url, ... }
+    } catch (err) {
+      console.error('Error fetching posts:', err);
+    }
+  };
+
+  useEffect(() => {
+    if (token) {
+      fetchPosts();
+    }
+  }, [token]);
+
+  // Callback to add new post to the state immediately
+  const handleNewPost = (newPost) => {
+    setPosts([newPost, ...posts]);
+  };
 
   return (
     <div className="feed">
-      {/* Create Post Input */}
-      <CreatePost />
+      {/* Create New Post */}
+      <CreatePost onNewPost={handleNewPost} />
 
-      {/* Display Posts */}
+      {/* Render Posts */}
       {posts.map((post) => (
-        <Post key={post.id} post={post} />
+        <Post key={post.id} post={post} token={token} />
       ))}
     </div>
   );

@@ -1,49 +1,61 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 
-const SuggestedFriends = ({email}) => {
+const SuggestedFriends = ({ email }) => {
   const [error, setError] = useState("");
   const [possibleFriends, setPossibleFriends] = useState([]);
 
   useEffect(() => {
-    let getPossibleFriends = async () => {
+    const fetchPossibleFriends = async () => {
       try {
-        const response = await axios.post("http://localhost:5000/possible-friends", {email});
+        const response = await axios.get("http://localhost:5000/possible-friends", {
+          headers: { Authorization: `Bearer ${localStorage.getItem('authToken')}` }
+        });
         setPossibleFriends(response.data);
       } catch (err) {
         setError(err.response ? err.response.data.error : "Something went wrong.");
       }
     };
-    getPossibleFriends();
-  }, []); 
+
+    fetchPossibleFriends();
+  }, []);
+
   const handleAddFriend = async (friendEmail) => {
     try {
-      const response = await axios.post("http://localhost:5000/add-friend", {
+      await axios.post("http://localhost:5000/add-friend", {
         friendEmail,
         email,
+      }, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('authToken')}` }
       });
+      // Optionally update the UI (e.g. remove friend from suggestions)
     } catch (err) {
       setError(err.response ? err.response.data.error : "Something went wrong.");
     }
   };
+
   if (possibleFriends.length === 0) {
-    return (
-      <div>There are currently no suggested friends.</div>
-    )
+    return <div>There are currently no suggested friends.</div>;
   }
+
   return (
     <div className="suggested-friends">
       {error && <p className="error">{error}</p>}
-      {possibleFriends.map((friend) => {
-        console.log(friend);
-        return (
-          <div className="friend">
-          <span>{friend.EMAIL}</span>
-          <img src={friend.avatar} alt={friend.name} />
-          <button onClick={() => {handleAddFriend(friend.EMAIL)}}>Add Friend</button>
+      {possibleFriends.map((friend) => (
+        <div className="friend" key={friend.user_id}>
+          <img 
+            src={"https://pbs.twimg.com/profile_images/1237550450/mstom_400x400.jpg"} 
+            alt={friend.username} 
+          />
+          <div className="friend-info">
+            <p className="friend-name">{friend.username}</p>
+            <p className="friend-email">{friend.email}</p>
+          </div>
+          <button onClick={() => handleAddFriend(friend.email)}>
+            Add Friend
+          </button>
         </div>
-      )}
-      )}
+      ))}
     </div>
   );
 };

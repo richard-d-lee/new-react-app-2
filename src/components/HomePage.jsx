@@ -9,42 +9,65 @@ import '../styles/HomePage.css';
 
 const HomePage = ({ updateLogged, email }) => {
   const [userId, setUserId] = useState(null);
-  const token = localStorage.getItem("authToken"); // Get JWT token from localStorage
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [widgetsCollapsed, setWidgetsCollapsed] = useState(false);
+
+  const token = localStorage.getItem("authToken");
 
   useEffect(() => {
     if (token) {
       try {
-        const decodedToken = jwtDecode(token); // Decode the JWT token
-        setUserId(decodedToken.userId); // Set userId from decoded token
+        const decodedToken = jwtDecode(token);
+        setUserId(decodedToken.userId);
       } catch (error) {
         console.error("Invalid token", error);
-        setUserId(null); // If token is invalid, reset userId
+        setUserId(null);
       }
     }
   }, [token]);
 
+  const toggleSidebar = () => {
+    setSidebarCollapsed((prev) => !prev);
+  };
+
+  const toggleWidgets = () => {
+    setWidgetsCollapsed((prev) => !prev);
+  };
+
   return (
     <div className="home-page">
+      {/* Navbar */}
       <div className="nav">
         <Navbar updateLogged={updateLogged} />
       </div>
+      
       <div className="main-content">
-        <div className="sidebar">
-          <Sidebar />
+        {/* Left Sidebar */}
+        <div className={`sidebar-container ${sidebarCollapsed ? 'collapsed' : ''}`}>
+          <Sidebar collapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />
         </div>
-        <div className="feed">
+
+        {/* Feed */}
+        <div className="feed-container">
           <Feed />
         </div>
-        <div className="widgets">
-          <Widgets email={email} />
+
+        {/* Right Widgets Sidebar */}
+        <div className={`widgets-container ${widgetsCollapsed ? 'collapsed' : ''}`}>
+          <Widgets 
+            email={email} 
+            collapsed={widgetsCollapsed} 
+            toggleWidgets={toggleWidgets} 
+          />
         </div>
-        {userId ? (
-          <Messenger userId={userId} token={token} />
-        ) : (
-          <p>Please log in to use chat.</p>
-        )}
       </div>
 
+      {/* Messenger at the root level, not inside main-content */}
+      {userId ? (
+        <Messenger userId={userId} token={token} />
+      ) : (
+        <p className="chat-prompt">Please log in to use chat.</p>
+      )}
     </div>
   );
 };

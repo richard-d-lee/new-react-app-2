@@ -1,101 +1,120 @@
-/* Widgets Styles */
+/* Inner Widgets Styling */
 .widgets {
-    width: 25%;
-    background-color: #f0f2f5; /* Light gray */
-    padding: 20px;
-    box-shadow: -2px 0 5px rgba(0, 0, 0, 0.1);
-  }
-  
-  .widget {
-    margin-bottom: 20px;
-  }
-  
-  .widget h3 {
-    font-size: 16px;
-    margin-bottom: 10px;
-  }
-  
-  /* Birthday Reminder Styles */
-  .birthday-reminder {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-  }
-  
-  .birthday {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-  }
-  
-  .birthday span:first-child {
-    font-size: 20px;
-  }
-  
-  /* Sponsored Content Styles */
-  .sponsored-content {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-  }
-  
-  .ad {
-    background-color: white;
-    border: 1px solid #ddd;
-    border-radius: 5px;
-    padding: 10px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  }
-  
-  .ad img {
-    width: 100%;
-    border-radius: 5px;
-    margin-bottom: 10px;
-  }
-  
-  .ad p {
-    margin: 0;
-    font-size: 14px;
-  }
-  
-  /* Suggested Friends Styles */
-  .suggested-friends {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-  }
-  
-  .friend {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    background-color: white;
-    border: 1px solid #ddd;
-    border-radius: 5px;
-    padding: 10px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  }
-  
-  .friend img {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-  }
-  
-  .friend span {
-    flex: 1;
-    font-size: 14px;
-  }
-  
-  .friend button {
-    padding: 5px 10px;
-    background-color: #1877f2; /* Facebook-like blue */
-    color: white;
-    border: none;
-    border-radius: 5px;
-    cursor: pointer;
-  }
-  
-  .friend button:hover {
-    background-color: #165dbb;
-  }
+  background-color: #fff;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  height: 100%;
+  box-sizing: border-box;
+}
+
+/* Collapse Button */
+.collapse-widgets-button {
+  background-color: #1877f2; /* Accent color */
+  color: #fff;
+  border: none;
+  border-radius: 20px;
+  padding: 8px 12px;
+  cursor: pointer;
+  margin-bottom: 10px;
+  transition: background 0.2s ease;
+}
+
+.collapse-widgets-button:hover {
+  background-color: #145db2;
+}
+
+/* Each Widget Card */
+.widget {
+  margin-bottom: 20px;
+}
+
+.widget h3 {
+  font-size: 16px;
+  margin-bottom: 10px;
+}
+
+/* Birthday Reminder Styles */
+.birthday-reminder {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.birthday {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.birthday span:first-child {
+  font-size: 20px;
+}
+
+/* Sponsored Content Styles */
+.sponsored-content {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.ad {
+  background-color: white;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  padding: 10px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.ad img {
+  width: 100%;
+  border-radius: 5px;
+  margin-bottom: 10px;
+}
+
+.ad p {
+  margin: 0;
+  font-size: 14px;
+}
+
+/* Suggested Friends Styles */
+.suggested-friends {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.friend {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background-color: white;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  padding: 10px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.friend img {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+}
+
+.friend span {
+  flex: 1;
+  font-size: 14px;
+}
+
+.friend button {
+  padding: 5px 10px;
+  background-color: #1877f2;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.friend button:hover {
+  background-color: #165dbb;
+}

@@ -10,7 +10,6 @@ const SponsoredContent = () => {
       <div className="sponsored-content">
         {sponsored.map((ad) => (
           <div key={ad.id} className="ad">
-            <img src={ad.image} alt="Sponsored" />
             <p>{ad.text}</p>
           </div>
         ))}

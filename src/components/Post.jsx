@@ -1,23 +1,54 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
 
-const Post = ({ post }) => {
-  const [likes, setLikes] = useState(post.likes);
-  const [comments, setComments] = useState(post.comments);
+const Post = ({ post, token }) => {
+  const [comments, setComments] = useState([]);
   const [newComment, setNewComment] = useState('');
 
-  const handleLike = () => {
-    setLikes(likes + 1);
+  // Fetch comments for this post
+  const fetchComments = async () => {
+    try {
+      const res = await axios.get(`http://localhost:5000/posts/${post.id}/comments`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('authToken')}` }
+      });
+      setComments(res.data); // Each comment includes { id, post_id, user_id, content, created_at, username? }
+    } catch (err) {
+      console.error('Error fetching comments:', err);
+    }
   };
 
-  const handleComment = () => {
-    if (newComment.trim()) {
-      const comment = {
-        id: comments.length + 1,
-        author: 'Current User', // Replace with actual user data
-        text: newComment,
-      };
-      setComments([...comments, comment]);
+  useEffect(() => {
+    if (token) {
+      fetchComments();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [post.id, token]);
+
+  // Add a new comment
+  const handleComment = async () => {
+    if (!newComment.trim()) return;
+    try {
+      await axios.post(
+        `http://localhost:5000/posts/${post.id}/comments`,
+        { content: newComment },
+        {
+          headers: { Authorization: `Bearer ${localStorage.getItem('authToken')}` }
+        }
+      );
+
+      // Optionally fetch comments again or push a new comment in state
+      setComments([
+        ...comments,
+        {
+          id: Date.now(), // Temporary ID
+          content: newComment,
+          user_id: null, // The logged-in user
+          created_at: new Date().toISOString(),
+        },
+      ]);
       setNewComment('');
+    } catch (err) {
+      console.error('Error adding comment:', err);
     }
   };
 
@@ -25,8 +56,10 @@ const Post = ({ post }) => {
     <div className="post">
       {/* Post Author */}
       <div className="post-author">
-        <img src={post.authorAvatar} alt={post.author} />
-        <span>{post.author}</span>
+        {post.profile_picture_url && (
+          <img src={post.profile_picture_url} alt={post.username || 'User'} />
+        )}
+        <span>{post.username || `User ${post.user_id}`}</span>
       </div>
 
       {/* Post Content */}
@@ -34,22 +67,16 @@ const Post = ({ post }) => {
         <p>{post.content}</p>
       </div>
 
-      {/* Post Actions (Like, Comment) */}
-      <div className="post-actions">
-        <button onClick={handleLike}>👍 {likes} Likes</button>
-        <button>💬 {comments.length} Comments</button>
-      </div>
-
-      {/* Comments Section */}
+      {/* Comments */}
       <div className="comments">
         {comments.map((comment) => (
           <div key={comment.id} className="comment">
-            <strong>{comment.author}:</strong> {comment.text}
+            <p>{comment.content}</p>
           </div>
         ))}
       </div>
 
-      {/* Add Comment Input */}
+      {/* Add Comment */}
       <div className="add-comment">
         <input
           type="text"

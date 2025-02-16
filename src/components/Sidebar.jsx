@@ -1,18 +1,18 @@
 import React from 'react';
-import '../styles/Sidebar.css'; // Import the CSS file
+import '../styles/Sidebar.css';
 import UserProfileSection from './UserProfileSection.jsx';
 import Shortcut from './Shortcut.jsx';
 import Group from './Group.jsx';
 
-const Sidebar = () => {
+const Sidebar = ({ collapsed, toggleSidebar }) => {
   return (
-    <div className="sidebar">
-      {/* User Profile Section */}
-      <div className="user-profile-section">
-        <UserProfileSection />
-      </div>
+    <aside className={`sidebar ${collapsed ? 'collapsed' : ''}`} role="navigation">
+      <button className="collapse-toggle" onClick={toggleSidebar}>
+        {collapsed ? '→' : '←'}
+      </button>
 
-      {/* Shortcuts */}
+      <UserProfileSection />
+
       <div className="shortcuts">
         <h3>Shortcuts</h3>
         <Shortcut icon="📌" text="Saved Posts" />
@@ -20,14 +20,13 @@ const Sidebar = () => {
         <Shortcut icon="📸" text="Memories" />
       </div>
 
-      {/* Groups */}
       <div className="groups">
         <h3>Groups</h3>
         <Group icon="👥" text="React Developers" />
         <Group icon="👥" text="Travel Enthusiasts" />
         <Group icon="👥" text="Food Lovers" />
       </div>
-    </div>
+    </aside>
   );
 };
 

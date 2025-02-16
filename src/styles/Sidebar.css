@@ -1,92 +1,151 @@
+:root {
+  --primary-color: #1877f2;
+  --background-color: #f0f2f5;
+  --hover-background-color: #e4e6e9;
+  --text-color: #333;
+  --font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
 /* Sidebar Styles */
 .sidebar {
-    width: 25%;
-    background-color: #f0f2f5; /* Light gray */
-    padding: 20px;
-    box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
-  }
-  
-  /* User Profile Section Styles */
-  .user-profile-section {
-    text-align: center;
-    margin-bottom: 20px;
-  }
-  
-  .user-profile-section .profile-pic {
-    width: 80px;
-    height: 80px;
-    border-radius: 50%;
-    margin-bottom: 10px;
-  }
-  
-  .user-profile-section h3 {
-    margin: 10px 0;
-    font-size: 18px;
-  }
-  
-  .user-profile-section a {
-    color: #1877f2; /* Facebook-like blue */
-    text-decoration: none;
-  }
-  
-  .user-profile-section a:hover {
-    text-decoration: underline;
-  }
-  
-  /* Shortcuts Styles */
-  .shortcuts {
-    margin-bottom: 20px;
-  }
-  
-  .shortcuts h3 {
-    font-size: 16px;
-    margin-bottom: 10px;
-  }
-  
-  .shortcut {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 10px;
-    cursor: pointer;
-  }
-  
-  .shortcut:hover {
-    background-color: #e4e6e9; /* Light gray hover */
-    border-radius: 5px;
-  }
-  
-  .shortcut .icon {
-    font-size: 20px;
-  }
-  
-  .shortcut .text {
-    font-size: 14px;
-  }
-  
-  /* Groups Styles */
-  .groups h3 {
-    font-size: 16px;
-    margin-bottom: 10px;
-  }
-  
-  .group {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 10px;
-    cursor: pointer;
-  }
-  
-  .group:hover {
-    background-color: #e4e6e9; /* Light gray hover */
-    border-radius: 5px;
-  }
-  
-  .group .icon {
-    font-size: 20px;
-  }
-  
-  .group .text {
-    font-size: 14px;
-  }
+  width: 100%;
+  background-color: var(--background-color);
+  padding: 20px;
+  box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
+  font-family: var(--font-family);
+  color: var(--text-color);
+  transition: padding 0.3s ease;
+  position: relative;
+}
+
+/* Collapsed state for inner sidebar */
+.sidebar.collapsed {
+  padding: 20px 10px;
+}
+
+/* Toggle Button */
+.collapse-toggle {
+  background: var(--background-color);
+  border: 1px solid #ccc;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 18px;
+  position: absolute;
+  top: 10px;
+  right: -15px;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 3px rgba(0, 0, 0, 0.2);
+  transition: transform 0.3s ease;
+}
+
+/* Removed the rotation transform so that the arrow text remains unchanged */
+/* .sidebar.collapsed .collapse-toggle {
+  transform: rotate(180deg);
+} */
+
+/* User Profile Section */
+.user-profile-section {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.user-profile-section .profile-pic {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  margin-bottom: 10px;
+}
+
+.user-profile-section h3 {
+  margin: 10px 0;
+  font-size: 18px;
+}
+
+.user-profile-section a {
+  color: var(--primary-color);
+  text-decoration: none;
+}
+
+.user-profile-section a:hover {
+  text-decoration: underline;
+}
+
+/* Shortcuts */
+.shortcuts {
+  margin-bottom: 20px;
+}
+
+.shortcuts h3 {
+  font-size: 16px;
+  margin-bottom: 10px;
+}
+
+.shortcut {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.shortcut:hover {
+  background-color: var(--hover-background-color);
+  border-radius: 5px;
+}
+
+.shortcut .icon {
+  font-size: 20px;
+}
+
+.shortcut .text {
+  font-size: 14px;
+}
+
+/* Groups */
+.groups h3 {
+  font-size: 16px;
+  margin-bottom: 10px;
+}
+
+.group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.group:hover {
+  background-color: var(--hover-background-color);
+  border-radius: 5px;
+}
+
+.group .icon {
+  font-size: 20px;
+}
+
+.group .text {
+  font-size: 14px;
+}
+
+/* Hide text when collapsed */
+.sidebar.collapsed .user-profile-section h3,
+.sidebar.collapsed .user-profile-section a,
+.sidebar.collapsed .shortcuts h3,
+.sidebar.collapsed .shortcut .text,
+.sidebar.collapsed .groups h3,
+.sidebar.collapsed .group .text {
+  display: none;
+}
+
+/* Center icons in shortcuts and groups when collapsed */
+.sidebar.collapsed .shortcut,
+.sidebar.collapsed .group {
+  justify-content: center;
+}

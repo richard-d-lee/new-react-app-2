@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { FaComments, FaPaperPlane } from "react-icons/fa";
+import "../styles/Messenger.css"; // We'll define .messenger-icon, .messenger-box, etc. here
 
 const Messenger = ({ userId, token }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -53,39 +54,39 @@ const Messenger = ({ userId, token }) => {
   };
 
   return (
-    <div className="fixed bottom-5 right-5 z-50">
-      {/* Floating Chat Icon */}
+    <>
+      {/* Floating Chat Icon (if closed) */}
       {!isOpen && (
         <button
+          className="messenger-icon"
           onClick={() => setIsOpen(true)}
-          className="bg-blue-600 text-white p-4 rounded-full shadow-lg hover:bg-blue-700 transition"
         >
           <FaComments size={24} />
         </button>
       )}
 
-      {/* Messenger Box */}
+      {/* Messenger Box (if open) */}
       {isOpen && (
-        <div className="w-80 h-96 bg-white shadow-lg rounded-lg flex flex-col">
+        <div className="messenger-box">
           {/* Header */}
-          <div className="p-3 bg-blue-600 text-white flex justify-between">
+          <div className="messenger-header">
             <span>Messenger</span>
-            <button onClick={() => setIsOpen(false)} className="text-sm">
+            <button onClick={() => setIsOpen(false)} className="close-button">
               ✕
             </button>
           </div>
 
           {/* Conversation List / Chat Box */}
           {!selectedUser ? (
-            <div className="flex-1 overflow-auto p-2">
+            <div className="conversation-list">
               {conversations.length === 0 ? (
-                <p className="text-center text-gray-500">No messages yet</p>
+                <p className="empty">No messages yet</p>
               ) : (
                 conversations.map((conv) => (
                   <div
                     key={conv.sender_id}
                     onClick={() => fetchMessages(conv)}
-                    className="p-2 border-b cursor-pointer hover:bg-gray-100"
+                    className="conversation"
                   >
                     {conv.sender_name || `User ${conv.sender_id}`}
                   </div>
@@ -93,15 +94,17 @@ const Messenger = ({ userId, token }) => {
               )}
             </div>
           ) : (
-            <div className="flex-1 flex flex-col">
+            <div className="chat-area">
               {/* Messages */}
-              <div className="flex-1 overflow-auto p-2">
+              <div className="messages">
                 {messages.map((msg, index) => (
                   <div
                     key={index}
-                    className={`p-2 my-1 rounded ${
-                      msg.sender_id === userId ? "bg-blue-500 text-white ml-auto" : "bg-gray-200"
-                    } max-w-xs`}
+                    className={
+                      msg.sender_id === userId
+                        ? "message sent"
+                        : "message received"
+                    }
                   >
                     {msg.content}
                   </div>
@@ -109,18 +112,14 @@ const Messenger = ({ userId, token }) => {
               </div>
 
               {/* Message Input */}
-              <div className="p-2 border-t flex">
+              <div className="message-input">
                 <input
                   type="text"
                   value={newMessage}
                   onChange={(e) => setNewMessage(e.target.value)}
-                  className="flex-1 p-2 border rounded"
                   placeholder="Type a message..."
                 />
-                <button
-                  onClick={sendMessage}
-                  className="ml-2 bg-blue-600 text-white p-2 rounded hover:bg-blue-700"
-                >
+                <button onClick={sendMessage} className="send-button">
                   <FaPaperPlane />
                 </button>
               </div>
@@ -128,7 +127,7 @@ const Messenger = ({ userId, token }) => {
           )}
         </div>
       )}
-    </div>
+    </>
   );
 };
 

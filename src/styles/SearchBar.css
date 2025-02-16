@@ -1,25 +1,103 @@
-.search-bar {
-    display: flex;
-    align-items: center;
-    background: white;
-    border-radius: 20px;
-    overflow: hidden;
-  }
-  
-  .search-bar input {
-    border: none;
-    padding: 8px 12px;
-    outline: none;
-    width: 200px;
-  }
-  
-  .search-button {
-    background-color: #f0f2f5;
-    border: none;
-    padding: 8px 12px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-  
+:root {
+  --primary-color: #1877f2;
+  --background-color: #f0f2f5;
+  --hover-background-color: #e4e6e9;
+  --text-color: #333;
+  --font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+/* Sidebar Styles */
+.sidebar {
+  background-color: var(--background-color);
+  padding: 20px;
+  box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
+  font-family: var(--font-family);
+  color: var(--text-color);
+}
+
+/* User Profile Section Styles */
+.user-profile-section {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.user-profile-section .profile-pic {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  margin-bottom: 10px;
+}
+
+.user-profile-section h3 {
+  margin: 10px 0;
+  font-size: 18px;
+}
+
+.user-profile-section a {
+  color: var(--primary-color);
+  text-decoration: none;
+}
+
+.user-profile-section a:hover {
+  text-decoration: underline;
+}
+
+/* Shortcuts Styles */
+.shortcuts {
+  margin-bottom: 20px;
+}
+
+.shortcuts h3 {
+  font-size: 16px;
+  margin-bottom: 10px;
+}
+
+.shortcut {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.shortcut:hover {
+  background-color: var(--hover-background-color);
+  border-radius: 5px;
+}
+
+.shortcut .icon {
+  font-size: 20px;
+}
+
+.shortcut .text {
+  font-size: 14px;
+}
+
+/* Groups Styles */
+.groups h3 {
+  font-size: 16px;
+  margin-bottom: 10px;
+}
+
+.group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.group:hover {
+  background-color: var(--hover-background-color);
+  border-radius: 5px;
+}
+
+.group .icon {
+  font-size: 20px;
+}
+
+.group .text {
+  font-size: 14px;
+}
