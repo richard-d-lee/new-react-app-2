@@ -1,93 +1,50 @@
-/* Navbar Styles */
+/* Navbar container */
 .navbar {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    background-color: #1877f2; /* Facebook-like blue */
-    color: white;
-    padding: 10px 20px;
-  }
-  
-  /* Logo Styles */
-  .logo h1 {
-    margin: 0;
-    font-size: 24px;
-  }
-  
-  /* Search Bar Styles */
-  .search-bar input {
-    padding: 8px;
-    border: none;
-    border-radius: 20px;
-    outline: none;
-  }
-  
-  .search-bar button {
-    padding: 8px;
-    border: none;
-    background-color: #fff;
-    border-radius: 20px;
-    margin-left: 5px;
-    cursor: pointer;
-  }
-  
-  /* Navigation Links Styles */
-  .nav-links {
-    display: flex;
-    gap: 20px;
-  }
-  
-  .nav-link {
-    display: flex;
-    align-items: center;
-    gap: 5px;
-    cursor: pointer;
-  }
-  
-  .nav-link .icon {
-    font-size: 20px;
-  }
-  
-  .nav-link .text {
-    font-size: 16px;
-  }
-  
-  /* User Profile Styles */
-  .user-profile {
-    position: relative;
-  }
-  
-  .profile-pic img {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    cursor: pointer;
-  }
-  
-  /* Dropdown Menu Styles */
-  .dropdown-menu {
-    position: absolute;
-    top: 50px;
-    right: 0;
-    background-color: white;
-    border: 1px solid #ccc;
-    border-radius: 5px;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-    z-index: 1000;
-  }
-  
-  .dropdown-menu ul {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-  }
-  
-  .dropdown-menu ul li {
-    padding: 10px 20px;
-    color: black;
-    cursor: pointer;
-  }
-  
-  .dropdown-menu ul li:hover {
-    background-color: #f0f2f5;
-  }
+  display: flex;
+  align-items: center;
+  background-color: #1877f2; /* Facebook-like blue */
+  color: #fff;
+  padding: 10px 20px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+/* Logo */
+.logo h1 {
+  margin: 0;
+  font-size: 24px;
+}
+
+/* Search Bar Container */
+.search-bar-container {
+  /* A fixed width keeps it from pushing nav items away */
+  width: 250px; 
+  margin: 0 20px;
+}
+
+.left-container {
+  display: flex;
+  align-items: center;
+}
+
+/* Right Container: Nav Links + Profile */
+.right-container {
+  /* Push this group to the far right */
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 20px; 
+}
+
+/* Nav Links */
+.nav-links {
+  display: flex;
+  gap: 20px;
+  align-items: center;
+}
+
+/* User Profile Container */
+.user-profile-container {
+  position: relative;
+}

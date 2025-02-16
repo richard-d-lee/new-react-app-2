@@ -3,29 +3,39 @@ import '../styles/Login.css';
 import axios from 'axios';
 import CreateAccount from './CreateAccount.jsx';
 
-const Login = ({ updateLogged, updateEmail, email}) => {
+const Login = ({ updateLogged, updateEmail, email }) => {
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
-    const [creating, setCreating] = useState(false)
+    const [creating, setCreating] = useState(false);
 
     if (creating) {
-        return <CreateAccount setCreating={setCreating} />
+        return <CreateAccount setCreating={setCreating} />;
     }
 
     const handleLogin = async (e) => {
         e.preventDefault();
+        setError(''); // Clear previous errors
+
         try {
             const response = await axios.post('http://localhost:5000/login', { email, password });
-            localStorage.setItem('authToken', response.data.token);
-            updateEmail(email)
-            updateLogged(true);
-        } catch (err) {
-            setError(err.response ? err.response.data.error : 'Something went wrong.');
-        }
-    };
 
-    const handleCreateAccount = () => {
-        setCreating(true)
+            if (response.data.token) {
+                const token = response.data.token;
+
+                // Store token securely
+                localStorage.setItem('authToken', token);
+
+                // Set default Axios header for authenticated requests
+                axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+
+                updateEmail(email);
+                updateLogged(true);
+            } else {
+                setError('Login failed. Please try again.');
+            }
+        } catch (err) {
+            setError(err.response?.data?.error || 'Something went wrong. Please try again.');
+        }
     };
 
     return (
@@ -58,7 +68,7 @@ const Login = ({ updateLogged, updateEmail, email}) => {
 
             <div className="create-account-container">
                 <p>Don't have an account?</p>
-                <button onClick={handleCreateAccount} className="create-account-button">
+                <button onClick={() => setCreating(true)} className="create-account-button">
                     Create Account
                 </button>
             </div>

@@ -3,30 +3,29 @@ import '../styles/Navbar.css';
 import SearchBar from './SearchBar.jsx';
 import NavLink from './NavLink.jsx';
 import UserProfile from './UserProfile.jsx';
+import { FaHome, FaUserFriends, FaBell } from 'react-icons/fa';
 
-const Navbar = ({updateLogged}) => {
+const Navbar = ({ updateLogged }) => {
   return (
     <div className="navbar">
-      {/* Logo */}
-      <div className="logo">
-        <h1>SocialApp</h1>
+      <div className='left-container'>
+        <div className="logo">
+          <h1>SocialApp</h1>
+        </div>
+        <div className="search-bar-container">
+          <SearchBar />
+        </div>
       </div>
 
-      {/* Search Bar */}
-      <div className="search-bar">
-        <SearchBar />
-      </div>
-
-      {/* Navigation Links */}
-      <div className="nav-links">
-        <NavLink icon="🏠" text="Home" />
-        <NavLink icon="👥" text="Friends" />
-        <NavLink icon="🔔" text="Notifications" />
-      </div>
-
-      {/* User Profile Dropdown */}
-      <div className="user-profile">
-        <UserProfile updateLogged={updateLogged}/>
+      <div className="right-container">
+        <div className="nav-links">
+          <NavLink icon={<FaHome />} text="Home" />
+          <NavLink icon={<FaUserFriends />} text="Friends" />
+          <NavLink icon={<FaBell />} text="Notifications" />
+        </div>
+        <div className="user-profile-container">
+          <UserProfile updateLogged={updateLogged} />
+        </div>
       </div>
     </div>
   );
