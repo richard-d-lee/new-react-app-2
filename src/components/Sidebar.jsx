@@ -5,14 +5,14 @@ import UserProfileSection from './UserProfileSection.jsx';
 import Shortcut from './Shortcut.jsx';
 import Group from './Group.jsx';
 
-const Sidebar = ({ collapsed, toggleSidebar }) => {
+const Sidebar = ({ collapsed, toggleSidebar, setCurrentView}) => {
   return (
     <aside className={`sidebar ${collapsed ? 'collapsed' : ''}`} role="navigation">
       <button className="collapse-toggle" onClick={toggleSidebar}>
         {collapsed ? <FaAngleDoubleRight /> : <FaAngleDoubleLeft />}
       </button>
 
-      <UserProfileSection />
+      <UserProfileSection setCurrentView={setCurrentView}/>
 
       <div className="shortcuts">
         <h3>Shortcuts</h3>

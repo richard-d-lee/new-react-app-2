@@ -2,7 +2,8 @@ import React, { useEffect, useState } from 'react';
 import Navbar from './Navbar.jsx';
 import Sidebar from './Sidebar.jsx';
 import Feed from './Feed.jsx';
-import Friends from './Friends.jsx'; // <-- Import the new Friends component
+import Friends from './Friends.jsx';
+import Profile from './Profile.jsx';
 import Widgets from './Widgets.jsx';
 import Messenger from './Messenger.jsx';
 import { jwtDecode } from 'jwt-decode';
@@ -12,9 +13,9 @@ const HomePage = ({ updateLogged, email }) => {
   const [userId, setUserId] = useState(null);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [widgetsCollapsed, setWidgetsCollapsed] = useState(false);
-  const [currentView, setCurrentView] = useState('feed'); // <--- new state
+  const [currentView, setCurrentView] = useState('feed'); // 'feed', 'friends', 'profile'
 
-  const token = localStorage.getItem('authToken');
+  const token = localStorage.getItem("authToken");
 
   useEffect(() => {
     if (token) {
@@ -29,38 +30,36 @@ const HomePage = ({ updateLogged, email }) => {
   }, [token]);
 
   const toggleSidebar = () => {
-    setSidebarCollapsed((prev) => !prev);
+    setSidebarCollapsed(prev => !prev);
   };
 
   const toggleWidgets = () => {
-    setWidgetsCollapsed((prev) => !prev);
+    setWidgetsCollapsed(prev => !prev);
   };
 
   return (
     <div className="home-page">
       <div className="nav">
-        <Navbar 
-          updateLogged={updateLogged} 
-          setCurrentView={setCurrentView} // pass a setter to the Navbar
-        />
+        <Navbar updateLogged={updateLogged} setCurrentView={setCurrentView} />
       </div>
       
       <div className="main-content">
         <div className={`sidebar-container ${sidebarCollapsed ? 'collapsed' : ''}`}>
-          <Sidebar collapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />
+          <Sidebar 
+            collapsed={sidebarCollapsed} 
+            toggleSidebar={toggleSidebar} 
+            setCurrentView={setCurrentView}
+          />
         </div>
 
         <div className="feed-container">
-          {currentView === 'feed' ? <Feed /> : <Friends />} 
-          {/* Conditionally render feed or friends */}
+          {currentView === 'feed' && <Feed />}
+          {currentView === 'friends' && <Friends />}
+          {currentView === 'profile' && <Profile token={token} currentUserId={userId} />}
         </div>
 
         <div className={`widgets-container ${widgetsCollapsed ? 'collapsed' : ''}`}>
-          <Widgets 
-            email={email} 
-            collapsed={widgetsCollapsed} 
-            toggleWidgets={toggleWidgets} 
-          />
+          <Widgets email={email} collapsed={widgetsCollapsed} toggleWidgets={toggleWidgets} />
         </div>
       </div>
 

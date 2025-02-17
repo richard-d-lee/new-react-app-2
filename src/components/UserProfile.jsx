@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { FaChevronDown } from 'react-icons/fa';
 import '../styles/UserProfile.css';
 
-const UserProfile = ({ updateLogged }) => {
+const UserProfile = ({ updateLogged, setCurrentView }) => {
   const [isDropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef(null);
 
@@ -10,7 +10,6 @@ const UserProfile = ({ updateLogged }) => {
     setDropdownOpen(!isDropdownOpen);
   };
 
-  // Close dropdown if clicked outside
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
@@ -24,23 +23,25 @@ const UserProfile = ({ updateLogged }) => {
     };
   }, []);
 
+  const handleProfileClick = () => {
+    setCurrentView('profile');
+    setDropdownOpen(false);
+  };
+
   return (
     <div className="user-profile" ref={dropdownRef}>
       <div className="profile-trigger" onClick={toggleDropdown}>
-        <div className='profile-dropdown'>Profile</div>
+        <div className="profile-dropdown">Profile</div>
         <FaChevronDown className={`dropdown-icon ${isDropdownOpen ? 'open' : ''}`} />
       </div>
-
       <div className={`dropdown-menu ${isDropdownOpen ? 'show' : ''}`}>
         <ul>
-          <li>Profile</li>
+          <li onClick={handleProfileClick}>Profile</li>
           <li>Settings</li>
-          <li
-            onClick={() => {
+          <li onClick={() => {
               localStorage.removeItem('authToken');
               updateLogged(false);
-            }}
-          >
+            }}>
             Logout
           </li>
         </ul>

@@ -15,23 +15,21 @@ const SuggestedFriends = ({ email }) => {
         headers: { Authorization: `Bearer ${token}` },
       });
       setOutbound(res.data);
-      console.log("Outbound requests:", res.data);
     } catch (err) {
       setError(err.response?.data?.error || "Error fetching outbound requests");
     }
   }, [token]);
 
-  // Fetch suggested friends (filter out users with any pending/accepted relationship)
+  // Fetch suggested friends
   const fetchSuggested = useCallback(async () => {
     try {
       const res = await axios.get("http://localhost:5000/possible-friends", {
         headers: { Authorization: `Bearer ${token}` },
       });
-      console.log("All possible friends:", res.data);
-      // Filter out those with friend_status other than 'none'
-      const filtered = res.data.filter((f) => f.friend_status != "none");
+      // Filter out those with friend_status other than 'none' if needed
+      // or remove the filter if you want them all
+      const filtered = res.data.filter((f) => f.friend_status !== "none");
       setSuggested(filtered);
-      console.log("Filtered suggestions:", filtered);
     } catch (err) {
       setError(err.response?.data?.error || "Error fetching suggested friends");
     }
@@ -94,8 +92,9 @@ const SuggestedFriends = ({ email }) => {
               <div className="friend-details">
                 <img
                   src={
-                    friend.profile_picture_url ||
-                    "https://via.placeholder.com/40"
+                    friend.profile_picture_url
+                      ? `http://localhost:5000${friend.profile_picture_url}`
+                      : "https://t3.ftcdn.net/jpg/10/29/65/84/360_F_1029658445_rfwMzxeuqrvm7GTY4Yr9WaBbYKlXIRs7.jpg"
                   }
                   alt={friend.username}
                 />
@@ -126,8 +125,9 @@ const SuggestedFriends = ({ email }) => {
               <div className="friend-details">
                 <img
                   src={
-                    friend.profile_picture_url ||
-                    "https://via.placeholder.com/40"
+                    friend.profile_picture_url
+                      ? `http://localhost:5000${friend.profile_picture_url}`
+                      : "https://t3.ftcdn.net/jpg/10/29/65/84/360_F_1029658445_rfwMzxeuqrvm7GTY4Yr9WaBbYKlXIRs7.jpg"
                   }
                   alt={friend.username}
                 />
@@ -140,7 +140,7 @@ const SuggestedFriends = ({ email }) => {
                 className="action-btn"
                 onClick={() => handleAddFriend(friend.email)}
               >
-                Add Friend
+                Add
               </button>
             </div>
           ))

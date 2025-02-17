@@ -31,6 +31,16 @@
   font-size: 16px;
 }
 
+/* New spacing between post content and stats */
+.post-stats {
+  margin-top: 15px;
+  margin-bottom: 10px;
+  display: flex;
+  gap: 20px;
+  font-size: 14px;
+  color: #555;
+}
+
 .post-actions {
   display: flex;
   gap: 20px;
@@ -49,6 +59,10 @@
 
 .post-actions button:hover {
   background-color: #145db2;
+}
+
+.post-actions button.liked {
+  background-color: #1877f2;
 }
 
 .comments {

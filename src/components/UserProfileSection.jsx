@@ -1,10 +1,12 @@
 import React from 'react';
 
-const UserProfileSection = () => {
+const UserProfileSection = ({ setCurrentView }) => {
   return (
     <div className="user-profile-section">
       <h3>John Doe</h3>
-      <a href="/profile">View Profile</a>
+      <a href="#" onClick={(e) => { e.preventDefault(); setCurrentView('profile'); }}>
+        View Profile
+      </a>
     </div>
   );
 };

@@ -1,4 +1,4 @@
-import React from 'react';
+import React from 'react'; 
 import '../styles/Navbar.css';
 import SearchBar from './SearchBar.jsx';
 import NavLink from './NavLink.jsx';
@@ -10,7 +10,7 @@ const Navbar = ({ updateLogged, setCurrentView }) => {
     <div className="navbar">
       <div className="left-container">
         <div className="logo">
-          <h1>SocialApp</h1>
+          <h1>BuzApp</h1>
         </div>
         <div className="search-bar-container">
           <SearchBar />
@@ -28,7 +28,7 @@ const Navbar = ({ updateLogged, setCurrentView }) => {
           <NavLink icon={<FaBell />} text="Notifications" />
         </div>
         <div className="user-profile-container">
-          <UserProfile updateLogged={updateLogged} />
+          <UserProfile updateLogged={updateLogged} setCurrentView={setCurrentView} />
         </div>
       </div>
     </div>

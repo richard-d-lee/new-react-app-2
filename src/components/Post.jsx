@@ -7,6 +7,7 @@ const Post = ({ post, token }) => {
   const [comments, setComments] = useState([]);
   const [newComment, setNewComment] = useState('');
   const [likes, setLikes] = useState(0);
+  const [liked, setLiked] = useState(false);
 
   // Fetch comments for this post
   const fetchComments = async () => {
@@ -20,7 +21,7 @@ const Post = ({ post, token }) => {
     }
   };
 
-  // Fetch the like count from the API endpoint
+  // Fetch the like count for the post
   const fetchLikes = async () => {
     try {
       const res = await axios.get(`http://localhost:5000/posts/${post.post_id}/likes/count`, {
@@ -32,10 +33,23 @@ const Post = ({ post, token }) => {
     }
   };
 
+  // Fetch whether the current user has liked this post
+  const fetchLikedStatus = async () => {
+    try {
+      const res = await axios.get(`http://localhost:5000/posts/${post.post_id}/liked`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setLiked(res.data.liked);
+    } catch (err) {
+      console.error('Error fetching liked status:', err);
+    }
+  };
+
   useEffect(() => {
     if (token) {
       fetchComments();
       fetchLikes();
+      fetchLikedStatus();
     }
   }, [post.post_id, token]);
 
@@ -48,12 +62,11 @@ const Post = ({ post, token }) => {
         { content: newComment },
         { headers: { Authorization: `Bearer ${token}` } }
       );
-
-      // Append a temporary comment (ideally, you would re-fetch the comments)
+      // Append a temporary comment (ideally re-fetch comments)
       const tempComment = {
         id: Date.now(), // temporary ID
         content: newComment,
-        username: 'You', // Replace with actual logged-in username if available
+        username: 'You', // Replace with the logged-in user's actual username if available
         created_at: new Date().toISOString()
       };
       setComments([...comments, tempComment]);
@@ -63,15 +76,23 @@ const Post = ({ post, token }) => {
     }
   };
 
-  // Like post and then re-fetch like count
-  const handleLike = async () => {
+  // Toggle like/unlike functionality
+  const handleToggleLike = async () => {
     try {
-      await axios.post(`http://localhost:5000/posts/${post.post_id}/like`, {}, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      fetchLikes(); // Update like count from server
+      if (!liked) {
+        await axios.post(`http://localhost:5000/posts/${post.post_id}/like`, {}, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        setLiked(true);
+      } else {
+        await axios.delete(`http://localhost:5000/posts/${post.post_id}/like`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        setLiked(false);
+      }
+      fetchLikes();
     } catch (err) {
-      console.error('Error liking post:', err);
+      console.error('Error toggling like:', err);
     }
   };
 
@@ -80,9 +101,15 @@ const Post = ({ post, token }) => {
       {/* Post Header */}
       <div className="post-author">
         {post.profile_picture_url ? (
-          <img src={post.profile_picture_url} alt={post.username || 'User'} />
+          <img 
+            src={`http://localhost:5000${post.profile_picture_url}`} 
+            alt={post.username || 'User'} 
+          />
         ) : (
-          <img src="https://via.placeholder.com/40" alt="Default Avatar" />
+          <img 
+            src="https://t3.ftcdn.net/jpg/10/29/65/84/360_F_1029658445_rfwMzxeuqrvm7GTY4Yr9WaBbYKlXIRs7.jpg" 
+            alt="Default Avatar" 
+          />
         )}
         <span>{post.username || `User ${post.user_id}`}</span>
       </div>
@@ -92,10 +119,17 @@ const Post = ({ post, token }) => {
         <p>{post.content}</p>
       </div>
 
+      {/* Post Stats (like & comment counts) */}
+      <div className="post-stats">
+        <span>{likes} {likes === 1 ? "Like" : "Likes"}</span>
+        <span>{comments.length} {comments.length === 1 ? "Comment" : "Comments"}</span>
+      </div>
+
       {/* Post Actions */}
       <div className="post-actions">
-        <button onClick={handleLike}>👍 {likes} Likes</button>
-        <button onClick={fetchComments}>💬 {comments.length} Comments</button>
+        <button onClick={handleToggleLike} className={liked ? 'liked' : ''}>
+          {liked ? "Unlike" : "Like"}
+        </button>
       </div>
 
       {/* Comments List */}
