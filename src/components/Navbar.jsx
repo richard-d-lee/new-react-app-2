@@ -5,10 +5,10 @@ import NavLink from './NavLink.jsx';
 import UserProfile from './UserProfile.jsx';
 import { FaHome, FaUserFriends, FaBell } from 'react-icons/fa';
 
-const Navbar = ({ updateLogged }) => {
+const Navbar = ({ updateLogged, setCurrentView }) => {
   return (
     <div className="navbar">
-      <div className='left-container'>
+      <div className="left-container">
         <div className="logo">
           <h1>SocialApp</h1>
         </div>
@@ -19,8 +19,12 @@ const Navbar = ({ updateLogged }) => {
 
       <div className="right-container">
         <div className="nav-links">
-          <NavLink icon={<FaHome />} text="Home" />
-          <NavLink icon={<FaUserFriends />} text="Friends" />
+          <div onClick={() => setCurrentView('feed')}>
+            <NavLink icon={<FaHome />} text="Home" />
+          </div>
+          <div onClick={() => setCurrentView('friends')}>
+            <NavLink icon={<FaUserFriends />} text="Friends" />
+          </div>
           <NavLink icon={<FaBell />} text="Notifications" />
         </div>
         <div className="user-profile-container">

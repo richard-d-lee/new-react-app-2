@@ -36,23 +36,125 @@ const authenticateToken = (req, res, next) => {
   });
 };
 
-// GET endpoint: /possible-friends
-app.get('/possible-friends', authenticateToken, (req, res) => {
-  const userId = req.user.userId; // Logged-in user's ID
-
+// ======================
+// GET /friends/outbound
+// ======================
+app.get('/friends/outbound', authenticateToken, (req, res) => {
+  const userId = req.user.userId;
   const query = `
     SELECT u.user_id, u.username, u.email, u.profile_picture_url
+    FROM friends f
+    JOIN users u ON f.user_id_2 = u.user_id
+    WHERE f.user_id_1 = ? AND f.status = 'pending'
+    ORDER BY u.username ASC
+  `;
+  connection.query(query, [userId], (err, results) => {
+    if (err) {
+      console.error('Error fetching outbound requests:', err);
+      return res.status(500).json({ error: 'Database error' });
+    }
+    res.json(results);
+  });
+});
+
+// POST /friends/decline
+app.post('/friends/decline', authenticateToken, (req, res) => {
+  const me = req.user.userId; // The logged-in user (recipient)
+  const { friendId } = req.body; // The sender of the friend request
+  console.log(`Declining friend request from user ${friendId} to user ${me}`);
+
+  const query = `
+    DELETE FROM friends
+    WHERE user_id_1 = ? AND user_id_2 = ? AND status = 'pending'
+  `;
+  connection.query(query, [friendId, me], (err, results) => {
+    if (err) {
+      console.error('Error declining friend request:', err);
+      return res.status(500).json({ error: 'Database error' });
+    }
+    if (results.affectedRows === 0) {
+      return res.status(404).json({ error: 'No pending friend request found' });
+    }
+    res.json({ message: 'Friend request declined' });
+  });
+});
+
+
+app.post('/friends/remove', authenticateToken, (req, res) => {
+  const userId = req.user.userId;
+  const { friendId } = req.body;
+  const query = `
+    DELETE FROM friends
+    WHERE status = 'accepted'
+      AND (
+        (user_id_1 = ? AND user_id_2 = ?)
+        OR
+        (user_id_1 = ? AND user_id_2 = ?)
+      )
+  `;
+  connection.query(query, [userId, friendId, friendId, userId], (err, results) => {
+    if (err) {
+      console.error('Error removing friend:', err);
+      return res.status(500).json({ error: 'Database error' });
+    }
+    if (results.affectedRows === 0) {
+      return res.status(404).json({ error: 'No friendship found' });
+    }
+    res.json({ message: 'Friend removed successfully' });
+  });
+});
+
+
+app.get('/friends/pending', authenticateToken, (req, res) => {
+  const userId = req.user.userId;
+  const query = `
+    SELECT u.user_id, u.username, u.email, u.profile_picture_url
+    FROM friends f
+    JOIN users u ON f.user_id_1 = u.user_id
+    WHERE f.user_id_2 = ? AND f.status = 'pending'
+    ORDER BY u.username ASC
+  `;
+  connection.query(query, [userId], (err, results) => {
+    if (err) {
+      console.error('Error fetching inbound pending requests:', err);
+      return res.status(500).json({ error: 'Database error' });
+    }
+    res.json(results);
+  });
+});
+
+
+// ======================
+// GET /possible-friends
+// ======================
+app.get('/possible-friends', authenticateToken, (req, res) => {
+  const me = req.user.userId;
+
+  // This query excludes users who have any row with me in either direction
+  // where status is 'pending' or 'accepted'.
+  const query = `
+    SELECT 
+      u.user_id,
+      u.username,
+      u.email,
+      u.profile_picture_url
     FROM users u
-    WHERE u.user_id != ? 
-      AND u.user_id NOT IN (
-        SELECT f.USER_ID_2
+    WHERE 
+      u.user_id != ?
+      AND NOT EXISTS (
+        SELECT 1
         FROM friends f
-        WHERE f.USER_ID_1 = ?
+        WHERE (
+          (f.user_id_1 = ? AND f.user_id_2 = u.user_id)
+          OR
+          (f.user_id_1 = u.user_id AND f.user_id_2 = ?)
+        )
+        AND f.status IN ('pending','accepted')
       )
     ORDER BY u.username ASC
   `;
 
-  connection.query(query, [userId, userId], (err, results) => {
+  connection.query(query, [me, me, me], (err, results) => {
     if (err) {
       console.error('Error retrieving possible friends:', err);
       return res.status(500).json({ error: 'Error retrieving possible friends' });
@@ -60,6 +162,128 @@ app.get('/possible-friends', authenticateToken, (req, res) => {
     res.json(results);
   });
 });
+
+
+// ======================
+// POST /add-friend
+// ======================
+app.post('/add-friend', authenticateToken, (req, res) => {
+  const { friendEmail } = req.body;
+  const me = req.user.userId;
+
+  // 1) Look up the friend by email
+  const findFriendQuery = 'SELECT user_id FROM users WHERE email = ? LIMIT 1';
+  connection.query(findFriendQuery, [friendEmail], (err, results) => {
+    if (err) return res.status(500).json({ error: 'Database error' });
+    if (results.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const friendId = results[0].user_id;
+
+    // 2) Check if there's already a row in either direction
+    // with status = 'pending' or 'accepted'
+    const checkQuery = `
+      SELECT status FROM friends
+      WHERE
+        (
+          (user_id_1 = ? AND user_id_2 = ?)
+          OR
+          (user_id_1 = ? AND user_id_2 = ?)
+        )
+        AND status IN ('pending', 'accepted')
+      LIMIT 1
+    `;
+    connection.query(checkQuery, [me, friendId, friendId, me], (err, checkRes) => {
+      if (err) return res.status(500).json({ error: 'Database error' });
+
+      // If we found any row, we cannot add a new friend request
+      if (checkRes.length > 0) {
+        // If it's accepted, they're already friends. If it's pending, there's a pending request
+        return res.status(400).json({ error: 'Friend request or friendship already exists' });
+      }
+
+      // 3) Otherwise, insert a new row with status = 'pending'
+      const addFriendQuery = `
+        INSERT INTO friends (user_id_1, user_id_2, status)
+        VALUES (?, ?, 'pending')
+      `;
+      connection.query(addFriendQuery, [me, friendId], (err) => {
+        if (err) {
+          console.error('Error adding friend:', err);
+          return res.status(500).json({ error: 'Error adding friend' });
+        }
+        res.json({ message: 'Friend request sent!' });
+      });
+    });
+  });
+});
+
+
+// ======================
+// POST /friends/cancel
+// ======================
+app.post('/friends/cancel', authenticateToken, (req, res) => {
+  const userId = req.user.userId;  // the sender
+  const { friendId } = req.body;   // the recipient
+  const query = `
+    DELETE FROM friends
+    WHERE user_id_1 = ? AND user_id_2 = ? AND status = 'pending'
+  `;
+  connection.query(query, [userId, friendId], (err, results) => {
+    if (err) {
+      console.error('Error cancelling friend request:', err);
+      return res.status(500).json({ error: 'Database error' });
+    }
+    if (results.affectedRows === 0) {
+      return res.status(404).json({ error: 'No pending friend request found' });
+    }
+    res.json({ message: 'Friend request cancelled' });
+  });
+});
+
+
+app.get('/friends', authenticateToken, (req, res) => {
+  const userId = req.user.userId;
+  const query = `
+    SELECT u.user_id, u.username, u.email, u.profile_picture_url
+    FROM friends f
+    JOIN users u ON (f.user_id_1 = u.user_id OR f.user_id_2 = u.user_id)
+    WHERE f.status = 'accepted'
+      AND (f.user_id_1 = ? OR f.user_id_2 = ?)
+      AND u.user_id != ?
+    ORDER BY u.username ASC
+  `;
+  connection.query(query, [userId, userId, userId], (err, results) => {
+    if (err) {
+      console.error('Error fetching accepted friends:', err);
+      return res.status(500).json({ error: 'Database error' });
+    }
+    res.json(results);
+  });
+});
+
+app.post('/friends/confirm', authenticateToken, (req, res) => {
+  const userId = req.user.userId; // the one receiving request
+  const { friendId } = req.body;  // the one who sent request
+  const query = `
+    UPDATE friends
+    SET status = 'accepted'
+    WHERE user_id_1 = ? AND user_id_2 = ? AND status = 'pending'
+  `;
+  connection.query(query, [friendId, userId], (err, results) => {
+    if (err) {
+      console.error('Error confirming friend request:', err);
+      return res.status(500).json({ error: 'Database error' });
+    }
+    if (results.affectedRows === 0) {
+      return res.status(404).json({ error: 'No pending request found' });
+    }
+    res.json({ message: 'Friend request confirmed' });
+  });
+});
+
+
 
 /*==============================
   Authentication Endpoints
@@ -69,35 +293,42 @@ app.get('/possible-friends', authenticateToken, (req, res) => {
 app.post('/register', (req, res) => {
   const { username, email, password, first_name, last_name } = req.body;
   bcrypt.hash(password, 10, (err, hashedPassword) => {
-    if (err) return res.status(500).json({ error: 'Error hashing password' });
-    const query = 'INSERT INTO users (username, email, password_hash, first_name, last_name) VALUES ("testy", ?, ?, "test", "test")';
-    connection.query(query, [email, hashedPassword], (err, results) => {
+    if (err) {
+      return res.status(500).json({ error: 'Error hashing password' });
+    }
+    const query = `
+      INSERT INTO users (username, email, password_hash, first_name, last_name) 
+      VALUES (?, ?, ?, ?, ?)
+    `;
+    connection.query(query, [username, email, hashedPassword, first_name, last_name], (err, results) => {
       if (err) {
         return res.status(500).json({ error: 'Error saving user' });
       }
-      res.json({ message: 'User registered successfully' });
+      res.json({ message: 'User registered successfully! Please return to the login screen to continue.' });
     });
   });
 });
 
+
 // Login endpoint
 app.post('/login', (req, res) => {
-  const { email, password } = req.body;
-  connection.query('SELECT * FROM users WHERE email = ?', [email], (err, results) => {
+  const { email, password } = req.body; // "email" may be an email address or username
+  const query = 'SELECT * FROM users WHERE email = ? OR username = ?';
+  connection.query(query, [email, email], (err, results) => {
     if (err) return res.status(500).json({ error: 'Database error' });
-    if (results.length === 0) return res.status(401).json({ error: 'Invalid email or password' });
-
+    if (results.length === 0) return res.status(401).json({ error: 'Invalid email/username or password' });
     const user = results[0];
     bcrypt.compare(password, user.password_hash, (err, isMatch) => {
-      if (err || !isMatch) return res.status(401).json({ error: 'Invalid email or password' });
+      if (err || !isMatch) return res.status(401).json({ error: 'Invalid email/username or password' });
       
-      // IMPORTANT: Ensure you're passing the correct field.
-      // If your users table uses 'user_id' as the primary key, use that.
+      // Use the correct primary key field (e.g., user.user_id)
       const token = jwt.sign({ userId: user.user_id }, 'your_jwt_secret', { expiresIn: '1h' });
       res.json({ message: 'Login successful', token });
     });
   });
 });
+
+
 
 
 /*==============================

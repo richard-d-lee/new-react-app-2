@@ -6,7 +6,7 @@
   --font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
-/* Sidebar Styles */
+/* Sidebar Container */
 .sidebar {
   width: 100%;
   background-color: var(--background-color);
@@ -18,34 +18,29 @@
   position: relative;
 }
 
-/* Collapsed state for inner sidebar */
+/* Collapsed State */
 .sidebar.collapsed {
   padding: 20px 10px;
 }
 
-/* Toggle Button */
+/* Updated Collapse Toggle (Left) */
 .collapse-toggle {
-  background: var(--background-color);
-  border: 1px solid #ccc;
-  border-radius: 50%;
+  background-color: var(--primary-color);
+  color: #fff;
+  border: none;
+  border-radius: 20px;
+  padding: 8px 12px;
   cursor: pointer;
-  font-size: 18px;
+  transition: background 0.2s ease;
   position: absolute;
   top: 10px;
-  right: -15px;
-  width: 30px;
-  height: 30px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  right: -15px; /* Adjust as needed */
   box-shadow: 0 0 3px rgba(0, 0, 0, 0.2);
-  transition: transform 0.3s ease;
 }
 
-/* Removed the rotation transform so that the arrow text remains unchanged */
-/* .sidebar.collapsed .collapse-toggle {
-  transform: rotate(180deg);
-} */
+.collapse-toggle:hover {
+  background-color: #145db2;
+}
 
 /* User Profile Section */
 .user-profile-section {
@@ -144,7 +139,7 @@
   display: none;
 }
 
-/* Center icons in shortcuts and groups when collapsed */
+/* Center icons when collapsed */
 .sidebar.collapsed .shortcut,
 .sidebar.collapsed .group {
   justify-content: center;

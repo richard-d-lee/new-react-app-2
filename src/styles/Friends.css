@@ -1,0 +1,96 @@
+.friends-container {
+    max-width: 600px;
+    margin: 0 auto;
+    padding: 20px;
+    font-family: Arial, sans-serif;
+  }
+  
+  .friends-container h2 {
+    font-size: 24px;
+    margin-bottom: 20px;
+    color: #1877f2;
+  }
+  
+  .error {
+    color: red;
+    margin-bottom: 10px;
+  }
+  
+  .pending-section,
+  .accepted-section {
+    margin-bottom: 30px;
+    background-color: #fff;
+    padding: 15px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+  }
+  
+  .pending-section h3,
+  .accepted-section h3 {
+    font-size: 18px;
+    margin-bottom: 15px;
+    color: #1877f2;
+  }
+  
+  .friend-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background-color: #f9f9f9;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    padding: 10px;
+    margin-bottom: 10px;
+  }
+  
+  .friend-card img {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+  }
+  
+  .friend-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    margin-left: 10px;
+  }
+  
+  .friend-name {
+    font-weight: 600;
+    font-size: 14px;
+  }
+  
+  .friend-email {
+    font-size: 12px;
+    color: #666;
+  }
+  
+  .friend-actions {
+    display: flex;
+    gap: 8px;
+  }
+  
+  .confirm-btn,
+  .decline-btn,
+  .remove-btn {
+    background-color: #1877f2;
+    color: #fff;
+    border: none;
+    border-radius: 20px;
+    padding: 8px 12px;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+  }
+  
+  .confirm-btn:hover,
+  .decline-btn:hover,
+  .remove-btn:hover {
+    background-color: #145db2;
+  }
+  
+  .empty {
+    font-style: italic;
+    color: #999;
+  }
+  

@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import Navbar from './Navbar.jsx';
 import Sidebar from './Sidebar.jsx';
 import Feed from './Feed.jsx';
+import Friends from './Friends.jsx'; // <-- Import the new Friends component
 import Widgets from './Widgets.jsx';
 import Messenger from './Messenger.jsx';
 import { jwtDecode } from 'jwt-decode';
@@ -11,8 +12,9 @@ const HomePage = ({ updateLogged, email }) => {
   const [userId, setUserId] = useState(null);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [widgetsCollapsed, setWidgetsCollapsed] = useState(false);
+  const [currentView, setCurrentView] = useState('feed'); // <--- new state
 
-  const token = localStorage.getItem("authToken");
+  const token = localStorage.getItem('authToken');
 
   useEffect(() => {
     if (token) {
@@ -36,23 +38,23 @@ const HomePage = ({ updateLogged, email }) => {
 
   return (
     <div className="home-page">
-      {/* Navbar */}
       <div className="nav">
-        <Navbar updateLogged={updateLogged} />
+        <Navbar 
+          updateLogged={updateLogged} 
+          setCurrentView={setCurrentView} // pass a setter to the Navbar
+        />
       </div>
       
       <div className="main-content">
-        {/* Left Sidebar */}
         <div className={`sidebar-container ${sidebarCollapsed ? 'collapsed' : ''}`}>
           <Sidebar collapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />
         </div>
 
-        {/* Feed */}
         <div className="feed-container">
-          <Feed />
+          {currentView === 'feed' ? <Feed /> : <Friends />} 
+          {/* Conditionally render feed or friends */}
         </div>
 
-        {/* Right Widgets Sidebar */}
         <div className={`widgets-container ${widgetsCollapsed ? 'collapsed' : ''}`}>
           <Widgets 
             email={email} 
@@ -62,7 +64,6 @@ const HomePage = ({ updateLogged, email }) => {
         </div>
       </div>
 
-      {/* Messenger at the root level, not inside main-content */}
       {userId ? (
         <Messenger userId={userId} token={token} />
       ) : (

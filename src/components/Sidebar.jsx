@@ -1,5 +1,6 @@
 import React from 'react';
 import '../styles/Sidebar.css';
+import { FaAngleDoubleLeft, FaAngleDoubleRight } from 'react-icons/fa';
 import UserProfileSection from './UserProfileSection.jsx';
 import Shortcut from './Shortcut.jsx';
 import Group from './Group.jsx';
@@ -8,7 +9,7 @@ const Sidebar = ({ collapsed, toggleSidebar }) => {
   return (
     <aside className={`sidebar ${collapsed ? 'collapsed' : ''}`} role="navigation">
       <button className="collapse-toggle" onClick={toggleSidebar}>
-        {collapsed ? '→' : '←'}
+        {collapsed ? <FaAngleDoubleRight /> : <FaAngleDoubleLeft />}
       </button>
 
       <UserProfileSection />

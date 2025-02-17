@@ -1,0 +1,85 @@
+.suggested-friends-container {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  font-family: Arial, sans-serif;
+  margin: 10px;
+}
+
+.error-message {
+  color: red;
+  margin-bottom: 10px;
+}
+
+.outbound-section,
+.possible-section {
+  background-color: #fff;
+  padding: 15px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+}
+
+.outbound-section h3,
+.possible-section h3 {
+  color: #1877f2;
+  font-size: 18px;
+  margin-bottom: 15px;
+}
+
+.friend-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between; /* Ensures the button is aligned right */
+  background-color: #f9f9f9;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  padding: 10px;
+  margin-bottom: 10px;
+}
+
+.friend-details {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.friend-details img {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.friend-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.friend-name {
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.friend-email {
+  font-size: 12px;
+  color: #666;
+}
+
+.action-btn {
+  background-color: #1877f2;
+  color: #fff;
+  border: none;
+  border-radius: 20px;
+  padding: 8px 12px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.action-btn:hover {
+  background-color: #145db2;
+}
+
+.empty {
+  font-style: italic;
+  color: #999;
+}

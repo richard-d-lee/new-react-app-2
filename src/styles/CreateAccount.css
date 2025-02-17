@@ -1,75 +1,99 @@
-/* CreateAccount.css */
 .create-account {
-    width: 300px;
-    margin: 0 auto;
-    padding: 20px;
-    background-color: #f9f9f9;
-    border-radius: 8px;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-  }
-  
-  .create-account h2 {
-    text-align: center;
-    margin-bottom: 20px;
-  }
-  
-  .create-account .form-group {
-    margin-bottom: 15px;
-  }
-  
-  .create-account label {
-    display: block;
-    font-size: 14px;
-    color: #333;
-    margin-bottom: 5px;
-  }
-  
-  .create-account input {
-    width: 100%;
-    padding: 8px;
-    font-size: 14px;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-  }
-  
-  .create-account .submit-btn {
-    width: 100%;
-    padding: 10px;
-    background-color: #4CAF50;
-    color: white;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-  }
-  
-  .create-account .submit-btn:hover {
-    background-color: #45a049;
-  }
-  
-  .create-account .error-message,
-  .create-account .success-message {
-    text-align: center;
-    padding: 10px;
-    margin-bottom: 10px;
-    border-radius: 4px;
-  }
-  
-  .create-account .error-message {
-    background-color: #f8d7da;
-    color: #721c24;
-  }
-  
-  .create-account .success-message {
-    background-color: #d4edda;
-    color: #155724;
-  }
-  
-  .create-account p {
-    text-align: center;
-    margin-top: 20px;
-  }
-  
-  .create-account a {
-    color: #007bff;
-  }
-  
+  width: 320px;
+  margin: 80px auto;
+  padding: 30px;
+  background-color: #f9f9f9;
+  border-radius: 10px;
+  border: 1px solid #e0e0e0;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.create-account h2 {
+  text-align: center;
+  margin-bottom: 20px;
+  color: #1877f2;
+  font-size: 24px;
+}
+
+.create-account .create-account-form {
+  display: flex;
+  flex-direction: column;
+}
+
+.create-account .form-group {
+  margin-bottom: 15px;
+}
+
+.create-account label {
+  display: block;
+  font-size: 14px;
+  color: #333;
+  margin-bottom: 5px;
+}
+
+.create-account input {
+  width: 100%;
+  padding: 10px;
+  font-size: 14px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  transition: border-color 0.2s ease;
+}
+
+.create-account input:focus {
+  border-color: #1877f2;
+  outline: none;
+}
+
+.create-account .submit-btn {
+  width: 100%;
+  padding: 12px;
+  background-color: #4caf50;
+  color: white;
+  font-size: 16px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.create-account .submit-btn:hover {
+  background-color: #45a049;
+}
+
+.create-account .error-message,
+.create-account .success-message {
+  text-align: center;
+  padding: 10px;
+  margin-bottom: 15px;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.create-account .error-message {
+  background-color: #f8d7da;
+  color: #721c24;
+}
+
+.create-account .success-message {
+  background-color: #d4edda;
+  color: #155724;
+}
+
+.create-account .toggle-login {
+  text-align: center;
+  margin-top: 20px;
+  font-size: 14px;
+  color: #555;
+}
+
+.create-account .toggle-login a {
+  color: #007bff;
+  cursor: pointer;
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.create-account .toggle-login a:hover {
+  color: #0056b3;
+}
