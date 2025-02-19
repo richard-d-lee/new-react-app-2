@@ -1,10 +1,10 @@
+// CreatePost.jsx
 import React, { useState } from 'react';
 import axios from 'axios';
 import '../styles/CreatePost.css';
 
-const CreatePost = ({ onNewPost }) => {
+const CreatePost = ({ onNewPost, token, currentUserId, currentUserProfilePic, currentUsername }) => {
   const [content, setContent] = useState('');
-  const token = localStorage.getItem('authToken');
 
   const handlePost = async () => {
     if (!content.trim()) return;
@@ -14,19 +14,21 @@ const CreatePost = ({ onNewPost }) => {
         { content },
         { headers: { Authorization: `Bearer ${token}` } }
       );
-
-      // Construct a new post object – in a real app, the API would return full post data.
+      
+      // Construct a new post object for the front-end
+      // The server may return minimal data, so we fill in local details:
       const newPost = {
-        post_id: res.data.postId,
+        post_id: res.data.postId,   // from server
         content,
-        user_id: null, // Optionally assign the logged-in user ID
-        username: 'You',
-        profile_picture_url: '', // Provide a default or actual URL if available
+        user_id: currentUserId,
+        username: currentUsername,  // e.g. 'b' or your real username
+        profile_picture_url: currentUserProfilePic || null,
         created_at: new Date().toISOString(),
-        likes: 0
       };
 
+      // Immediately add it to the feed
       onNewPost(newPost);
+
       setContent('');
     } catch (err) {
       console.error('Error creating post:', err);

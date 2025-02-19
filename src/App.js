@@ -12,10 +12,6 @@ const App = () => {
     const token = localStorage.getItem('authToken');
     if (token) {
       setIsLogged(true);
-      // Optionally, decode the token to get the email or other user info if needed.
-      // For example:
-      // const decoded = jwtDecode(token);
-      // setEmail(decoded.email);
     }
   }, []);
 

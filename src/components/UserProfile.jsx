@@ -28,6 +28,11 @@ const UserProfile = ({ updateLogged, setCurrentView }) => {
     setDropdownOpen(false);
   };
 
+  const handleSettingsClick = () => {
+    setCurrentView('settings');
+    setDropdownOpen(false);
+  };
+
   return (
     <div className="user-profile" ref={dropdownRef}>
       <div className="profile-trigger" onClick={toggleDropdown}>
@@ -37,7 +42,7 @@ const UserProfile = ({ updateLogged, setCurrentView }) => {
       <div className={`dropdown-menu ${isDropdownOpen ? 'show' : ''}`}>
         <ul>
           <li onClick={handleProfileClick}>Profile</li>
-          <li>Settings</li>
+          <li onClick={handleSettingsClick}>Settings</li>
           <li onClick={() => {
               localStorage.removeItem('authToken');
               updateLogged(false);

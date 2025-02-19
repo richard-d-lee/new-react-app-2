@@ -1,0 +1,85 @@
+/* Settings.css */
+.settings-container {
+    max-width: 600px;
+    margin: 30px auto;
+    padding: 20px;
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  }
+  
+  .settings-container h2 {
+    text-align: center;
+    color: #1877f2;
+    margin-bottom: 20px;
+  }
+  
+  .settings-form {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    margin-bottom: 20px;
+  }
+  
+  .settings-form label {
+    display: flex;
+    flex-direction: column;
+    font-size: 14px;
+    color: #333;
+  }
+  
+  .settings-form input[type="text"],
+  .settings-form input[type="date"],
+  .settings-form input[type="file"] {
+    padding: 8px;
+    font-size: 16px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    margin-top: 5px;
+  }
+  
+  .update-btn {
+    align-self: flex-end;
+    background-color: #1877f2;
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    padding: 10px 20px;
+    cursor: pointer;
+    transition: background 0.2s ease;
+  }
+  
+  .update-btn:hover {
+    background-color: #145db2;
+  }
+  
+  .delete-btn {
+    background-color: #d9534f;
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    padding: 10px 20px;
+    cursor: pointer;
+    transition: background 0.2s ease;
+    width: 100%;
+    margin-top: 20px;
+  }
+  
+  .delete-btn:hover {
+    background-color: #c9302c;
+  }
+  
+  .error-message {
+    color: #d9534f;
+    text-align: center;
+    margin-bottom: 10px;
+  }
+  
+  .success-message {
+    color: #5cb85c;
+    text-align: center;
+    margin-bottom: 10px;
+  }
+  

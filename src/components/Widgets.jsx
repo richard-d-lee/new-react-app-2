@@ -25,7 +25,7 @@ const Widgets = ({ email, collapsed, toggleWidgets }) => {
             <SponsoredContent />
           </div> */}
           <div className="widget">
-            <h3>Suggested Friends</h3>
+            <h3>Friend Activity</h3>
             <SuggestedFriends email={email} />
           </div>
         </>

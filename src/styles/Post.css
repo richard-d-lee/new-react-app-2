@@ -31,7 +31,6 @@
   font-size: 16px;
 }
 
-/* New spacing between post content and stats */
 .post-stats {
   margin-top: 15px;
   margin-bottom: 10px;
@@ -61,8 +60,10 @@
   background-color: #145db2;
 }
 
+/* The 'liked' class now makes the button gray/off-white */
 .post-actions button.liked {
-  background-color: #1877f2;
+  background-color: #ccc;
+  color: #333;
 }
 
 .comments {

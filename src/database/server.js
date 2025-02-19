@@ -147,6 +147,87 @@ app.get('/users/:id', authenticateToken, (req, res) => {
   });
 });
 
+app.put('/users/settings/:id', authenticateToken, (req, res) => {
+  const userId = req.params.id;
+  const { first_name, last_name, birthday } = req.body;
+  
+  if (!first_name || !last_name || !birthday) {
+    return res.status(400).json({ error: 'First name, last name, and birthday are required' });
+  }
+
+  // 1) Update users table (first_name, last_name)
+  const updateUserQuery = `
+    UPDATE users
+    SET first_name = ?, last_name = ?
+    WHERE user_id = ?
+  `;
+
+  connection.query(updateUserQuery, [first_name, last_name, userId], (err) => {
+    if (err) {
+      console.error("Error updating user settings (names):", err);
+      return res.status(500).json({ error: 'Database error updating user names' });
+    }
+
+    // 2) Insert or update birthdays table for the user's date_of_birth
+    const checkBirthdayQuery = 'SELECT * FROM birthdays WHERE user_id = ?';
+    connection.query(checkBirthdayQuery, [userId], (err, results) => {
+      if (err) {
+        console.error("Error checking birthdays table:", err);
+        return res.status(500).json({ error: 'Database error checking birthdays' });
+      }
+
+      if (results.length > 0) {
+        // Already has a birthday record, so update it
+        const updateBirthdayQuery = `
+          UPDATE birthdays
+          SET date_of_birth = ?
+          WHERE user_id = ?
+        `;
+        connection.query(updateBirthdayQuery, [birthday, userId], (err) => {
+          if (err) {
+            console.error("Error updating birthday:", err);
+            return res.status(500).json({ error: 'Database error updating birthday' });
+          }
+          res.json({ message: 'User settings updated successfully' });
+        });
+      } else {
+        // No birthday record yet, insert a new one
+        const insertBirthdayQuery = `
+          INSERT INTO birthdays (user_id, date_of_birth)
+          VALUES (?, ?)
+        `;
+        connection.query(insertBirthdayQuery, [userId, birthday], (err) => {
+          if (err) {
+            console.error("Error inserting birthday:", err);
+            return res.status(500).json({ error: 'Database error inserting birthday' });
+          }
+          res.json({ message: 'User settings updated successfully' });
+        });
+      }
+    });
+  });
+});
+
+
+app.delete('/users/settings/:id', authenticateToken, (req, res) => {
+  const userId = req.params.id;
+  
+  const query = `
+    DELETE FROM users
+    WHERE user_id = ?
+  `;
+  
+  connection.query(query, [userId], (err, results) => {
+    if (err) {
+      console.error("Error deleting user account:", err);
+      return res.status(500).json({ error: 'Database error' });
+    }
+    res.json({ message: 'User account deleted successfully' });
+  });
+});
+
+
+
 // ================================
 // Authentication Endpoints
 // ================================

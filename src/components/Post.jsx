@@ -3,7 +3,7 @@ import axios from 'axios';
 import Comment from './Comment.jsx';
 import '../styles/Post.css';
 
-const Post = ({ post, token }) => {
+const Post = ({ post, token, currentUserId, currentUserProfilePic }) => {
   const [comments, setComments] = useState([]);
   const [newComment, setNewComment] = useState('');
   const [likes, setLikes] = useState(0);
@@ -66,7 +66,7 @@ const Post = ({ post, token }) => {
       const tempComment = {
         id: Date.now(), // temporary ID
         content: newComment,
-        username: 'You', // Replace with the logged-in user's actual username if available
+        username: 'You', // Replace with actual logged-in username if available
         created_at: new Date().toISOString()
       };
       setComments([...comments, tempComment]);
@@ -96,21 +96,24 @@ const Post = ({ post, token }) => {
     }
   };
 
+  // Decide which profile image URL to use:
+  // If the post belongs to the current user, use currentUserProfilePic (if available)
+  // Otherwise, use the profile_picture_url from the post data (or default)
+  const profileImageUrl =
+    post.user_id === currentUserId && currentUserProfilePic
+      ? `http://localhost:5000${currentUserProfilePic}`
+      : post.profile_picture_url
+      ? `http://localhost:5000${post.profile_picture_url}`
+      : "https://t3.ftcdn.net/jpg/10/29/65/84/360_F_1029658445_rfwMzxeuqrvm7GTY4Yr9WaBbYKlXIRs7.jpg";
+
   return (
     <div className="post">
       {/* Post Header */}
       <div className="post-author">
-        {post.profile_picture_url ? (
-          <img 
-            src={`http://localhost:5000${post.profile_picture_url}`} 
-            alt={post.username || 'User'} 
-          />
-        ) : (
-          <img 
-            src="https://t3.ftcdn.net/jpg/10/29/65/84/360_F_1029658445_rfwMzxeuqrvm7GTY4Yr9WaBbYKlXIRs7.jpg" 
-            alt="Default Avatar" 
-          />
-        )}
+        <img 
+          src={profileImageUrl} 
+          alt={post.username || 'User'} 
+        />
         <span>{post.username || `User ${post.user_id}`}</span>
       </div>
 

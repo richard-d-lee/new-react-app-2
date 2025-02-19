@@ -4,9 +4,8 @@ import CreatePost from './CreatePost.jsx';
 import Post from './Post.jsx';
 import '../styles/Feed.css';
 
-const Feed = () => {
+const Feed = ({ token, currentUserId, currentUserProfilePic }) => {
   const [posts, setPosts] = useState([]);
-  const token = localStorage.getItem('authToken'); // Or get from context/props
 
   // Fetch posts from /posts
   const fetchPosts = async () => {
@@ -14,7 +13,7 @@ const Feed = () => {
       const res = await axios.get('http://localhost:5000/posts', {
         headers: { Authorization: `Bearer ${token}` }
       });
-      setPosts(res.data); // Assumes each post includes fields: post_id, user_id, content, created_at, username, profile_picture_url, likes, etc.
+      setPosts(res.data);
     } catch (err) {
       console.error('Error fetching posts:', err);
     }
@@ -33,9 +32,21 @@ const Feed = () => {
 
   return (
     <div className="feed">
-      <CreatePost onNewPost={handleNewPost} />
+      <CreatePost
+        onNewPost={handleNewPost}
+        token={token}
+        currentUserId={currentUserId}
+        currentUserProfilePic={currentUserProfilePic}
+      />
+
       {posts.map((post) => (
-        <Post key={post.post_id} post={post} token={token} />
+        <Post
+          key={post.post_id}
+          post={post}
+          token={token}
+          currentUserId={currentUserId}
+          currentUserProfilePic={currentUserProfilePic}
+        />
       ))}
     </div>
   );
