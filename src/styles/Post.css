@@ -1,11 +1,15 @@
+/* post.css */
+
+/* The main container for a post */
 .post {
   background-color: #fff;
-  border-radius: 8px;
+  border-radius: 6px;
   padding: 15px;
   margin-bottom: 20px;
   box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
+/* The top area with author info */
 .post-author {
   display: flex;
   align-items: center;
@@ -22,71 +26,97 @@
 
 .post-author span {
   font-weight: 600;
-  font-size: 16px;
 }
 
-.post-content p {
-  margin: 0;
-  line-height: 1.5;
-  font-size: 16px;
+/* The "Delete" or other links next to author */
+.post-link {
+  color: #1877f2;
+  text-decoration: none;
+  cursor: pointer;
+  margin-left: auto; /* if you want it on the far right, or remove for inline */
 }
 
-.post-stats {
-  margin-top: 15px;
+.post-link:hover {
+  text-decoration: underline;
+}
+
+/* The main text content of the post */
+.post-content {
   margin-bottom: 10px;
+}
+
+/* Stats row for like & comment counts */
+.post-stats {
   display: flex;
   gap: 20px;
-  font-size: 14px;
   color: #555;
+  font-size: 14px;
+  margin-bottom: 5px;
 }
 
+/* Actions row for Like, Reply, etc. as links */
 .post-actions {
   display: flex;
-  gap: 20px;
-  margin-top: 10px;
+  gap: 15px;
+  margin-bottom: 10px;
 }
 
-.post-actions button {
+.post-actions .post-link {
+  margin-left: 0; /* override if you used margin-left: auto above */
+}
+
+/* The text area & button for replying to the post */
+.post-reply-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.post-reply-form textarea {
+  width: 100%;
+  min-height: 40px;
+  border: 1px solid #ccc;
+  border-radius: 20px;
+  padding: 8px 12px;
+  font-family: inherit;
+  outline: none;
+  resize: none;
+}
+
+.post-reply-form button {
+  align-self: flex-end;
   background-color: #1877f2;
   color: #fff;
   border: none;
   border-radius: 20px;
-  padding: 6px 12px;
+  padding: 8px 16px;
   cursor: pointer;
   transition: background 0.2s ease;
+  font-size: 14px;
 }
 
-.post-actions button:hover {
+.post-reply-form button:hover {
   background-color: #145db2;
 }
 
-/* The 'liked' class now makes the button gray/off-white */
-.post-actions button.liked {
-  background-color: #ccc;
-  color: #333;
-}
-
+/* The container for all comments below the post */
 .comments {
-  margin-top: 15px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding-left: 10px;
-  border-left: 2px solid #f0f2f5;
+  margin-top: 10px;
 }
 
+/* The "add new comment" input at the bottom */
 .add-comment {
   display: flex;
-  align-items: center;
-  gap: 10px;
+  gap: 8px;
   margin-top: 10px;
 }
 
 .add-comment input {
   flex: 1;
   padding: 8px;
-  border: 1px solid #ccc;
   border-radius: 20px;
+  border: 1px solid #ccc;
   outline: none;
 }
 

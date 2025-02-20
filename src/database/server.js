@@ -227,6 +227,393 @@ app.delete('/users/settings/:id', authenticateToken, (req, res) => {
 });
 
 
+// ================================
+// Groups Endpoints
+// ================================
+
+// POST /groups - Create a new group
+app.post('/groups', authenticateToken, (req, res) => {
+  const creatorId = req.user.userId;
+  const { group_name, group_description, group_privacy, icon } = req.body;
+  if (!group_name) {
+    return res.status(400).json({ error: 'Group name is required' });
+  }
+  const query = `
+    INSERT INTO groups_table (group_name, group_description, group_privacy, icon, creator_id)
+    VALUES (?, ?, ?, ?, ?)
+  `;
+  connection.query(query, [group_name, group_description || '', group_privacy || 'public', icon || '👥', creatorId], (err, results) => {
+    if (err) {
+      console.error('Error creating group:', err);
+      return res.status(500).json({ error: 'Database error' });
+    }
+    const groupId = results.insertId;
+    // Automatically add creator as owner
+    const joinQuery = `
+      INSERT INTO user_groups (user_id, group_id, role)
+      VALUES (?, ?, 'owner')
+    `;
+    connection.query(joinQuery, [creatorId, groupId], (joinErr) => {
+      if (joinErr) {
+        console.error('Error joining group:', joinErr);
+        return res.status(500).json({ error: 'Database error on join' });
+      }
+      res.json({ message: 'Group created successfully', groupId });
+    });
+  });
+});
+
+// GET /groups - Retrieve all groups
+app.get('/groups', authenticateToken, (req, res) => {
+  const query = `
+    SELECT group_id, group_name, group_description, group_privacy, icon, creator_id, created_at
+    FROM groups_table
+    ORDER BY created_at DESC
+  `;
+  connection.query(query, (err, results) => {
+    if (err) {
+      console.error('Error fetching groups:', err);
+      return res.status(500).json({ error: 'Database error' });
+    }
+    res.json(results);
+  });
+});
+
+// GET /groups/my - Retrieve groups the user is a member of
+app.get('/groups/my', authenticateToken, (req, res) => {
+  const userId = req.user.userId;
+  const query = `
+    SELECT g.group_id, g.group_name, g.group_description, g.group_privacy, g.icon, g.creator_id, g.created_at, ug.role
+    FROM groups_table g
+    JOIN user_groups ug ON g.group_id = ug.group_id
+    WHERE ug.user_id = ?
+    ORDER BY g.created_at DESC
+  `;
+  connection.query(query, [userId], (err, results) => {
+    if (err) {
+      console.error('Error fetching user groups:', err);
+      return res.status(500).json({ error: 'Database error' });
+    }
+    res.json(results);
+  });
+});
+
+// POST /groups/join - Join a group (user sends request to join a public group)
+app.post('/groups/join', authenticateToken, (req, res) => {
+  const userId = req.user.userId;
+  const { group_id } = req.body;
+  if (!group_id) {
+    return res.status(400).json({ error: 'Group ID is required' });
+  }
+  // For public groups, we allow immediate join. For private groups, you might need a request process.
+  const query = `
+    INSERT INTO user_groups (user_id, group_id, role)
+    VALUES (?, ?, 'member')
+  `;
+  connection.query(query, [userId, group_id], (err, results) => {
+    if (err) {
+      console.error('Error joining group:', err);
+      return res.status(500).json({ error: 'Database error' });
+    }
+    res.json({ message: 'Joined group successfully' });
+  });
+});
+
+// POST /groups/leave - Leave a group
+app.post('/groups/leave', authenticateToken, (req, res) => {
+  const userId = req.user.userId;
+  const { group_id } = req.body;
+  if (!group_id) {
+    return res.status(400).json({ error: 'Group ID is required' });
+  }
+  const query = `
+    DELETE FROM user_groups
+    WHERE user_id = ? AND group_id = ?
+  `;
+  connection.query(query, [userId, group_id], (err, results) => {
+    if (err) {
+      console.error('Error leaving group:', err);
+      return res.status(500).json({ error: 'Database error' });
+    }
+    if (results.affectedRows === 0) {
+      return res.status(404).json({ error: 'Not a member of this group' });
+    }
+    res.json({ message: 'Left group successfully' });
+  });
+});
+
+// POST /groups/:groupId/posts - Create a new post in a group
+app.post('/groups/:groupId/posts', authenticateToken, (req, res) => {
+  const groupId = req.params.groupId;
+  const userId = req.user.userId;
+  const { content } = req.body;
+  
+  if (!content || content.trim() === "") {
+    return res.status(400).json({ error: 'Content is required' });
+  }
+  
+  const query = 'INSERT INTO group_posts (group_id, user_id, content) VALUES (?, ?, ?)';
+  connection.query(query, [groupId, userId, content], (err, results) => {
+    if (err) {
+      console.error("Error inserting group post:", err);
+      return res.status(500).json({ error: 'Error posting in group' });
+    }
+    res.json({ message: 'Group post created successfully', postId: results.insertId });
+  });
+});
+
+// PUT /groups/:groupId/logo - Update a group's logo
+app.put('/groups/:groupId/logo', authenticateToken, upload.single('groupLogo'), (req, res) => {
+  const groupId = req.params.groupId;
+  if (!req.file) {
+    return res.status(400).json({ error: 'No file uploaded or invalid file type.' });
+  }
+  const logoUrl = `/uploads/${req.file.filename}`;
+  const query = 'UPDATE groups_table SET icon = ? WHERE group_id = ?';
+  connection.query(query, [logoUrl, groupId], (err, results) => {
+    if (err) {
+      console.error('Error updating group logo:', err);
+      return res.status(500).json({ error: 'Database error' });
+    }
+    res.json({ message: 'Group logo updated successfully', logoUrl });
+  });
+});
+
+// DELETE /groups/:groupId/posts/:postId - Delete a post in a group (only if the user is the author)
+app.delete('/groups/:groupId/posts/:postId', authenticateToken, (req, res) => {
+  const { groupId, postId } = req.params;
+  const userId = req.user.userId;
+  const query = `
+    DELETE FROM group_posts 
+    WHERE group_post_id = ? 
+      AND group_id = ? 
+      AND user_id = ?
+  `;
+  connection.query(query, [postId, groupId, userId], (err, results) => {
+    if (err) {
+      console.error("Error deleting group post:", err);
+      return res.status(500).json({ error: 'Error deleting post' });
+    }
+    if (results.affectedRows === 0) {
+      return res.status(404).json({ error: 'Post not found or not authorized' });
+    }
+    res.json({ message: 'Post deleted successfully' });
+  });
+});
+
+
+// GET /groups/:groupId/members - Retrieve all members for a given group
+app.get('/groups/:groupId/members', authenticateToken, (req, res) => {
+  const groupId = req.params.groupId;
+  const query = `
+    SELECT u.user_id, u.username, u.email, u.profile_picture_url, ug.role
+    FROM user_groups ug
+    JOIN users u ON ug.user_id = u.user_id
+    WHERE ug.group_id = ?
+    ORDER BY u.username ASC
+  `;
+  connection.query(query, [groupId], (err, results) => {
+    if (err) {
+      console.error("Error fetching group members:", err);
+      return res.status(500).json({ error: "Database error" });
+    }
+    res.json(results);
+  });
+});
+
+// GET /groups/:groupId/posts - Retrieve all posts for a given group
+app.get('/groups/:groupId/posts', authenticateToken, (req, res) => {
+  const groupId = req.params.groupId;
+  const query = `
+    SELECT gp.group_post_id AS post_id, gp.group_id, gp.user_id, gp.content, gp.created_at,
+           u.username, u.profile_picture_url
+    FROM group_posts gp
+    JOIN users u ON gp.user_id = u.user_id
+    WHERE gp.group_id = ?
+    ORDER BY gp.created_at DESC
+  `;
+  connection.query(query, [groupId], (err, results) => {
+    if (err) {
+      console.error("Error fetching group posts:", err);
+      return res.status(500).json({ error: "Database error" });
+    }
+    res.json(results);
+  });
+});
+
+// GET /groups/:groupId - Retrieve basic details for a specific group
+app.get('/groups/:groupId', authenticateToken, (req, res) => {
+  const groupId = req.params.groupId;
+  const query = `
+    SELECT group_id, group_name, group_description, group_privacy, icon, creator_id, created_at
+    FROM groups_table
+    WHERE group_id = ?
+  `;
+  connection.query(query, [groupId], (err, results) => {
+    if (err) {
+      console.error("Error fetching group details:", err);
+      return res.status(500).json({ error: "Database error" });
+    }
+    if (results.length === 0) {
+      return res.status(404).json({ error: "Group not found" });
+    }
+    res.json(results[0]);
+  });
+});
+
+// DELETE /groups/:groupId/members/:userId - Remove a member from a group
+app.delete('/groups/:groupId/members/:userId', authenticateToken, (req, res) => {
+  const { groupId, userId: targetUserId } = req.params;
+  const requesterId = req.user.userId;
+  // Check if the requester is owner or admin in this group
+  const checkRoleQuery = 'SELECT role FROM user_groups WHERE group_id = ? AND user_id = ?';
+  connection.query(checkRoleQuery, [groupId, requesterId], (err, results) => {
+    if (err) {
+      console.error('Error checking role:', err);
+      return res.status(500).json({ error: 'Database error' });
+    }
+    if (results.length === 0 || (results[0].role !== 'owner' && results[0].role !== 'admin')) {
+      return res.status(403).json({ error: 'Not authorized' });
+    }
+    const deleteQuery = 'DELETE FROM user_groups WHERE group_id = ? AND user_id = ?';
+    connection.query(deleteQuery, [groupId, targetUserId], (err, results) => {
+      if (err) {
+        console.error('Error removing member:', err);
+        return res.status(500).json({ error: 'Database error' });
+      }
+      if (results.affectedRows === 0) {
+        return res.status(404).json({ error: 'Member not found in group' });
+      }
+      res.json({ message: 'Member removed from group' });
+    });
+  });
+});
+
+
+// PUT /groups/:groupId/members/:userId/admin - Promote a member to admin
+app.put('/groups/:groupId/members/:userId/admin', authenticateToken, (req, res) => {
+  const { groupId, userId: targetUserId } = req.params;
+  const requesterId = req.user.userId;
+  // Only group owner can promote to admin
+  const checkRoleQuery = 'SELECT role FROM user_groups WHERE group_id = ? AND user_id = ?';
+  connection.query(checkRoleQuery, [groupId, requesterId], (err, results) => {
+    if (err) {
+      console.error('Error checking role:', err);
+      return res.status(500).json({ error: 'Database error' });
+    }
+    if (results.length === 0 || results[0].role !== 'owner') {
+      return res.status(403).json({ error: 'Only group owner can promote members' });
+    }
+    const updateQuery = 'UPDATE user_groups SET role = "admin" WHERE group_id = ? AND user_id = ?';
+    connection.query(updateQuery, [groupId, targetUserId], (err, results) => {
+      if (err) {
+        console.error('Error promoting member:', err);
+        return res.status(500).json({ error: 'Database error' });
+      }
+      if (results.affectedRows === 0) {
+        return res.status(404).json({ error: 'Member not found in group' });
+      }
+      res.json({ message: 'Member promoted to admin' });
+    });
+  });
+});
+
+// PUT /groups/:groupId/members/:userId/demote - Demote an admin to member
+app.put('/groups/:groupId/members/:userId/demote', authenticateToken, (req, res) => {
+  const { groupId, userId: targetUserId } = req.params;
+  const requesterId = req.user.userId;
+  // Only group owner can demote an admin
+  const checkRoleQuery = 'SELECT role FROM user_groups WHERE group_id = ? AND user_id = ?';
+  connection.query(checkRoleQuery, [groupId, requesterId], (err, results) => {
+    if (err) {
+      console.error('Error checking role:', err);
+      return res.status(500).json({ error: 'Database error' });
+    }
+    if (results.length === 0 || results[0].role !== 'owner') {
+      return res.status(403).json({ error: 'Only group owner can demote admins' });
+    }
+    const updateQuery = 'UPDATE user_groups SET role = "member" WHERE group_id = ? AND user_id = ?';
+    connection.query(updateQuery, [groupId, targetUserId], (err, results) => {
+      if (err) {
+        console.error('Error demoting admin:', err);
+        return res.status(500).json({ error: 'Database error' });
+      }
+      if (results.affectedRows === 0) {
+        return res.status(404).json({ error: 'Member not found in group' });
+      }
+      res.json({ message: 'Admin demoted to member' });
+    });
+  });
+});
+
+// DELETE /groups/:groupId/members/:userId/posts - Remove all posts by a member in a group
+app.delete('/groups/:groupId/members/:userId/posts', authenticateToken, (req, res) => {
+  const { groupId, userId: targetUserId } = req.params;
+  const requesterId = req.user.userId;
+  // Check if requester is owner or admin
+  const checkRoleQuery = 'SELECT role FROM user_groups WHERE group_id = ? AND user_id = ?';
+  connection.query(checkRoleQuery, [groupId, requesterId], (err, results) => {
+    if (err) {
+      console.error('Error checking role:', err);
+      return res.status(500).json({ error: 'Database error' });
+    }
+    if (results.length === 0 || (results[0].role !== 'owner' && results[0].role !== 'admin')) {
+      return res.status(403).json({ error: 'Not authorized' });
+    }
+    const deleteQuery = 'DELETE FROM group_posts WHERE group_id = ? AND user_id = ?';
+    connection.query(deleteQuery, [groupId, targetUserId], (err, results) => {
+      if (err) {
+        console.error('Error deleting group posts:', err);
+        return res.status(500).json({ error: 'Database error' });
+      }
+      res.json({ message: 'All posts by member removed from group' });
+    });
+  });
+});
+
+// GET /groups/:groupId/membership - Check if current user is a member of the group
+app.get('/groups/:groupId/membership', authenticateToken, (req, res) => {
+  const groupId = req.params.groupId;
+  const userId = req.user.userId;
+  const query = 'SELECT role, joined_at FROM user_groups WHERE group_id = ? AND user_id = ?';
+  connection.query(query, [groupId, userId], (err, results) => {
+    if (err) {
+      console.error('Error checking group membership:', err);
+      return res.status(500).json({ error: 'Database error' });
+    }
+    if (results.length > 0) {
+      return res.json({ isMember: true, role: results[0].role, joinedAt: results[0].joined_at });
+    }
+    res.json({ isMember: false });
+  });
+});
+
+// POST /groups/:groupId/join - Join a group
+app.post('/groups/:groupId/join', authenticateToken, (req, res) => {
+  const groupId = req.params.groupId;
+  const userId = req.user.userId;
+  // First, check if the user is already a member
+  const checkQuery = 'SELECT * FROM user_groups WHERE group_id = ? AND user_id = ?';
+  connection.query(checkQuery, [groupId, userId], (err, results) => {
+    if (err) {
+      console.error('Error checking membership:', err);
+      return res.status(500).json({ error: 'Database error' });
+    }
+    if (results.length > 0) {
+      return res.status(400).json({ error: 'Already a member' });
+    }
+    // Insert new membership row with default role "member"
+    const insertQuery = 'INSERT INTO user_groups (group_id, user_id, role) VALUES (?, ?, "member")';
+    connection.query(insertQuery, [groupId, userId], (err, results) => {
+      if (err) {
+        console.error('Error joining group:', err);
+        return res.status(500).json({ error: 'Database error' });
+      }
+      res.json({ message: 'Joined group successfully' });
+    });
+  });
+});
+
 
 // ================================
 // Authentication Endpoints
@@ -304,6 +691,66 @@ app.get('/posts/user/:id', authenticateToken, (req, res) => {
   });
 });
 
+// DELETE /posts/:postId - Delete a post (and cascade delete its comments and likes)
+app.delete('/posts/:postId', authenticateToken, (req, res) => {
+  const postId = req.params.postId;
+  const userId = req.user.userId; // Ensure the user owns the post
+
+  // Start a transaction
+  connection.beginTransaction(err => {
+    if (err) {
+      console.error("Error starting transaction:", err);
+      return res.status(500).json({ error: 'Database error' });
+    }
+
+    // Delete likes related to the post
+    connection.query('DELETE FROM likes WHERE post_id = ?', [postId], (err, results) => {
+      if (err) {
+        console.error("Error deleting likes:", err);
+        return connection.rollback(() => {
+          res.status(500).json({ error: 'Error deleting likes' });
+        });
+      }
+
+      // Delete comments related to the post
+      connection.query('DELETE FROM comments WHERE post_id = ?', [postId], (err, results) => {
+        if (err) {
+          console.error("Error deleting comments:", err);
+          return connection.rollback(() => {
+            res.status(500).json({ error: 'Error deleting comments' });
+          });
+        }
+
+        // Finally, delete the post itself, but only if it belongs to the current user
+        connection.query('DELETE FROM posts WHERE post_id = ? AND user_id = ?', [postId, userId], (err, results) => {
+          if (err) {
+            console.error("Error deleting post:", err);
+            return connection.rollback(() => {
+              res.status(500).json({ error: 'Error deleting post' });
+            });
+          }
+          if (results.affectedRows === 0) {
+            return connection.rollback(() => {
+              res.status(404).json({ error: 'Post not found or unauthorized' });
+            });
+          }
+          // Commit the transaction
+          connection.commit(err => {
+            if (err) {
+              console.error("Error committing transaction:", err);
+              return connection.rollback(() => {
+                res.status(500).json({ error: 'Error committing transaction' });
+              });
+            }
+            res.json({ message: 'Post deleted successfully' });
+          });
+        });
+      });
+    });
+  });
+});
+
+
 app.post('/posts', authenticateToken, (req, res) => {
   const { content } = req.body;
   const userId = req.user.userId;
@@ -350,6 +797,129 @@ app.post('/posts/:id/comments', authenticateToken, (req, res) => {
     }
   );
 });
+
+// POST /comments/:commentId/like - Like a comment
+app.post('/comments/:commentId/like', authenticateToken, (req, res) => {
+  const commentId = req.params.commentId;
+  const userId = req.user.userId;
+  const query = 'INSERT INTO comment_likes (comment_id, user_id) VALUES (?, ?)';
+  connection.query(query, [commentId, userId], (err, results) => {
+    if (err) {
+      if (err.code === 'ER_DUP_ENTRY') {
+        return res.status(400).json({ error: 'Comment already liked by this user' });
+      }
+      console.error('Error liking comment:', err);
+      return res.status(500).json({ error: 'Database error' });
+    }
+    res.json({ message: 'Comment liked successfully' });
+  });
+});
+
+// DELETE /comments/:commentId/like - Unlike a comment
+app.delete('/comments/:commentId/like', authenticateToken, (req, res) => {
+  const commentId = req.params.commentId;
+  const userId = req.user.userId;
+  const query = 'DELETE FROM comment_likes WHERE comment_id = ? AND user_id = ?';
+  connection.query(query, [commentId, userId], (err, results) => {
+    if (err) {
+      console.error('Error unliking comment:', err);
+      return res.status(500).json({ error: 'Database error' });
+    }
+    if (results.affectedRows === 0) {
+      return res.status(404).json({ error: 'No like found to remove' });
+    }
+    res.json({ message: 'Comment unliked successfully' });
+  });
+});
+
+
+// POST /comments/:commentId/reply - Reply to a comment
+app.post('/comments/:commentId/reply', authenticateToken, (req, res) => {
+  const parentCommentId = req.params.commentId;
+  const userId = req.user.userId;
+  const { content } = req.body;
+  if (!content) {
+    return res.status(400).json({ error: 'Reply content is required' });
+  }
+  const query = `
+    INSERT INTO comments (post_id, user_id, content, parent_comment_id)
+    SELECT c.post_id, ?, ?, c.comment_id
+    FROM comments c
+    WHERE c.comment_id = ?
+  `;
+  connection.query(query, [userId, content, parentCommentId], (err, results) => {
+    if (err) {
+      console.error('Error creating reply:', err);
+      return res.status(500).json({ error: 'Database error' });
+    }
+    if (results.affectedRows === 0) {
+      return res.status(404).json({ error: 'Parent comment not found' });
+    }
+    res.json({ message: 'Reply posted successfully', commentId: results.insertId });
+  });
+});
+
+// DELETE /comments/:commentId - Delete a comment (if user is author or admin)
+app.delete('/comments/:commentId', authenticateToken, (req, res) => {
+  const commentId = req.params.commentId;
+  const userId = req.user.userId;
+  // For simplicity, let's assume authors or admins can delete
+  // We'll do a quick check if the user is the comment's author or an admin
+  // For now, let's just check if user is the author:
+  const checkQuery = 'SELECT user_id FROM comments WHERE comment_id = ? LIMIT 1';
+  connection.query(checkQuery, [commentId], (err, results) => {
+    if (err) {
+      console.error('Error finding comment:', err);
+      return res.status(500).json({ error: 'Database error' });
+    }
+    if (results.length === 0) {
+      return res.status(404).json({ error: 'Comment not found' });
+    }
+    const authorId = results[0].user_id;
+    if (authorId !== userId) {
+      // TODO: Check if user is admin of the post or group if needed
+      return res.status(403).json({ error: 'Not authorized to delete this comment' });
+    }
+    const deleteQuery = 'DELETE FROM comments WHERE comment_id = ?';
+    connection.query(deleteQuery, [commentId], (err, delResults) => {
+      if (err) {
+        console.error('Error deleting comment:', err);
+        return res.status(500).json({ error: 'Database error' });
+      }
+      if (delResults.affectedRows === 0) {
+        return res.status(404).json({ error: 'Comment not found or already deleted' });
+      }
+      res.json({ message: 'Comment deleted successfully' });
+    });
+  });
+});
+
+// GET /friends/search
+// e.g. /friends/search?q=ja
+// returns all accepted friends whose username starts with "ja"
+app.get('/friends/search', authenticateToken, (req, res) => {
+  const userId = req.user.userId;
+  const queryString = req.query.q || '';
+  const query = `
+    SELECT u.username
+    FROM friends f
+    JOIN users u ON (f.user_id_1 = u.user_id AND f.user_id_2 = ?) 
+                  OR (f.user_id_2 = u.user_id AND f.user_id_1 = ?)
+    WHERE f.status = 'accepted'
+      AND u.username LIKE CONCAT(?, '%')
+    GROUP BY u.username
+    LIMIT 10
+  `;
+  connection.query(query, [userId, userId, queryString], (err, results) => {
+    if (err) {
+      console.error("Error searching friends:", err);
+      return res.status(500).json({ error: 'Database error' });
+    }
+    // returns array of { username: 'James' } etc.
+    res.json(results);
+  });
+});
+
 
 // ================================
 // Likes Endpoints
@@ -527,8 +1097,6 @@ app.get('/messages/inbox-latest', authenticateToken, (req, res) => {
   );
 });
 
-
-
 app.post('/messages/send', authenticateToken, (req, res) => {
   const senderId = req.user.userId;
   // Accept either "receiver_id" or "receiverId"
@@ -550,9 +1118,6 @@ app.post('/messages/send', authenticateToken, (req, res) => {
     res.json({ message: 'Message sent successfully', messageId: results.insertId });
   });
 });
-
-
-
 
 app.get('/messages/conversation/:otherUserId', authenticateToken, (req, res) => {
   const userId = req.user.userId;
@@ -594,6 +1159,32 @@ app.get('/friends/outbound', authenticateToken, (req, res) => {
     res.json(results);
   });
 });
+
+// GET /friends/status - Retrieve friendship status between current user and other user
+app.get('/friends/status', authenticateToken, (req, res) => {
+  const currentUser = req.query.userId;
+  const otherUser = req.query.otherId;
+  const query = `
+    SELECT user_id_1 AS sender, status, created_at AS friendAddedDate
+    FROM friends
+    WHERE ((user_id_1 = ? AND user_id_2 = ?) OR (user_id_1 = ? AND user_id_2 = ?))
+    LIMIT 1
+  `;
+  connection.query(query, [currentUser, otherUser, otherUser, currentUser], (err, results) => {
+    if (err) {
+      console.error("Error fetching friend status:", err);
+      return res.status(500).json({ error: 'Database error' });
+    }
+    if (results.length === 0) {
+      return res.json({ status: 'none' });
+    }
+    const row = results[0];
+    // Determine direction: if sender equals currentUser, then it's an outgoing (pending) request; otherwise incoming.
+    const direction = row.sender == currentUser ? 'outgoing' : 'incoming';
+    res.json({ status: row.status, direction, friendAddedDate: row.friendAddedDate });
+  });
+});
+
 
 app.get('/friends/pending', authenticateToken, (req, res) => {
   const userId = req.user.userId;

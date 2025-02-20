@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { FaChevronDown } from 'react-icons/fa';
 import '../styles/UserProfile.css';
 
-const UserProfile = ({ updateLogged, setCurrentView }) => {
+const UserProfile = ({ updateLogged, setCurrentView, profilePic }) => {
   const [isDropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef(null);
 
@@ -33,10 +33,17 @@ const UserProfile = ({ updateLogged, setCurrentView }) => {
     setDropdownOpen(false);
   };
 
+  // Default image URL if no profilePic is available
+  const defaultPic = "https://t3.ftcdn.net/jpg/10/29/65/84/360_F_1029658445_rfwMzxeuqrvm7GTY4Yr9WaBbYKlXIRs7.jpg";
+  
   return (
     <div className="user-profile" ref={dropdownRef}>
       <div className="profile-trigger" onClick={toggleDropdown}>
-        <div className="profile-dropdown">Profile</div>
+        <img 
+          src={ profilePic ? `http://localhost:5000${profilePic}` : defaultPic } 
+          className="dropdown-profile-pic" 
+          alt="User Profile" 
+        />
         <FaChevronDown className={`dropdown-icon ${isDropdownOpen ? 'open' : ''}`} />
       </div>
       <div className={`dropdown-menu ${isDropdownOpen ? 'show' : ''}`}>

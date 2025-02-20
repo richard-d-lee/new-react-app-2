@@ -1,12 +1,103 @@
+/* Comment.css */
+
 .comment {
-    background-color: #f0f2f5;
-    padding: 8px 12px;
-    border-radius: 16px;
-    font-size: 14px;
-  }
-  
-  .comment-author {
-    font-weight: 600;
-    margin-right: 5px;
-  }
-  
+  background-color: #f0f2f5;
+  border-radius: 6px;
+  padding: 10px;
+  margin-bottom: 6px;
+  position: relative;
+}
+
+.comment.reply {
+  margin-left: 40px;
+  background-color: #f9f9f9;
+}
+
+.comment.reply::before {
+  content: "↳";
+  position: absolute;
+  left: -15px;
+  top: 15px;
+  font-size: 18px;
+  color: #999;
+}
+
+.comment-author {
+  font-weight: 600;
+  margin-right: 5px;
+}
+
+.comment-content {
+  margin-left: 5px;
+}
+
+/* The area for "like" and "reply" counts */
+.comment-stats {
+  margin-top: 5px;
+  margin-bottom: 5px;
+  font-size: 14px;
+  color: #555;
+  display: flex;
+  gap: 15px;
+}
+
+.comment-actions {
+  display: flex;
+  gap: 15px;
+  margin-bottom: 5px;
+}
+
+.comment-link {
+  color: #1877f2;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.comment-link:hover {
+  text-decoration: underline;
+}
+
+.comment-error {
+  color: red;
+  margin-bottom: 5px;
+}
+
+.comment-replies {
+  margin-top: 5px;
+}
+/* 1) The container around the reply form */
+.comment-reply-form {
+  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* 2) The text area for replies */
+.comment-reply-form textarea {
+  width: 100%;
+  min-height: 40px;
+  border: 1px solid #ccc;   /* or same color used for other input fields */
+  border-radius: 20px;      /* match your “Write a comment” input style */
+  padding: 8px 12px;        /* same internal padding */
+  font-family: inherit;     /* keep the same font as the rest of the app */
+  outline: none;
+  resize: none;             /* keep it from being manually resized if you like */
+}
+
+/* 3) The submit button */
+.comment-reply-form button {
+  align-self: flex-end;     /* push button to the right if you prefer */
+  background-color: #1877f2; /* or your accent color */
+  color: #fff;
+  border: none;
+  border-radius: 20px;      /* same round style as your other buttons */
+  padding: 8px 16px;
+  cursor: pointer;
+  transition: background 0.2s ease;
+  font-size: 14px;          /* match the size from your other comment buttons */
+}
+
+.comment-reply-form button:hover {
+  background-color: #145db2;
+}

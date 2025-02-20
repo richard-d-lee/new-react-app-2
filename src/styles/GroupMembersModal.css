@@ -1,0 +1,145 @@
+/* GroupMembersModal.css */
+
+/* Dark overlay behind the modal */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.5);
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  /* The modal container */
+  .group-members-modal {
+    background: #fff;
+    width: 500px;
+    max-height: 80vh;
+    overflow-y: auto;
+    border-radius: 8px;
+    padding: 20px;
+    position: relative;
+  }
+  
+  /* Fade-in animation (optional) */
+  .fade-in {
+    animation: fadeIn 0.3s ease-in-out;
+  }
+  
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: scale(0.95);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+  
+  /* Close button at top right */
+  .close-modal {
+    background: none;
+    border: none;
+    font-size: 18px;
+    position: absolute;
+    right: 20px;
+    top: 20px;
+    cursor: pointer;
+  }
+  
+  /* The search input */
+  .group-members-modal input[type="text"] {
+    width: 100%;
+    margin-bottom: 15px;
+    padding: 8px;
+    font-size: 14px;
+  }
+  
+  /* Error message styling */
+  .error-message {
+    color: red;
+    margin-bottom: 10px;
+  }
+  
+  /* Members list */
+  .members-list {
+    list-style-type: none;
+    margin: 0;
+    padding: 0;
+  }
+  
+  .member-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between; /* Admin dropdown on the far right */
+    margin-bottom: 15px;
+  }
+  
+  /* Left side: profile pic + name + friend status */
+  .member-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  
+  .member-info .profile-pic {
+    /* The .profile-pic class is from ProfilePic.css, 
+       but you can override or add additional rules here if needed */
+  }
+  
+  /* Right side: admin dropdown */
+  .admin-actions {
+    display: flex;
+    align-items: center;
+  }
+  
+  /* Admin Dropdown */
+  .admin-dropdown {
+    position: relative;
+    display: inline-block;
+  }
+  
+  .admin-dropdown-toggle {
+    background: none;
+    border: none;
+    font-size: 18px;
+    cursor: pointer;
+  }
+  
+  .admin-dropdown-menu {
+    display: none;
+    position: absolute;
+    right: 0;
+    top: 25px;
+    background-color: #fff;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    min-width: 150px;
+    z-index: 100;
+  }
+  
+  /* Show the dropdown on hover */
+  .admin-dropdown:hover .admin-dropdown-menu {
+    display: block;
+  }
+  
+  .admin-dropdown-menu button {
+    display: block;
+    width: 100%;
+    background: none;
+    border: none;
+    padding: 8px 12px;
+    text-align: left;
+    cursor: pointer;
+    font-size: 14px;
+  }
+  
+  .admin-dropdown-menu button:hover {
+    background-color: #f0f2f5;
+  }
+  

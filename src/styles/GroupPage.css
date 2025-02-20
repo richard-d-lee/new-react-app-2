@@ -1,0 +1,141 @@
+/* GroupPage.css */
+.group-page {
+    max-width: 800px;
+    margin: 20px auto;
+    padding: 20px;
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  }
+  
+  .back-button {
+    background: none;
+    border: none;
+    color: #1877f2;
+    font-size: 16px;
+    cursor: pointer;
+    margin-bottom: 10px;
+  }
+  
+  .group-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 10px;
+    margin-bottom: 20px;
+  }
+  
+  .group-logo-container {
+    flex-shrink: 0;
+  }
+  
+  .group-logo {
+    height: 80px;           /* Fixed height */
+    max-width: 80px;        /* Maximum width to keep it consistent */
+    object-fit: cover;
+    border-radius: 8px;     /* Adjust as desired */
+  }
+  
+  .group-details {
+    flex-grow: 1;
+    padding: 0 20px;
+  }
+  
+  .group-details h2 {
+    margin: 0;
+    color: #1877f2;
+  }
+  
+  .group-details p {
+    margin: 5px 0 0 0;
+    font-size: 14px;
+    color: #555;
+  }
+  
+  .view-members-link {
+    flex-shrink: 0;
+  }
+  
+  .view-members-link button {
+    background: none;
+    border: none;
+    color: #1877f2;
+    font-size: 14px;
+    text-decoration: none;
+    cursor: pointer;
+    padding: 0;
+  }
+  
+  .view-members-link button:hover {
+    text-decoration: underline;
+  }
+  
+  .group-posts h3 {
+    margin-bottom: 10px;
+    color: #1877f2;
+  }
+  
+  .new-group-post-form {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+  
+  .new-group-post-form textarea {
+    width: 100%;
+    height: 60px;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    resize: none;
+    font-size: 14px;
+  }
+  
+  .new-group-post-form button {
+    align-self: flex-end;
+    background-color: #1877f2;
+    color: #fff;
+    border: none;
+    border-radius: 20px;
+    padding: 8px 16px;
+    cursor: pointer;
+    transition: background 0.2s ease;
+  }
+  
+  .new-group-post-form button:hover {
+    background-color: #145db2;
+  }
+  
+  .group-post {
+    padding: 10px;
+    border-bottom: 1px solid #eee;
+  }
+  
+  .group-post .timestamp {
+    font-size: 12px;
+    color: #999;
+  }
+  
+  .error {
+    color: #d9534f;
+    text-align: center;
+  }
+  
+  .modal-overlay {
+    animation: fadeIn 0.3s ease-in-out;
+  }
+  
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: scale(0.95);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }

@@ -25,9 +25,14 @@ const Feed = ({ token, currentUserId, currentUserProfilePic }) => {
     }
   }, [token]);
 
-  // Callback to add new post to the state immediately
+  // Callback to add a new post immediately
   const handleNewPost = (newPost) => {
     setPosts([newPost, ...posts]);
+  };
+
+  // Callback for when a post is deleted
+  const handleDeletePost = (deletedPostId) => {
+    setPosts(prevPosts => prevPosts.filter(post => post.post_id !== deletedPostId));
   };
 
   return (
@@ -38,7 +43,6 @@ const Feed = ({ token, currentUserId, currentUserProfilePic }) => {
         currentUserId={currentUserId}
         currentUserProfilePic={currentUserProfilePic}
       />
-
       {posts.map((post) => (
         <Post
           key={post.post_id}
@@ -46,6 +50,7 @@ const Feed = ({ token, currentUserId, currentUserProfilePic }) => {
           token={token}
           currentUserId={currentUserId}
           currentUserProfilePic={currentUserProfilePic}
+          onDelete={handleDeletePost}
         />
       ))}
     </div>
