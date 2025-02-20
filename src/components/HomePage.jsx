@@ -18,7 +18,6 @@ const HomePage = ({ updateLogged, email }) => {
   const [currentUserProfilePic, setCurrentUserProfilePic] = useState("");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [widgetsCollapsed, setWidgetsCollapsed] = useState(false);
-  // currentView can be "feed", "friends", "profile", "settings", "groups", or { view: 'group', groupId: ... }
   const [currentView, setCurrentView] = useState('feed');
 
   const token = localStorage.getItem('authToken');
@@ -41,16 +40,16 @@ const HomePage = ({ updateLogged, email }) => {
       axios.get(`http://localhost:5000/users/${userId}`, {
         headers: { Authorization: `Bearer ${token}` }
       })
-      .then((res) => {
-        setCurrentUserProfilePic(res.data.profile_picture_url || "");
-      })
-      .catch((err) => {
-        console.error("Error fetching user details:", err);
-        if (err.response && err.response.status === 401) {
-          localStorage.removeItem('authToken');
-          updateLogged(false);
-        }
-      });
+        .then((res) => {
+          setCurrentUserProfilePic(res.data.profile_picture_url || "");
+        })
+        .catch((err) => {
+          console.error("Error fetching user details:", err);
+          if (err.response && err.response.status === 401) {
+            localStorage.removeItem('authToken');
+            updateLogged(false);
+          }
+        });
     }
   }, [token, userId, updateLogged]);
 
@@ -65,65 +64,72 @@ const HomePage = ({ updateLogged, email }) => {
   return (
     <div className="home-page">
       <div className="nav">
-        <Navbar 
-          updateLogged={updateLogged} 
+        <Navbar
+          updateLogged={updateLogged}
           setCurrentView={setCurrentView}
           profilePic={currentUserProfilePic}
+          userId={userId}
         />
       </div>
-      
+
       <div className="main-content">
         <div className={`sidebar-container ${sidebarCollapsed ? 'collapsed' : ''}`}>
-          <Sidebar 
-            collapsed={sidebarCollapsed} 
-            toggleSidebar={toggleSidebar} 
+          <Sidebar
+            collapsed={sidebarCollapsed}
+            toggleSidebar={toggleSidebar}
             setCurrentView={setCurrentView}
             token={token}
             currentUserId={userId}
           />
         </div>
-        
+
         <div className="feed-container">
           {currentView === 'feed' && (
-            <Feed 
+            <Feed
               token={token}
               currentUserId={userId}
               currentUserProfilePic={currentUserProfilePic}
+              setCurrentView={setCurrentView}
             />
           )}
           {currentView === 'friends' && <Friends />}
-          {currentView === 'profile' && (
-            <Profile token={token} currentUserId={userId} />
+          {typeof currentView === 'object' && currentView.view === 'profile' && (
+            <Profile 
+              token={token} 
+              userId={currentView.userId}  // ✅ Show selected user's profile
+              currentUserId={userId} 
+              setCurrentView={setCurrentView}
+            />
           )}
           {currentView === 'settings' && (
-            <Settings 
+            <Settings
               token={token}
               currentUserId={userId}
               setCurrentView={setCurrentView}
             />
           )}
           {currentView === 'groups' && (
-            <Groups 
+            <Groups
               token={token}
               currentUserId={userId}
               setCurrentView={setCurrentView}
             />
           )}
           {typeof currentView === 'object' && currentView.view === 'group' && (
-            <GroupPage 
-              token={token} 
-              currentUserId={userId} 
+            <GroupPage
+              token={token}
+              currentUserId={userId}
               groupId={currentView.groupId}
               setCurrentView={setCurrentView}
             />
           )}
         </div>
-        
+
         <div className={`widgets-container ${widgetsCollapsed ? 'collapsed' : ''}`}>
           <Widgets email={email} collapsed={widgetsCollapsed} toggleWidgets={toggleWidgets} />
         </div>
       </div>
-      
+
       {userId ? (
         <Messenger userId={userId} token={token} />
       ) : (

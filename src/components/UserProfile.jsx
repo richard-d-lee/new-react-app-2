@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { FaChevronDown } from 'react-icons/fa';
 import '../styles/UserProfile.css';
 
-const UserProfile = ({ updateLogged, setCurrentView, profilePic }) => {
+const UserProfile = ({ updateLogged, setCurrentView, profilePic, userId }) => {
   const [isDropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef(null);
 
@@ -24,7 +24,7 @@ const UserProfile = ({ updateLogged, setCurrentView, profilePic }) => {
   }, []);
 
   const handleProfileClick = () => {
-    setCurrentView('profile');
+    setCurrentView({ view: 'profile', userId: userId });
     setDropdownOpen(false);
   };
 

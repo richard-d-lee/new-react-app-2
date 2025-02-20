@@ -1,13 +1,21 @@
+// Feed.jsx
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import CreatePost from './CreatePost.jsx';
 import Post from './Post.jsx';
 import '../styles/Feed.css';
 
-const Feed = ({ token, currentUserId, currentUserProfilePic }) => {
+const Feed = ({
+  token,
+  currentUserId,
+  currentUsername,
+  currentUserProfilePic,
+  setCurrentView,
+  onProfileClick
+}) => {
   const [posts, setPosts] = useState([]);
 
-  // Fetch posts from /posts
+  // Fetch all posts
   const fetchPosts = async () => {
     try {
       const res = await axios.get('http://localhost:5000/posts', {
@@ -25,32 +33,37 @@ const Feed = ({ token, currentUserId, currentUserProfilePic }) => {
     }
   }, [token]);
 
-  // Callback to add a new post immediately
-  const handleNewPost = (newPost) => {
-    setPosts([newPost, ...posts]);
+  // This is called by <CreatePost /> after a new post is created
+  const handleNewPost = (newPostObj) => {
+    // Insert at top
+    setPosts(prev => [newPostObj, ...prev]);
   };
 
-  // Callback for when a post is deleted
-  const handleDeletePost = (deletedPostId) => {
-    setPosts(prevPosts => prevPosts.filter(post => post.post_id !== deletedPostId));
+  // If user deletes a post
+  const handleDeletePost = (postId) => {
+    setPosts(prev => prev.filter(p => p.post_id !== postId));
   };
 
   return (
     <div className="feed">
       <CreatePost
-        onNewPost={handleNewPost}
         token={token}
         currentUserId={currentUserId}
+        currentUsername={currentUsername}
         currentUserProfilePic={currentUserProfilePic}
+        onNewPost={handleNewPost}
       />
+
       {posts.map((post) => (
         <Post
           key={post.post_id}
           post={post}
           token={token}
+          onDelete={(postId) => setPosts(prev => prev.filter(p => p.post_id !== postId))}
           currentUserId={currentUserId}
           currentUserProfilePic={currentUserProfilePic}
-          onDelete={handleDeletePost}
+          setCurrentView={setCurrentView}
+          onProfileClick={(userId) => setCurrentView({ view: 'profile', userId })} // ✅ Fix profile navigation
         />
       ))}
     </div>

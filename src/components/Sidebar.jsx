@@ -36,7 +36,7 @@ const Sidebar = ({ collapsed, toggleSidebar, setCurrentView, token, currentUserI
         {collapsed ? '→' : '←'}
       </button>
 
-      <UserProfileSection />
+      <UserProfileSection setCurrentView={setCurrentView}/>
 
       <div className="shortcuts">
         <h3>Shortcuts</h3>

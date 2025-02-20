@@ -5,7 +5,7 @@ import NavLink from './NavLink.jsx';
 import UserProfile from './UserProfile.jsx';
 import { FaHome, FaUserFriends, FaBell, FaUsers } from 'react-icons/fa';
 
-const Navbar = ({ updateLogged, setCurrentView, profilePic }) => {
+const Navbar = ({ updateLogged, setCurrentView, profilePic, userId }) => {
   return (
     <div className="navbar">
       <div className="left-container">
@@ -40,7 +40,7 @@ const Navbar = ({ updateLogged, setCurrentView, profilePic }) => {
           <NavLink icon={<FaBell />} text="Notifications" />
         </div>
         <div className="user-profile-container">
-          <UserProfile updateLogged={updateLogged} setCurrentView={setCurrentView} profilePic={profilePic} />
+          <UserProfile userId={userId} updateLogged={updateLogged} setCurrentView={setCurrentView} profilePic={profilePic} />
         </div>
       </div>
     </div>

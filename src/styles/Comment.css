@@ -101,3 +101,39 @@
 .comment-reply-form button:hover {
   background-color: #145db2;
 }
+
+/* Mention suggestions dropdown */
+.mention-suggestions {
+  position: absolute;
+  background-color: #fff;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  margin-top: 4px;
+  max-height: 150px;
+  overflow-y: auto;
+  z-index: 10;
+  width: 100%;
+}
+
+.mention-suggestion {
+  padding: 6px 10px;
+  cursor: pointer;
+}
+
+.mention-suggestion:hover {
+  background-color: #f0f2f5;
+}
+
+.comment-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+.comment-author-link {
+  color: #1877f2;
+  text-decoration: none;
+}
+.comment-author-link:hover {
+  text-decoration: underline;
+}

@@ -751,19 +751,51 @@ app.delete('/posts/:postId', authenticateToken, (req, res) => {
 });
 
 
+// server.js (or wherever your routes are defined)
 app.post('/posts', authenticateToken, (req, res) => {
   const { content } = req.body;
   const userId = req.user.userId;
-  if (!content) return res.status(400).json({ error: 'Content is required' });
-  connection.query(
-    'INSERT INTO posts (user_id, content) VALUES (?, ?)',
-    [userId, content],
-    (err, results) => {
-      if (err) return res.status(500).json({ error: 'Error creating post' });
-      res.json({ message: 'Post created successfully', postId: results.insertId });
+
+  // 1) Insert the new post
+  const insertQuery = `
+    INSERT INTO posts (user_id, content)
+    VALUES (?, ?)
+  `;
+  connection.query(insertQuery, [userId, content], (err, insertResult) => {
+    if (err) {
+      console.error("Error creating post:", err);
+      return res.status(500).json({ error: "Database error" });
     }
-  );
+    const newPostId = insertResult.insertId;
+
+    // 2) Select the newly inserted post joined with the user data
+    const selectQuery = `
+      SELECT 
+        p.post_id,
+        p.user_id,
+        p.content,
+        p.created_at,
+        u.username,
+        u.profile_picture_url,
+        0 AS likes -- or subquery if you want to count likes
+      FROM posts p
+      JOIN users u ON p.user_id = u.user_id
+      WHERE p.post_id = ?
+    `;
+    connection.query(selectQuery, [newPostId], (err, rows) => {
+      if (err) {
+        console.error("Error selecting new post:", err);
+        return res.status(500).json({ error: "Database error" });
+      }
+      if (!rows || rows.length === 0) {
+        return res.status(404).json({ error: "Post not found after insert" });
+      }
+      // Return the fully joined post object with username + profile_picture_url
+      res.json(rows[0]);
+    });
+  });
 });
+
 
 // ================================
 // Comments Endpoints
@@ -783,20 +815,79 @@ app.get('/posts/:id/comments', authenticateToken, (req, res) => {
   });
 });
 
-app.post('/posts/:id/comments', authenticateToken, (req, res) => {
-  const postId = req.params.id;
-  const { content } = req.body;
+// POST /posts/:id/comments
+app.post('/posts/:postId/comments', authenticateToken, (req, res) => {
+  const postId = req.params.postId;
   const userId = req.user.userId;
-  if (!content) return res.status(400).json({ error: 'Content is required' });
-  connection.query(
-    'INSERT INTO comments (post_id, user_id, content) VALUES (?, ?, ?)',
-    [postId, userId, content],
-    (err, results) => {
-      if (err) return res.status(500).json({ error: 'Error creating comment' });
-      res.json({ message: 'Comment added successfully', commentId: results.insertId });
+  const { content } = req.body;
+
+  // 1) Insert the new comment
+  const insertQuery = `
+    INSERT INTO comments (post_id, user_id, content) 
+    VALUES (?, ?, ?)
+  `;
+  connection.query(insertQuery, [postId, userId, content], (err, insertResult) => {
+    if (err) {
+      console.error("Error inserting comment:", err);
+      return res.status(500).json({ error: "Database error" });
     }
-  );
+    const newCommentId = insertResult.insertId;
+
+    // 2) Now select the newly inserted row, joined with the user data
+    const selectQuery = `
+      SELECT 
+        c.comment_id,
+        c.post_id,
+        c.parent_comment_id,
+        c.user_id,
+        c.content,
+        c.created_at,
+        u.username,
+        u.profile_picture_url,
+        0 AS likeCount
+      FROM comments c
+      JOIN users u ON c.user_id = u.user_id
+      WHERE c.comment_id = ?
+    `;
+    connection.query(selectQuery, [newCommentId], (err, rows) => {
+      if (err) {
+        console.error("Error selecting new comment:", err);
+        return res.status(500).json({ error: "Database error" });
+      }
+      if (!rows || rows.length === 0) {
+        return res.status(404).json({ error: "Comment not found after insert" });
+      }
+      // Return the full comment object with username + profile_picture_url
+      res.json(rows[0]);
+    });
+  });
 });
+
+
+
+// GET /comments/:commentId/liked - Get like count and liked status for a comment
+app.get('/comments/:commentId/liked', authenticateToken, (req, res) => {
+  const commentId = req.params.commentId;
+  const userId = req.user.userId;
+  const query = `
+    SELECT 
+      COUNT(*) AS likeCount,
+      SUM(CASE WHEN user_id = ? THEN 1 ELSE 0 END) AS userLiked
+    FROM comment_likes
+    WHERE comment_id = ?
+  `;
+  connection.query(query, [userId, commentId], (err, results) => {
+    if (err) {
+      console.error("Error fetching comment like status:", err);
+      return res.status(500).json({ error: 'Database error' });
+    }
+    // If userLiked > 0, then the user has liked this comment.
+    const likeCount = results[0].likeCount;
+    const liked = results[0].userLiked > 0;
+    res.json({ likeCount, liked });
+  });
+});
+
 
 // POST /comments/:commentId/like - Like a comment
 app.post('/comments/:commentId/like', authenticateToken, (req, res) => {
@@ -838,26 +929,52 @@ app.post('/comments/:commentId/reply', authenticateToken, (req, res) => {
   const parentCommentId = req.params.commentId;
   const userId = req.user.userId;
   const { content } = req.body;
-  if (!content) {
-    return res.status(400).json({ error: 'Reply content is required' });
-  }
-  const query = `
-    INSERT INTO comments (post_id, user_id, content, parent_comment_id)
-    SELECT c.post_id, ?, ?, c.comment_id
-    FROM comments c
-    WHERE c.comment_id = ?
+
+  // Insert the reply, copying post_id from the parent comment
+  const insertQuery = `
+    INSERT INTO comments (post_id, parent_comment_id, user_id, content)
+    SELECT post_id, ?, ?, ?
+    FROM comments
+    WHERE comment_id = ?
   `;
-  connection.query(query, [userId, content, parentCommentId], (err, results) => {
+  connection.query(insertQuery, [parentCommentId, userId, content, parentCommentId], (err, insertResult) => {
     if (err) {
-      console.error('Error creating reply:', err);
-      return res.status(500).json({ error: 'Database error' });
+      console.error("Error inserting reply:", err);
+      return res.status(500).json({ error: "Database error" });
     }
-    if (results.affectedRows === 0) {
-      return res.status(404).json({ error: 'Parent comment not found' });
-    }
-    res.json({ message: 'Reply posted successfully', commentId: results.insertId });
+    const newCommentId = insertResult.insertId;
+
+    // Now select the newly inserted row joined with the user data
+    const selectQuery = `
+      SELECT
+        c.comment_id,
+        c.post_id,
+        c.parent_comment_id,
+        c.user_id,
+        c.content,
+        c.created_at,
+        u.username,
+        u.profile_picture_url,
+        0 AS likeCount
+      FROM comments c
+      JOIN users u ON c.user_id = u.user_id
+      WHERE c.comment_id = ?
+    `;
+    connection.query(selectQuery, [newCommentId], (err, rows) => {
+      if (err) {
+        console.error("Error selecting new reply:", err);
+        return res.status(500).json({ error: "Database error" });
+      }
+      if (!rows || rows.length === 0) {
+        return res.status(404).json({ error: "Reply not found after insert" });
+      }
+      // Return the fully populated comment object
+      res.json(rows[0]);
+    });
   });
 });
+
+
 
 // DELETE /comments/:commentId - Delete a comment (if user is author or admin)
 app.delete('/comments/:commentId', authenticateToken, (req, res) => {
@@ -898,27 +1015,26 @@ app.delete('/comments/:commentId', authenticateToken, (req, res) => {
 // e.g. /friends/search?q=ja
 // returns all accepted friends whose username starts with "ja"
 app.get('/friends/search', authenticateToken, (req, res) => {
-  const userId = req.user.userId;
-  const queryString = req.query.q || '';
+  const currentUser = req.user.userId;
+  const { q } = req.query;
+  if (!q) return res.json([]);
+  // Search for users whose usernames start with q (case-insensitive) and exclude the current user.
   const query = `
-    SELECT u.username
-    FROM friends f
-    JOIN users u ON (f.user_id_1 = u.user_id AND f.user_id_2 = ?) 
-                  OR (f.user_id_2 = u.user_id AND f.user_id_1 = ?)
-    WHERE f.status = 'accepted'
-      AND u.username LIKE CONCAT(?, '%')
-    GROUP BY u.username
+    SELECT user_id, username, profile_picture_url 
+    FROM users 
+    WHERE username LIKE ? 
+      AND user_id != ? 
     LIMIT 10
   `;
-  connection.query(query, [userId, userId, queryString], (err, results) => {
+  connection.query(query, [`${q}%`, currentUser], (err, results) => {
     if (err) {
       console.error("Error searching friends:", err);
       return res.status(500).json({ error: 'Database error' });
     }
-    // returns array of { username: 'James' } etc.
     res.json(results);
   });
 });
+
 
 
 // ================================
@@ -938,29 +1054,32 @@ app.get('/posts/:id/likes/count', authenticateToken, (req, res) => {
 
 app.post('/posts/:id/like', authenticateToken, (req, res) => {
   const postId = req.params.id;
+  console.log(postId)
   const userId = req.user.userId;
-  connection.query(
-    'INSERT INTO likes (post_id, user_id) VALUES (?, ?)',
-    [postId, userId],
-    (err, results) => {
-      if (err) return res.status(500).json({ error: 'Error liking post' });
-      res.json({ message: 'Post liked successfully' });
+  const query = 'INSERT INTO likes (post_id, user_id) VALUES (?, ?)';
+  connection.query(query, [postId, userId], (err, results) => {
+    if (err) {
+      console.error("Error liking post:", err);
+      return res.status(500).json({ error: 'Error liking post' });
     }
-  );
+    res.json({ message: 'Post liked successfully' });
+  });
 });
+
 
 app.delete('/posts/:id/like', authenticateToken, (req, res) => {
   const postId = req.params.id;
   const userId = req.user.userId;
-  connection.query(
-    'DELETE FROM likes WHERE post_id = ? AND user_id = ?',
-    [postId, userId],
-    (err, results) => {
-      if (err) return res.status(500).json({ error: 'Error unliking post' });
-      res.json({ message: 'Post unliked successfully' });
+  const query = 'DELETE FROM likes WHERE post_id = ? AND user_id = ?';
+  connection.query(query, [postId, userId], (err, results) => {
+    if (err) {
+      console.error("Error unliking post:", err);
+      return res.status(500).json({ error: 'Error unliking post' });
     }
-  );
+    res.json({ message: 'Post unliked successfully' });
+  });
 });
+
 
 app.get('/posts/:id/liked', authenticateToken, (req, res) => {
   const postId = req.params.id;

@@ -4,15 +4,17 @@ import Post from './Post.jsx';
 import ProfilePicUploader from './ProfilePicUploader.jsx';
 import '../styles/Profile.css';
 
-const Profile = ({ token, currentUserId }) => {
+const Profile = ({ token, userId, currentUserId, setCurrentView }) => {
   const [user, setUser] = useState({});
   const [posts, setPosts] = useState([]);
   const [error, setError] = useState('');
   const [showUploader, setShowUploader] = useState(false);
+  const actualId = userId || currentUserId;
 
+  // Fetch user details
   const fetchUser = async () => {
     try {
-      const res = await axios.get(`http://localhost:5000/users/${currentUserId}`, {
+      const res = await axios.get(`http://localhost:5000/users/${actualId}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setUser(res.data);
@@ -21,9 +23,10 @@ const Profile = ({ token, currentUserId }) => {
     }
   };
 
+  // Fetch user posts
   const fetchUserPosts = async () => {
     try {
-      const res = await axios.get(`http://localhost:5000/posts/user/${currentUserId}`, {
+      const res = await axios.get(`http://localhost:5000/posts/user/${actualId}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setPosts(res.data);
@@ -32,17 +35,19 @@ const Profile = ({ token, currentUserId }) => {
     }
   };
 
+  // Handle profile picture updates
   const handleProfilePicUpdated = (newUrl) => {
     setUser(prev => ({ ...prev, profile_picture_url: newUrl }));
     setShowUploader(false);
   };
 
+  // Fetch data when actualId changes
   useEffect(() => {
-    if (token && currentUserId) {
+    if (token && actualId) {
       fetchUser();
       fetchUserPosts();
     }
-  }, [token, currentUserId]);
+  }, [token, actualId]);
 
   return (
     <div className="profile-view">
@@ -69,12 +74,12 @@ const Profile = ({ token, currentUserId }) => {
         </div>
       </div>
       <div className="profile-posts">
-        <h3>{user.username ? `${user.username}'s Posts` : "Your Posts"}</h3>
+        <h3>{user.username ? `${user.username}'s Posts` : "User's Posts"}</h3>
         {posts.length === 0 ? (
           <p className="empty">No posts to display.</p>
         ) : (
           posts.map(post => (
-            <Post key={post.post_id} post={post} token={token} />
+            <Post setCurrentView={setCurrentView} key={post.post_id} post={post} token={token} />
           ))
         )}
       </div>
