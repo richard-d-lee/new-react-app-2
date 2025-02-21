@@ -51,6 +51,7 @@ const GroupPage = ({ token, currentUserId, currentUserProfilePic, groupId, setCu
       setError(err.response?.data?.error || "Error fetching group posts");
     }
   };
+  
 
   useEffect(() => {
     if (token && groupId) {
@@ -149,11 +150,12 @@ const GroupPage = ({ token, currentUserId, currentUserProfilePic, groupId, setCu
                     key={post.post_id}
                     post={post}
                     token={token}
-                    onDelete={handleDeletePost}
                     currentUserId={currentUserId}
                     currentUserProfilePic={currentUserProfilePic}
                     setCurrentView={setCurrentView}
-                    onProfileClick={(userId) => setCurrentView({ view: 'profile', userId })} // ✅ Fix profile navigation
+                    onDelete={handleDeletePost}
+                    onProfileClick={(userId) => setCurrentView({ view: 'profile', userId })}
+                    groupId={groupId}  // Ensure groupId is passed here for group posts
                   />
                 ))
               )}

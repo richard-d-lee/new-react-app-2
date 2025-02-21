@@ -23,7 +23,7 @@ const SuggestedFriends = ({ email }) => {
   // Fetch suggested friends
   const fetchSuggested = useCallback(async () => {
     try {
-      const res = await axios.get("http://localhost:5000/possible-friends", {
+      const res = await axios.get("http://localhost:5000/friends/possible-friends", {
         headers: { Authorization: `Bearer ${token}` },
       });
       // Filter out those with friend_status other than 'none' if needed
@@ -51,7 +51,7 @@ const SuggestedFriends = ({ email }) => {
   const handleAddFriend = async (friendEmail) => {
     try {
       await axios.post(
-        "http://localhost:5000/add-friend",
+        "http://localhost:5000/friends/add-friend",
         { friendEmail, email },
         { headers: { Authorization: `Bearer ${token}` } }
       );

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { jwtDecode } from 'jwt-decode';
+import {jwtDecode} from 'jwt-decode';
 import axios from 'axios';
 import Navbar from './Navbar.jsx';
 import Sidebar from './Sidebar.jsx';
@@ -11,6 +11,7 @@ import Profile from './Profile.jsx';
 import Settings from './Settings.jsx';
 import Widgets from './Widgets.jsx';
 import Messenger from './Messenger.jsx';
+import Notifications from './Notifications.jsx';
 import '../styles/HomePage.css';
 
 const HomePage = ({ updateLogged, email }) => {
@@ -19,6 +20,7 @@ const HomePage = ({ updateLogged, email }) => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [widgetsCollapsed, setWidgetsCollapsed] = useState(false);
   const [currentView, setCurrentView] = useState('feed');
+  const [unreadCount, setUnreadCount] = useState(0);
 
   const token = localStorage.getItem('authToken');
 
@@ -53,6 +55,19 @@ const HomePage = ({ updateLogged, email }) => {
     }
   }, [token, userId, updateLogged]);
 
+  // Fetch unread notifications count on mount and whenever the token changes.
+  useEffect(() => {
+    if (token) {
+      axios.get('http://localhost:5000/notifications/unread-count', {
+          headers: { Authorization: `Bearer ${token}` }
+      })
+      .then(response => {
+         setUnreadCount(response.data.unreadCount);
+      })
+      .catch(err => console.error("Error fetching unread notifications count:", err));
+    }
+  }, [token]);
+
   const toggleSidebar = () => {
     setSidebarCollapsed(prev => !prev);
   };
@@ -69,6 +84,7 @@ const HomePage = ({ updateLogged, email }) => {
           setCurrentView={setCurrentView}
           profilePic={currentUserProfilePic}
           userId={userId}
+          unreadCount={unreadCount}
         />
       </div>
 
@@ -93,10 +109,17 @@ const HomePage = ({ updateLogged, email }) => {
             />
           )}
           {currentView === 'friends' && <Friends />}
+          {currentView === 'notifications' && (
+            <Notifications
+              token={token}
+              userId={userId}
+              onMarkAllRead={() => setUnreadCount(0)}
+            />
+          )}
           {typeof currentView === 'object' && currentView.view === 'profile' && (
             <Profile 
               token={token} 
-              userId={currentView.userId}  // ✅ Show selected user's profile
+              userId={currentView.userId}  
               currentUserId={userId} 
               setCurrentView={setCurrentView}
             />

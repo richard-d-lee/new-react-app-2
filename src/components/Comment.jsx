@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'; 
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import ProfilePic from './ProfilePic.jsx';
 import '../styles/Comment.css';
@@ -8,9 +8,11 @@ const Comment = ({
   token,
   currentUserId,
   setCurrentView,
-  onAddComment,    // Callback for when a reply is added (updates parent's state)
-  onDeleteComment, // Callback for when a comment/reply is deleted (updates parent's state)
-  onProfileClick   // Callback to switch HomePage view to show commenter's profile
+  onAddComment,    // Callback for when a reply is added
+  onDeleteComment, // Callback for deletion
+  onProfileClick,  // Callback to view profile
+  groupId,         // Optional: if provided, this comment is for a group post
+  groupPostId      // Optional: group post ID (for replies)
 }) => {
   const isReply = !!comment.parent_comment_id;
   const [likes, setLikes] = useState(comment.likeCount || 0);
@@ -21,7 +23,18 @@ const Comment = ({
   const [showAllReplies, setShowAllReplies] = useState(false);
   const [profilePic, setProfilePic] = useState('');
 
-  // Fetch commenter's profile picture on mount
+  // Use group_comment_id if available when groupId is provided; otherwise, use comment_id.
+  const commentId = groupId 
+    ? (comment.group_comment_id || comment.comment_id)
+    : comment.comment_id;
+
+  // Build base URL for comment endpoints:
+  // For group comments, endpoints will be under /groups/{groupId}/comments/{commentId}
+  const baseCommentUrl = groupId
+    ? `http://localhost:5000/groups/${groupId}/comments/${commentId}`
+    : `http://localhost:5000/comments/${commentId}`;
+
+  // Fetch commenter's profile picture
   useEffect(() => {
     if (!comment.user_id) return;
     axios.get(`http://localhost:5000/users/${comment.user_id}`, {
@@ -40,7 +53,7 @@ const Comment = ({
   // Fetch like status for the comment
   useEffect(() => {
     if (!token) return;
-    axios.get(`http://localhost:5000/comments/${comment.comment_id}/liked`, {
+    axios.get(`${baseCommentUrl}/liked`, {
       headers: { Authorization: `Bearer ${token}` }
     })
       .then(res => {
@@ -48,19 +61,19 @@ const Comment = ({
         setLikes(res.data.likeCount);
       })
       .catch(err => console.error("Error fetching comment like status:", err));
-  }, [comment.comment_id, token]);
+  }, [baseCommentUrl, token]);
 
   // Toggle like/unlike for the comment
   const handleLike = async () => {
     try {
       if (!liked) {
-        await axios.post(`http://localhost:5000/comments/${comment.comment_id}/like`, {}, {
+        await axios.post(`${baseCommentUrl}/like`, {}, {
           headers: { Authorization: `Bearer ${token}` }
         });
         setLiked(true);
         setLikes(prev => prev + 1);
       } else {
-        await axios.delete(`http://localhost:5000/comments/${comment.comment_id}/like`, {
+        await axios.delete(`${baseCommentUrl}/like`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         setLiked(false);
@@ -72,14 +85,14 @@ const Comment = ({
     }
   };
 
-  // Delete comment or reply and update UI immediately via parent's state update
+  // Delete the comment
   const handleDelete = async () => {
     if (!window.confirm("Are you sure you want to delete this comment?")) return;
     try {
-      await axios.delete(`http://localhost:5000/comments/${comment.comment_id}`, {
+      await axios.delete(`${baseCommentUrl}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      onDeleteComment(comment.comment_id, comment.parent_comment_id || null);
+      onDeleteComment(commentId, comment.parent_comment_id || null);
     } catch (err) {
       console.error("Error deleting comment:", err);
       setError(err.response?.data?.error || "Error deleting comment");
@@ -88,7 +101,12 @@ const Comment = ({
 
   // Toggle reply form
   const toggleReplyForm = () => {
-    setShowReplyForm(!showReplyForm);
+    setShowReplyForm(prev => !prev);
+  };
+
+  // Toggle showing all replies
+  const toggleShowAllReplies = () => {
+    setShowAllReplies(prev => !prev);
   };
 
   // Submit a reply to the comment
@@ -96,12 +114,18 @@ const Comment = ({
     e.preventDefault();
     if (!replyContent.trim()) return;
     try {
-      const res = await axios.post(
-        `http://localhost:5000/comments/${comment.comment_id}/reply`,
-        { content: replyContent },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      const newReplyObj = res.data; // Server returns full reply object
+      // Use group-specific endpoint if groupId is provided.
+      const replyUrl = groupId
+        ? `http://localhost:5000/groups/${groupId}/comments/${commentId}/reply`
+        : `http://localhost:5000/comments/${commentId}/reply`;
+      // For group replies, include groupPostId in the payload.
+      const payload = groupId 
+        ? { content: replyContent, groupPostId: comment.post_id }  // Ensure comment.post_id holds the group post ID
+        : { content: replyContent };
+      const res = await axios.post(replyUrl, payload, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const newReplyObj = res.data;
       onAddComment(newReplyObj);
       setReplyContent('');
       setShowReplyForm(false);
@@ -111,16 +135,11 @@ const Comment = ({
     }
   };
 
-  // Toggle showing all replies or just one
-  const toggleShowAllReplies = () => {
-    setShowAllReplies(prev => !prev);
-  };
-
   return (
     <div className={`comment ${isReply ? 'reply' : ''}`}>
       {error && <p className="comment-error">{error}</p>}
       
-      {/* Comment Header: ProfilePic + Username + Timestamp */}
+      {/* Comment Header */}
       <div className="comment-header">
         <span onClick={() => onProfileClick && onProfileClick(comment.user_id)} style={{ cursor: 'pointer' }}>
           <ProfilePic imageUrl={profilePic} alt={comment.username || 'User'} size={30} />
@@ -140,7 +159,7 @@ const Comment = ({
       {/* Comment Content */}
       <div className="comment-content">{comment.content}</div>
       
-      {/* Comment Stats: Show counts if > 0 */}
+      {/* Comment Stats */}
       <div className="comment-stats">
         {likes > 0 && <span>{likes} {likes === 1 ? 'Like' : 'Likes'}</span>}
         {!isReply && comment.replies && comment.replies.length > 0 && (
@@ -167,7 +186,7 @@ const Comment = ({
         )}
       </div>
       
-      {/* Reply Form (collapsed by default) */}
+      {/* Reply Form */}
       {!isReply && showReplyForm && (
         <div className="comment-reply-form">
           <form onSubmit={handleSubmitReply}>
@@ -186,7 +205,7 @@ const Comment = ({
         <div className="comment-replies">
           {(showAllReplies ? comment.replies : comment.replies.slice(0, 1)).map(r => (
             <Comment
-              key={r.comment_id}
+              key={r.comment_id || r.group_comment_id}
               comment={r}
               token={token}
               currentUserId={currentUserId}
@@ -194,12 +213,14 @@ const Comment = ({
               onDeleteComment={onDeleteComment}
               onProfileClick={onProfileClick}
               setCurrentView={setCurrentView}
+              groupId={groupId}        // propagate group context
+              groupPostId={groupPostId}  // propagate groupPostId from parent
             />
           ))}
           {comment.replies.length > 1 && (
             <div className="expand-replies-link">
               <span className="comment-link" onClick={toggleShowAllReplies}>
-                {showAllReplies ? `Hide ${comment.replies.length} replies` : `${comment.replies.length} replies`}
+                {showAllReplies ? `Hide ${comment.replies.length} replies` : `Show ${comment.replies.length} replies`}
               </span>
             </div>
           )}

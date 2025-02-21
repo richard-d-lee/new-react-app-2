@@ -1,57 +1,54 @@
-// CreatePost.jsx snippet
+// CreatePost.jsx
 import React, { useState } from 'react';
 import axios from 'axios';
 import '../styles/CreatePost.css';
 
-const CreatePost = ({ 
-  token, 
-  currentUserId, 
-  currentUsername, 
-  currentUserProfilePic, 
-  onNewPost 
+const CreatePost = ({
+  token,
+  currentUserId,
+  currentUserProfilePic,
+  onNewPost,
+  groupId // optional prop: if provided, we're posting in a group
 }) => {
   const [content, setContent] = useState('');
+  const [error, setError] = useState('');
 
-  const handlePost = async () => {
+  const handleSubmit = async (e) => {
+    e.preventDefault();
     if (!content.trim()) return;
+  
     try {
-      // 1) Create the post in the database
-      const res = await axios.post(
-        'http://localhost:5000/posts',
-        { content },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-  
-      const { post_id } = res.data; // Ensure the backend returns the new post_id
-  
-      // 2) Manually add current user info to avoid "User {userId}" and missing post_id
-      const newPost = {
-        post_id, // Ensure this is defined
-        user_id: currentUserId,
-        username: currentUsername,                 // Add username
-        profile_picture_url: currentUserProfilePic, // Add profile picture
-        content,
-        created_at: new Date().toISOString()
-      };
-  
-      // 3) Add to feed immediately
-      onNewPost(newPost);
+      let url = '';
+      if (groupId) {
+        // Post to group
+        url = `http://localhost:5000/groups/${groupId}/posts`;
+      } else {
+        // Post to the main feed
+        url = `http://localhost:5000/posts`;
+      }
+      const res = await axios.post(url, { content }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      // Now res.data has user_id, username, etc.
+      onNewPost(res.data);
       setContent('');
     } catch (err) {
-      console.error('Error creating post:', err);
+      console.error("Error creating post:", err);
+      setError(err.response?.data?.error || "Error creating post");
     }
   };
-  
-  
 
   return (
     <div className="create-post">
-      <textarea
-        placeholder="What's on your mind?"
-        value={content}
-        onChange={(e) => setContent(e.target.value)}
-      />
-      <button onClick={handlePost}>Post</button>
+      {error && <p className="error">{error}</p>}
+      <form onSubmit={handleSubmit}>
+        <textarea
+          value={content}
+          onChange={(e) => setContent(e.target.value)}
+          placeholder="Write your post here..."
+        />
+        <button type="submit">Post</button>
+      </form>
     </div>
   );
 };

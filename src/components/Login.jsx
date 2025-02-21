@@ -18,7 +18,7 @@ const Login = ({ updateLogged, updateEmail, email }) => {
 
     try {
       // The "email" field here can contain either an email or a username
-      const response = await axios.post('http://localhost:5000/login', { email, password });
+      const response = await axios.post('http://localhost:5000/auth/login', { email, password });
       
       if (response.data.token) {
         const token = response.data.token;

@@ -12,7 +12,8 @@ const Post = ({
   currentUserProfilePic,
   onDelete,
   setCurrentView,
-  onProfileClick = () => {}
+  onProfileClick = () => {},
+  groupId // if provided, this post is a group post
 }) => {
   const [comments, setComments] = useState([]);
   const [newComment, setNewComment] = useState('');
@@ -21,16 +22,28 @@ const Post = ({
   const [liked, setLiked] = useState(false);
   const [showAllComments, setShowAllComments] = useState(false);
   const [author, setAuthor] = useState({
-    username: post.username || `User ${post.user_id}`,
+    username: post.username || `User ${post.user_id || ''}`,
     profile_picture_url: post.profile_picture_url || null
   });
 
   const commentsRef = useRef(null);
   const effectivePostId = post?.post_id || post?.postId;
 
-  // Fetch author info if not already provided
+  // Build base URL for post API calls:
+  // - If groupId is provided, use group endpoints.
+  // - Otherwise, use normal posts endpoints.
+  const basePostUrl = groupId
+    ? `http://localhost:5000/groups/${groupId}/posts/${effectivePostId}`
+    : `http://localhost:5000/posts/${effectivePostId}`;
+
+  // Build comments URL:
+  const commentsUrl = groupId
+    ? `http://localhost:5000/groups/${groupId}/posts/${effectivePostId}/comments`
+    : `http://localhost:5000/posts/${effectivePostId}/comments`;
+
+  // Fetch author info if not provided and if post.user_id exists
   useEffect(() => {
-    if (!effectivePostId || post.username) return;
+    if (!effectivePostId || post.username || !post.user_id) return;
     axios.get(`http://localhost:5000/users/${post.user_id}`, {
       headers: { Authorization: `Bearer ${token}` }
     })
@@ -41,48 +54,42 @@ const Post = ({
         });
       })
       .catch(err => console.error("Error fetching post author:", err));
-  }, [effectivePostId, post.user_id, token]);
+  }, [effectivePostId, post.user_id, post.username, token]);
 
-  // Fetch and structure comments
+  // Fetch comments for this post
   useEffect(() => {
     if (!effectivePostId) return;
-    axios.get(`http://localhost:5000/posts/${effectivePostId}/comments`, {
-      headers: { Authorization: `Bearer ${token}` }
-    })
+    axios.get(commentsUrl, { headers: { Authorization: `Bearer ${token}` } })
       .then(res => setComments(buildCommentTree(res.data)))
       .catch(err => console.error("Error fetching comments:", err));
-  }, [effectivePostId, token]);
+  }, [effectivePostId, token, commentsUrl]);
 
-  // Fetch like count and liked status
+  // Fetch like count and liked status for this post
   useEffect(() => {
     if (!token || !effectivePostId) return;
-    axios.get(`http://localhost:5000/posts/${effectivePostId}/likes/count`, {
-      headers: { Authorization: `Bearer ${token}` }
-    })
+    axios.get(`${basePostUrl}/likes/count`, { headers: { Authorization: `Bearer ${token}` } })
       .then(res => setLikeCount(res.data.likeCount))
       .catch(err => console.error("Error fetching like count:", err));
-    axios.get(`http://localhost:5000/posts/${effectivePostId}/liked`, {
-      headers: { Authorization: `Bearer ${token}` }
-    })
+    axios.get(`${basePostUrl}/liked`, { headers: { Authorization: `Bearer ${token}` } })
       .then(res => setLiked(res.data.liked))
       .catch(err => console.error("Error fetching liked status:", err));
-  }, [effectivePostId, token]);
+  }, [token, effectivePostId, basePostUrl]);
 
-  // Toggle like/unlike
+  // Toggle like/unlike for the post
   const handleToggleLike = async () => {
     if (!effectivePostId) {
-      console.error("Post ID is undefined. Cannot like post.");
+      console.error("Post ID is undefined. Cannot like/unlike.");
       return;
     }
     try {
       if (!liked) {
-        await axios.post(`http://localhost:5000/posts/${effectivePostId}/like`, {}, {
+        await axios.post(`${basePostUrl}/like`, {}, {
           headers: { Authorization: `Bearer ${token}` }
         });
         setLiked(true);
         setLikeCount(prev => prev + 1);
       } else {
-        await axios.delete(`http://localhost:5000/posts/${effectivePostId}/like`, {
+        await axios.delete(`${basePostUrl}/like`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         setLiked(false);
@@ -93,43 +100,34 @@ const Post = ({
     }
   };
 
-  // Delete the post
+  // Delete the post using the correct endpoint
   const handleDelete = async () => {
     if (!window.confirm("Are you sure you want to delete this post?")) return;
     try {
-      await axios.delete(`http://localhost:5000/posts/${effectivePostId}`, {
+      await axios.delete(basePostUrl, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      if (typeof onDelete === 'function') {
-        onDelete(effectivePostId);
-      }
+      if (typeof onDelete === 'function') onDelete(effectivePostId);
     } catch (err) {
       console.error("Error deleting post:", err);
     }
   };
 
-  // Single source of truth: update parent's comment tree when adding either a top-level comment or a reply.
+  // Update comments state when a new comment or reply is added
   const handleAddComment = (newCommentObj) => {
     if (newCommentObj.parent_comment_id) {
-      // It's a reply – update the parent comment's replies.
       setComments(prev =>
-        prev.map(c => {
-          if (c.comment_id === newCommentObj.parent_comment_id) {
-            return { 
-              ...c, 
-              replies: c.replies ? [...c.replies, newCommentObj] : [newCommentObj]
-            };
-          }
-          return c;
-        })
+        prev.map(c => c.comment_id === newCommentObj.parent_comment_id
+          ? { ...c, replies: c.replies ? [...c.replies, newCommentObj] : [newCommentObj] }
+          : c
+        )
       );
     } else {
-      // It's a top-level comment.
       setComments(prev => [newCommentObj, ...prev]);
     }
   };
 
-  // Post a new top-level comment
+  // Post a new comment
   const handlePostNewComment = async () => {
     if (!newComment.trim()) return;
     if (!effectivePostId) {
@@ -137,11 +135,9 @@ const Post = ({
       return;
     }
     try {
-      const res = await axios.post(
-        `http://localhost:5000/posts/${effectivePostId}/comments`,
-        { content: newComment },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      const res = await axios.post(commentsUrl, { content: newComment }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
       handleAddComment(res.data);
       setNewComment('');
       setShowCommentForm(false);
@@ -150,7 +146,7 @@ const Post = ({
     }
   };
 
-  // Delete a comment or reply (updates local state)
+  // Delete a comment (local state update)
   const handleDeleteComment = (commentId, parentId) => {
     setComments(prev =>
       prev.map(comment => {
@@ -162,34 +158,29 @@ const Post = ({
     );
   };
 
-  // Determine final username and profile pic for the post author
-  const finalUsername = author.username;
+  const finalUsername = author.username || "Unknown User";
   const finalProfilePic = author.profile_picture_url
     ? `http://localhost:5000${author.profile_picture_url}`
     : "https://t3.ftcdn.net/jpg/10/29/65/84/360_F_1029658445_rfwMzxeuqrvm7GTY4Yr9WaBbYKlXIRs7.jpg";
 
-  // Update HomePage view to show selected user's profile
   const handleProfileClick = () => {
-    setCurrentView({ view: 'profile', userId: post.user_id });
+    if (post.user_id) setCurrentView({ view: 'profile', userId: post.user_id });
   };
 
-  // Total top-level comment count (for display)
   const totalCommentCount = comments.length;
-
-  // Show collapsed or expanded comments
   const visibleComments = showAllComments ? comments : comments.slice(0, 1);
 
   return (
     <div className="post">
       {/* Post Header */}
       <div className="post-author">
-        <span onClick={handleProfileClick} style={{ cursor: 'pointer' }}>
+        <span onClick={handleProfileClick} style={{ cursor: post.user_id ? 'pointer' : 'default' }}>
           <ProfilePic imageUrl={finalProfilePic} alt={finalUsername} size={40} />
         </span>
         <span
           className="post-author-link"
-          style={{ cursor: 'pointer', marginLeft: '8px', color: '#1877f2' }}
           onClick={handleProfileClick}
+          style={{ cursor: post.user_id ? 'pointer' : 'default', marginLeft: '8px', color: '#1877f2' }}
         >
           {finalUsername}
         </span>
@@ -209,10 +200,10 @@ const Post = ({
 
       {/* Post Content */}
       <div className="post-content">
-        <p>{post.content}</p>
+        <p>{post.content || "No content available"}</p>
       </div>
 
-      {/* Post Stats (only shown if likeCount or commentCount > 0) */}
+      {/* Post Stats */}
       {(likeCount > 0 || totalCommentCount > 0) && (
         <div className="post-stats">
           {likeCount > 0 && <span>{likeCount} {likeCount === 1 ? "Like" : "Likes"}</span>}
@@ -242,7 +233,7 @@ const Post = ({
         </div>
       )}
 
-      {/* Comments Section with Expand/Collapse */}
+      {/* Comments Section */}
       <div className="comments" ref={commentsRef}>
         {visibleComments.map(comment => (
           <Comment
@@ -254,12 +245,14 @@ const Post = ({
             onDeleteComment={handleDeleteComment}
             onProfileClick={handleProfileClick}
             setCurrentView={setCurrentView}
+            groupId={groupId}        // Propagate groupId for group posts
+            groupPostId={effectivePostId} // Propagate group post id for replies
           />
         ))}
         {comments.length > 1 && (
           <div className="expand-comments-link">
             <span className="post-link" onClick={() => setShowAllComments(!showAllComments)}>
-              {showAllComments ? `Hide ${comments.length} comments` : `View ${comments.length} comments`}
+              {showAllComments ? `Hide ${comments.length} comments` : `Show ${comments.length} comments`}
             </span>
           </div>
         )}
