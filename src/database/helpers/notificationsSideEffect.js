@@ -1,4 +1,4 @@
-// helpers/notifications.js
+// helpers/notificationsSideEffect.js
 import connection from '../db.js';
 
 export function createNotification({ user_id, notification_type, reference_id, actor_id, reference_type, message }) {
@@ -19,7 +19,7 @@ export function createNotification({ user_id, notification_type, reference_id, a
     if (err) {
       console.error("Error creating notification:", err);
     } else {
-      console.log("Notification created, id:", results.insertId);
+      console.log("Notification created");
     }
   });
 }

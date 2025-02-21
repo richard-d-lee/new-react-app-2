@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import {jwtDecode} from 'jwt-decode';
+import { jwtDecode } from 'jwt-decode';
 import axios from 'axios';
 import Navbar from './Navbar.jsx';
 import Sidebar from './Sidebar.jsx';
@@ -16,6 +16,7 @@ import '../styles/HomePage.css';
 
 const HomePage = ({ updateLogged, email }) => {
   const [userId, setUserId] = useState(null);
+  const [currentUsername, setCurrentUsername] = useState(""); // NEW: store username
   const [currentUserProfilePic, setCurrentUserProfilePic] = useState("");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [widgetsCollapsed, setWidgetsCollapsed] = useState(false);
@@ -44,6 +45,7 @@ const HomePage = ({ updateLogged, email }) => {
       })
         .then((res) => {
           setCurrentUserProfilePic(res.data.profile_picture_url || "");
+          setCurrentUsername(res.data.username || ""); // NEW: store the username
         })
         .catch((err) => {
           console.error("Error fetching user details:", err);
@@ -55,26 +57,7 @@ const HomePage = ({ updateLogged, email }) => {
     }
   }, [token, userId, updateLogged]);
 
-  // Fetch unread notifications count on mount and whenever the token changes.
-  useEffect(() => {
-    if (token) {
-      axios.get('http://localhost:5000/notifications/unread-count', {
-          headers: { Authorization: `Bearer ${token}` }
-      })
-      .then(response => {
-         setUnreadCount(response.data.unreadCount);
-      })
-      .catch(err => console.error("Error fetching unread notifications count:", err));
-    }
-  }, [token]);
-
-  const toggleSidebar = () => {
-    setSidebarCollapsed(prev => !prev);
-  };
-
-  const toggleWidgets = () => {
-    setWidgetsCollapsed(prev => !prev);
-  };
+  // ... rest of your HomePage code ...
 
   return (
     <div className="home-page">
@@ -92,7 +75,7 @@ const HomePage = ({ updateLogged, email }) => {
         <div className={`sidebar-container ${sidebarCollapsed ? 'collapsed' : ''}`}>
           <Sidebar
             collapsed={sidebarCollapsed}
-            toggleSidebar={toggleSidebar}
+            toggleSidebar={() => setSidebarCollapsed(prev => !prev)}
             setCurrentView={setCurrentView}
             token={token}
             currentUserId={userId}
@@ -100,27 +83,37 @@ const HomePage = ({ updateLogged, email }) => {
         </div>
 
         <div className="feed-container">
-          {currentView === 'feed' && (
-            <Feed
-              token={token}
-              currentUserId={userId}
-              currentUserProfilePic={currentUserProfilePic}
-              setCurrentView={setCurrentView}
-            />
-          )}
+          {((typeof currentView === 'string' && currentView === 'feed') ||
+            (typeof currentView === 'object' && currentView.view === 'feed')) && (
+              <Feed
+                token={token}
+                currentUserId={userId}
+                currentUsername={currentUsername}
+                currentUserProfilePic={currentUserProfilePic}
+                setCurrentView={setCurrentView}
+                postId={currentView.postId}
+                expandedCommentId={currentView.expandedCommentId}
+              />
+            )}
+
           {currentView === 'friends' && <Friends />}
           {currentView === 'notifications' && (
             <Notifications
               token={token}
-              userId={userId}
               onMarkAllRead={() => setUnreadCount(0)}
+              onProfileClick={(actorId) => setCurrentView({ view: 'profile', userId: actorId })}
+              onPostClick={(payload) => {
+                // payload is an object with keys: view, postId, maybe groupId and expandedCommentId
+                setCurrentView(payload);
+              }}
             />
+
           )}
           {typeof currentView === 'object' && currentView.view === 'profile' && (
-            <Profile 
-              token={token} 
-              userId={currentView.userId}  
-              currentUserId={userId} 
+            <Profile
+              token={token}
+              userId={currentView.userId}
+              currentUserId={userId}
               setCurrentView={setCurrentView}
             />
           )}
@@ -142,14 +135,17 @@ const HomePage = ({ updateLogged, email }) => {
             <GroupPage
               token={token}
               currentUserId={userId}
+              currentUserProfilePic={currentUserProfilePic}
               groupId={currentView.groupId}
               setCurrentView={setCurrentView}
+              postId={currentView.postId}
+              expandedCommentId={currentView.expandedCommentId}
             />
           )}
         </div>
 
         <div className={`widgets-container ${widgetsCollapsed ? 'collapsed' : ''}`}>
-          <Widgets email={email} collapsed={widgetsCollapsed} toggleWidgets={toggleWidgets} />
+          <Widgets email={email} collapsed={widgetsCollapsed} toggleWidgets={() => setWidgetsCollapsed(prev => !prev)} />
         </div>
       </div>
 

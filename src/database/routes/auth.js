@@ -22,7 +22,6 @@ router.post('/register', (req, res) => {
 });
 
 router.post('/login', (req, res) => {
-    console.log('test')
   const { email, password } = req.body;
   const query = 'SELECT * FROM users WHERE email = ? OR username = ?';
   connection.query(query, [email, email], (err, results) => {

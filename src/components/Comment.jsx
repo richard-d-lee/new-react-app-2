@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import ProfilePic from './ProfilePic.jsx';
 import '../styles/Comment.css';
@@ -12,9 +12,12 @@ const Comment = ({
   onDeleteComment, // Callback for deletion
   onProfileClick,  // Callback to view profile
   groupId,         // Optional: if provided, this comment is for a group post
-  groupPostId      // Optional: group post ID (for replies)
+  groupPostId,     // Optional: group post ID (for replies)
+
+  // NEW props for highlighting and scrolling
+  isHighlighted = false,  
+  refCallback = null
 }) => {
-  const isReply = !!comment.parent_comment_id;
   const [likes, setLikes] = useState(comment.likeCount || 0);
   const [liked, setLiked] = useState(false);
   const [replyContent, setReplyContent] = useState('');
@@ -22,6 +25,19 @@ const Comment = ({
   const [error, setError] = useState('');
   const [showAllReplies, setShowAllReplies] = useState(false);
   const [profilePic, setProfilePic] = useState('');
+
+  // This comment might be a reply if parent_comment_id is set
+  const isReply = !!comment.parent_comment_id;
+
+  // For referencing the DOM element
+  const commentEl = useRef(null);
+
+  // If we want to pass this DOM element back to the parent for scrolling
+  useEffect(() => {
+    if (refCallback && commentEl.current) {
+      refCallback(commentEl.current);
+    }
+  }, [refCallback]);
 
   // Use group_comment_id if available when groupId is provided; otherwise, use comment_id.
   const commentId = groupId 
@@ -58,7 +74,10 @@ const Comment = ({
     })
       .then(res => {
         setLiked(res.data.liked);
-        setLikes(res.data.likeCount);
+        // If your endpoint returns likeCount, you can set it here
+        if (typeof res.data.likeCount === 'number') {
+          setLikes(res.data.likeCount);
+        }
       })
       .catch(err => console.error("Error fetching comment like status:", err));
   }, [baseCommentUrl, token]);
@@ -118,10 +137,12 @@ const Comment = ({
       const replyUrl = groupId
         ? `http://localhost:5000/groups/${groupId}/comments/${commentId}/reply`
         : `http://localhost:5000/comments/${commentId}/reply`;
-      // For group replies, include groupPostId in the payload.
+
+      // For group replies, you might include groupPostId in the payload if your backend requires it
       const payload = groupId 
-        ? { content: replyContent, groupPostId: comment.post_id }  // Ensure comment.post_id holds the group post ID
+        ? { content: replyContent, groupPostId: comment.post_id } 
         : { content: replyContent };
+
       const res = await axios.post(replyUrl, payload, {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -136,12 +157,18 @@ const Comment = ({
   };
 
   return (
-    <div className={`comment ${isReply ? 'reply' : ''}`}>
+    <div
+      className={`comment ${isReply ? 'reply' : ''} ${isHighlighted ? 'highlighted' : ''}`}
+      ref={commentEl}
+    >
       {error && <p className="comment-error">{error}</p>}
-      
+
       {/* Comment Header */}
       <div className="comment-header">
-        <span onClick={() => onProfileClick && onProfileClick(comment.user_id)} style={{ cursor: 'pointer' }}>
+        <span
+          onClick={() => onProfileClick && onProfileClick(comment.user_id)}
+          style={{ cursor: 'pointer' }}
+        >
           <ProfilePic imageUrl={profilePic} alt={comment.username || 'User'} size={30} />
         </span>
         <span
@@ -151,24 +178,27 @@ const Comment = ({
         >
           {comment.username || 'User'}
         </span>
-        <span className="comment-timestamp" style={{ fontSize: '12px', color: '#555', marginLeft: 'auto' }}>
+        <span
+          className="comment-timestamp"
+          style={{ fontSize: '12px', color: '#555', marginLeft: 'auto' }}
+        >
           {comment.created_at ? new Date(comment.created_at).toLocaleString() : ''}
         </span>
       </div>
-      
+
       {/* Comment Content */}
       <div className="comment-content">{comment.content}</div>
-      
+
       {/* Comment Stats */}
       <div className="comment-stats">
         {likes > 0 && <span>{likes} {likes === 1 ? 'Like' : 'Likes'}</span>}
         {!isReply && comment.replies && comment.replies.length > 0 && (
           <span>
-            {`${comment.replies.length} ${comment.replies.length === 1 ? 'Reply' : 'Replies'}`}
+            {comment.replies.length} {comment.replies.length === 1 ? 'Reply' : 'Replies'}
           </span>
         )}
       </div>
-      
+
       {/* Comment Actions */}
       <div className="comment-actions">
         <span className="comment-link" onClick={handleLike}>
@@ -185,7 +215,7 @@ const Comment = ({
           </span>
         )}
       </div>
-      
+
       {/* Reply Form */}
       {!isReply && showReplyForm && (
         <div className="comment-reply-form">
@@ -199,11 +229,11 @@ const Comment = ({
           </form>
         </div>
       )}
-      
+
       {/* Replies Section */}
       {!isReply && comment.replies && comment.replies.length > 0 && (
         <div className="comment-replies">
-          {(showAllReplies ? comment.replies : comment.replies.slice(0, 1)).map(r => (
+          {(showAllReplies ? comment.replies : comment.replies.slice(0, 1)).map((r) => (
             <Comment
               key={r.comment_id || r.group_comment_id}
               comment={r}
@@ -213,14 +243,19 @@ const Comment = ({
               onDeleteComment={onDeleteComment}
               onProfileClick={onProfileClick}
               setCurrentView={setCurrentView}
-              groupId={groupId}        // propagate group context
-              groupPostId={groupPostId}  // propagate groupPostId from parent
+              groupId={groupId}
+              groupPostId={groupPostId}
+
+              /* For nested replies, we do not highlight by default
+                 unless you pass down expandedCommentId and compare. */
             />
           ))}
           {comment.replies.length > 1 && (
             <div className="expand-replies-link">
               <span className="comment-link" onClick={toggleShowAllReplies}>
-                {showAllReplies ? `Hide ${comment.replies.length} replies` : `Show ${comment.replies.length} replies`}
+                {showAllReplies
+                  ? `Hide ${comment.replies.length} replies`
+                  : `Show ${comment.replies.length} replies`}
               </span>
             </div>
           )}

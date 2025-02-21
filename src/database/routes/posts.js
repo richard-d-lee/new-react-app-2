@@ -260,5 +260,25 @@ router.get('/:postId/comments', authenticateToken, (req, res) => {
   });
 });
 
+// GET /posts/:id
+router.get('/:id', async (req, res) => {
+  const postId = req.params.id;
+  // Suppose your "posts" table has a "content" column:
+  const query = 'SELECT * FROM posts WHERE post_id = ?';
+  connection.query(query, [postId], (err, results) => {
+    if (err) {
+      console.error('Error fetching post:', err);
+      return res.status(500).json({ error: 'Database error' });
+    }
+    // If results is an array of rows, return the first item or entire array
+    if (results.length === 0) {
+      return res.status(404).json({ error: 'Post not found' });
+    }
+    // Return an object or an array—just be consistent in your front-end
+    res.json(results[0]);
+  });
+});
+
+
 
 export default router;

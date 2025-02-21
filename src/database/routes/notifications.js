@@ -1,4 +1,3 @@
-// routes/notifications.js
 import express from 'express';
 import connection from '../db.js';
 import { authenticateToken } from '../middleware/auth.js';

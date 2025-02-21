@@ -84,7 +84,7 @@ const GroupMembersModal = ({ token, groupId, groupName, currentUserId, onClose, 
 
   const handleAddFriend = async (email, memberId) => {
     try {
-      await axios.post("http://localhost:5000/add-friend", { friendEmail: email }, {
+      await axios.post("http://localhost:5000/friends/add-friend", { friendEmail: email }, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setFriendStatusMap(prev => ({

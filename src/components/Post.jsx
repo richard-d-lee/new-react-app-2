@@ -5,6 +5,18 @@ import ProfilePic from './ProfilePic.jsx';
 import '../styles/Post.css';
 import { buildCommentTree } from '../helpers/buildCommentTree.js';
 
+function findCommentInTree(tree, targetId) {
+  // Recursively search comment tree for targetId
+  for (const comment of tree) {
+    if (comment.comment_id === targetId) return comment;
+    if (comment.replies && comment.replies.length > 0) {
+      const found = findCommentInTree(comment.replies, targetId);
+      if (found) return found;
+    }
+  }
+  return null;
+}
+
 const Post = ({
   post,
   token,
@@ -13,7 +25,8 @@ const Post = ({
   onDelete,
   setCurrentView,
   onProfileClick = () => {},
-  groupId // if provided, this post is a group post
+  groupId,                // if provided, this post is a group post
+  expandedCommentId       // NEW: optional ID to highlight & scroll to
 }) => {
   const [comments, setComments] = useState([]);
   const [newComment, setNewComment] = useState('');
@@ -27,16 +40,17 @@ const Post = ({
   });
 
   const commentsRef = useRef(null);
+  // For scrolling to a specific comment
+  const commentRefs = useRef({}); 
+
   const effectivePostId = post?.post_id || post?.postId;
 
-  // Build base URL for post API calls:
-  // - If groupId is provided, use group endpoints.
-  // - Otherwise, use normal posts endpoints.
+  // Build base URL for post API calls
   const basePostUrl = groupId
     ? `http://localhost:5000/groups/${groupId}/posts/${effectivePostId}`
     : `http://localhost:5000/posts/${effectivePostId}`;
 
-  // Build comments URL:
+  // Build comments URL
   const commentsUrl = groupId
     ? `http://localhost:5000/groups/${groupId}/posts/${effectivePostId}/comments`
     : `http://localhost:5000/posts/${effectivePostId}/comments`;
@@ -63,6 +77,30 @@ const Post = ({
       .then(res => setComments(buildCommentTree(res.data)))
       .catch(err => console.error("Error fetching comments:", err));
   }, [effectivePostId, token, commentsUrl]);
+
+  // If expandedCommentId is provided, auto-expand (showAllComments) if the target comment is not visible
+  useEffect(() => {
+    if (!expandedCommentId || comments.length === 0) return;
+
+    // If the target comment is in the tree, we show all so we can highlight it
+    const foundComment = findCommentInTree(comments, expandedCommentId);
+    if (foundComment) {
+      setShowAllComments(true);
+    }
+  }, [expandedCommentId, comments]);
+
+  // After we've shown all comments, scroll to the highlighted comment
+  useEffect(() => {
+    if (!expandedCommentId || comments.length === 0) return;
+
+    // Delay slightly to ensure DOM is updated
+    setTimeout(() => {
+      const targetEl = commentRefs.current[expandedCommentId];
+      if (targetEl) {
+        targetEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }, 100);
+  }, [expandedCommentId, comments, showAllComments]);
 
   // Fetch like count and liked status for this post
   useEffect(() => {
@@ -118,7 +156,10 @@ const Post = ({
     if (newCommentObj.parent_comment_id) {
       setComments(prev =>
         prev.map(c => c.comment_id === newCommentObj.parent_comment_id
-          ? { ...c, replies: c.replies ? [...c.replies, newCommentObj] : [newCommentObj] }
+          ? {
+              ...c,
+              replies: c.replies ? [...c.replies, newCommentObj] : [newCommentObj]
+            }
           : c
         )
       );
@@ -151,7 +192,10 @@ const Post = ({
     setComments(prev =>
       prev.map(comment => {
         if (parentId && comment.comment_id === parentId && comment.replies) {
-          return { ...comment, replies: comment.replies.filter(r => r.comment_id !== commentId) };
+          return {
+            ...comment,
+            replies: comment.replies.filter(r => r.comment_id !== commentId)
+          };
         }
         return comment;
       }).filter(comment => comment.comment_id !== commentId)
@@ -245,8 +289,16 @@ const Post = ({
             onDeleteComment={handleDeleteComment}
             onProfileClick={handleProfileClick}
             setCurrentView={setCurrentView}
-            groupId={groupId}        // Propagate groupId for group posts
-            groupPostId={effectivePostId} // Propagate group post id for replies
+            groupId={groupId}             // for group posts
+            groupPostId={effectivePostId} // for group replies
+            // Pass a ref callback so we can store each comment DOM node
+            refCallback={(el) => {
+              if (el) commentRefs.current[comment.comment_id] = el;
+            }}
+            // Indicate if this comment is highlighted
+            isHighlighted={expandedCommentId === comment.comment_id}
+            // Also pass expandedCommentId down if you want nested replies to highlight
+            expandedCommentId={expandedCommentId}
           />
         ))}
         {comments.length > 1 && (

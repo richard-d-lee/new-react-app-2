@@ -1,0 +1,86 @@
+.notifications-container {
+    padding: 1rem;
+  }
+  
+  .notifications-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+  }
+  
+  .mark-all-read-btn {
+    margin-bottom: 1rem;
+    background-color: #1877f2;
+    color: #fff;
+    border: none;
+    padding: 8px 12px;
+    cursor: pointer;
+    border-radius: 4px;
+  }
+  
+  .notification-item {
+    border: 1px solid #ccc;
+    margin-bottom: 8px;
+    padding: 8px;
+    transition: background-color 0.3s ease;
+  }
+  
+  .notification-unread {
+    background-color: #eef;
+  }
+  
+  .notification-read {
+    background-color: #fff;
+  }
+  
+  /* Main row: actor pic + main text + date in one line */
+  .actor-section {
+    display: flex;
+    align-items: center;
+  }
+  
+  .actor-pic {
+    cursor: pointer;
+    margin-right: 8px;
+  }
+  
+  .actor-name {
+    font-weight: 600;
+    color: #1877f2;
+    cursor: pointer;
+  }
+  
+  .notification-main-text {
+    margin: 0;
+    flex-grow: 1;
+  }
+  
+  /* Put date on the same line, but on the far right */
+  .notification-date {
+    float: right;
+    font-size: 0.85rem;
+    color: #666;
+    margin-left: 12px;
+  }
+  
+  /* Snippet below the main line */
+  .notification-snippet {
+    margin-top: 4px;
+    font-size: 0.9rem;
+    color: #333;
+  }
+  
+  .snippet-label {
+    font-weight: bold;
+    margin-right: 4px;
+  }
+  
+  .snippet-text {
+    cursor: pointer;
+    color: #1877f2;
+    font-style: italic;
+    text-decoration: none; /* Remove underline */
+  }
+  
+  

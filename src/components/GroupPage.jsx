@@ -6,7 +6,16 @@ import GroupLogoUploader from './GroupLogoUploader.jsx';
 import GroupMembersModal from './GroupMembersModal.jsx';
 import '../styles/GroupPage.css';
 
-const GroupPage = ({ token, currentUserId, currentUserProfilePic, groupId, setCurrentView }) => {
+const GroupPage = ({
+  token,
+  currentUserId,
+  currentUserProfilePic,
+  groupId,
+  setCurrentView,
+  // NEW optional props for single post view from a notification:
+  postId,            // if provided, display only this group post
+  expandedCommentId  // if provided, pass to the Post to auto-expand/highlight a comment
+}) => {
   const [group, setGroup] = useState(null);
   const [isMember, setIsMember] = useState(false);
   const [posts, setPosts] = useState([]);
@@ -14,7 +23,7 @@ const GroupPage = ({ token, currentUserId, currentUserProfilePic, groupId, setCu
   const [showLogoUploader, setShowLogoUploader] = useState(false);
   const [showMembersModal, setShowMembersModal] = useState(false);
 
-  // ✅ Fetch group details
+  // Fetch group details
   const fetchGroupDetails = async () => {
     try {
       const res = await axios.get(`http://localhost:5000/groups/${groupId}`, {
@@ -27,7 +36,7 @@ const GroupPage = ({ token, currentUserId, currentUserProfilePic, groupId, setCu
     }
   };
 
-  // ✅ Check membership status
+  // Check membership status
   const fetchMembershipStatus = async () => {
     try {
       const res = await axios.get(`http://localhost:5000/groups/${groupId}/membership`, {
@@ -39,7 +48,7 @@ const GroupPage = ({ token, currentUserId, currentUserProfilePic, groupId, setCu
     }
   };
 
-  // ✅ Fetch group posts
+  // Fetch group posts
   const fetchGroupPosts = async () => {
     try {
       const res = await axios.get(`http://localhost:5000/groups/${groupId}/posts`, {
@@ -51,50 +60,95 @@ const GroupPage = ({ token, currentUserId, currentUserProfilePic, groupId, setCu
       setError(err.response?.data?.error || "Error fetching group posts");
     }
   };
-  
 
   useEffect(() => {
     if (token && groupId) {
       fetchGroupDetails();
       fetchMembershipStatus();
-      if (isMember) {
-        fetchGroupPosts();
-      }
+    }
+  }, [token, groupId]);
+
+  useEffect(() => {
+    if (token && groupId && isMember) {
+      fetchGroupPosts();
     }
   }, [token, groupId, isMember]);
 
-  // ✅ Handle joining the group
+  // Handle joining the group
   const handleJoinGroup = async () => {
     try {
       await axios.post(`http://localhost:5000/groups/${groupId}/join`, {}, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setIsMember(true);
-      fetchGroupPosts(); // ✅ Fetch posts after joining
+      fetchGroupPosts();
     } catch (err) {
       console.error("Error joining group:", err);
       setError(err.response?.data?.error || "Error joining group");
     }
   };
 
-  // ✅ Handle new post creation (same as `Feed.jsx`)
+  // Handle new post creation (inserts new post at the top)
   const handleNewPost = (newPostObj) => {
-    setPosts(prev => [newPostObj, ...prev]); // ✅ Insert at the top
+    setPosts(prev => [newPostObj, ...prev]);
   };
 
-  // ✅ Handle post deletion (same as `Feed.jsx`)
-  const handleDeletePost = (postId) => {
-    setPosts(prev => prev.filter(p => p.post_id !== postId));
+  // Handle post deletion
+  const handleDeletePost = (delPostId) => {
+    setPosts(prev => prev.filter(p => p.post_id !== delPostId));
   };
 
-  // ✅ Handle group logo update
+  // Handle group logo update
   const handleLogoUpdate = (newLogoUrl) => {
     setGroup(prev => ({ ...prev, icon: newLogoUrl }));
     setShowLogoUploader(false);
   };
 
-  // ✅ Check if the user can update the logo (only owner)
+  // Determine if the user can update the logo (only owner)
   const canUpdateLogo = group && group.creator_id === currentUserId;
+
+  // Render posts:
+  // If postId prop is provided (from a notification), show only that post.
+  // Otherwise, show all group posts.
+  const renderPosts = () => {
+    if (!isMember) return null;
+    if (postId) {
+      const singlePost = posts.find(p => p.post_id === postId);
+      if (!singlePost) return <p>Loading post...</p>;
+      return (
+        <Post
+          key={singlePost.post_id}
+          post={singlePost}
+          token={token}
+          currentUserId={currentUserId}
+          currentUserProfilePic={currentUserProfilePic}
+          setCurrentView={setCurrentView}
+          onDelete={handleDeletePost}
+          onProfileClick={(userId) => setCurrentView({ view: 'profile', userId })}
+          groupId={groupId}
+          expandedCommentId={expandedCommentId}
+        />
+      );
+    } else {
+      return posts.length === 0 ? (
+        <p>No posts in this group yet.</p>
+      ) : (
+        posts.map(p => (
+          <Post
+            key={p.post_id}
+            post={p}
+            token={token}
+            currentUserId={currentUserId}
+            currentUserProfilePic={currentUserProfilePic}
+            setCurrentView={setCurrentView}
+            onDelete={handleDeletePost}
+            onProfileClick={(userId) => setCurrentView({ view: 'profile', userId })}
+            groupId={groupId}
+          />
+        ))
+      );
+    }
+  };
 
   return (
     <div className="group-page">
@@ -131,33 +185,23 @@ const GroupPage = ({ token, currentUserId, currentUserProfilePic, groupId, setCu
 
           {isMember ? (
             <div className="group-posts">
-              <h3>Posts in {group.group_name}</h3>
-
-              {/* ✅ Use CreatePost like `Feed.jsx` */}
-              <CreatePost
-                token={token}
-                currentUserId={currentUserId}
-                currentUserProfilePic={currentUserProfilePic}
-                onNewPost={handleNewPost}
-                groupId={groupId} // ✅ Ensure it posts in the correct group
-              />
-
-              {posts.length === 0 ? (
-                <p>No posts in this group yet.</p>
+              {postId ? (
+                <>
+                  <h3>Post in {group.group_name}</h3>
+                  {renderPosts()}
+                </>
               ) : (
-                posts.map(post => (
-                  <Post
-                    key={post.post_id}
-                    post={post}
+                <>
+                  <h3>Posts in {group.group_name}</h3>
+                  <CreatePost
                     token={token}
                     currentUserId={currentUserId}
                     currentUserProfilePic={currentUserProfilePic}
-                    setCurrentView={setCurrentView}
-                    onDelete={handleDeletePost}
-                    onProfileClick={(userId) => setCurrentView({ view: 'profile', userId })}
-                    groupId={groupId}  // Ensure groupId is passed here for group posts
+                    onNewPost={handleNewPost}
+                    groupId={groupId}
                   />
-                ))
+                  {renderPosts()}
+                </>
               )}
             </div>
           ) : (
@@ -173,7 +217,7 @@ const GroupPage = ({ token, currentUserId, currentUserProfilePic, groupId, setCu
 
       {error && <p className="error">{error}</p>}
 
-      {/* ✅ Group Logo Uploader */}
+      {/* Group Logo Uploader */}
       {showLogoUploader && (
         <GroupLogoUploader 
           token={token} 
@@ -183,15 +227,15 @@ const GroupPage = ({ token, currentUserId, currentUserProfilePic, groupId, setCu
         />
       )}
 
-      {/* ✅ Group Members Modal */}
+      {/* Group Members Modal */}
       {showMembersModal && (
         <GroupMembersModal 
           token={token} 
           groupId={groupId}
-          groupName={group.group_name}
+          groupName={group?.group_name}
           currentUserId={currentUserId}
           onClose={() => setShowMembersModal(false)}
-          isOwnerOrAdmin={canUpdateLogo} // ✅ Only owner in this example
+          isOwnerOrAdmin={canUpdateLogo}
         />
       )}
     </div>

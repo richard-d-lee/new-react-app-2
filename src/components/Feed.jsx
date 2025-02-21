@@ -8,15 +8,16 @@ import '../styles/Feed.css';
 const Feed = ({
   token,
   currentUserId,
-  currentUsername,
   currentUserProfilePic,
+  currentUsername,
   setCurrentView,
-  onProfileClick
+  postId, // optional: if present, we show only this single post
+  expandedCommentId // optional: comment to auto-expand in the post
 }) => {
   const [posts, setPosts] = useState([]);
 
   // Fetch all posts
-  const fetchPosts = async () => {
+  const fetchAllPosts = async () => {
     try {
       const res = await axios.get('http://localhost:5000/posts', {
         headers: { Authorization: `Bearer ${token}` }
@@ -27,45 +28,71 @@ const Feed = ({
     }
   };
 
-  useEffect(() => {
-    if (token) {
-      fetchPosts();
+  // Fetch a single post
+  const fetchSinglePost = async (id) => {
+    try {
+      const res = await axios.get(`http://localhost:5000/posts/${id}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      // The endpoint should return one post object
+      // Put it into an array so we can map over it in the JSX
+      setPosts([res.data]);
+    } catch (err) {
+      console.error('Error fetching single post:', err);
     }
-  }, [token]);
+  };
 
-  // This is called by <CreatePost /> after a new post is created
+  // Decide which posts to fetch on mount or when postId changes
+  useEffect(() => {
+    if (!token) return;
+    if (postId) {
+      // If a single post ID is provided, fetch that post
+      fetchSinglePost(postId);
+    } else {
+      // Otherwise, fetch all posts
+      fetchAllPosts();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token, postId]);
+
+  // Called by <CreatePost /> after a new post is created
   const handleNewPost = (newPostObj) => {
-    // Insert at top
-    setPosts(prev => [newPostObj, ...prev]);
+    // Insert the new post at the top
+    setPosts((prev) => [newPostObj, ...prev]);
   };
 
   // If user deletes a post
-  const handleDeletePost = (postId) => {
-    setPosts(prev => prev.filter(p => p.post_id !== postId));
+  const handleDeletePost = (deleteId) => {
+    setPosts((prev) => prev.filter((p) => p.post_id !== deleteId));
   };
 
   return (
     <div className="feed">
-      <CreatePost
-        token={token}
-        currentUserId={currentUserId}
-        currentUsername={currentUsername}
-        currentUserProfilePic={currentUserProfilePic}
-        onNewPost={handleNewPost}
-      />
+      {/* Only show CreatePost if we are viewing the full feed (not a single post) */}
+      {!postId && (
+        <CreatePost
+          token={token}
+          currentUserId={currentUserId}
+          currentUsername={currentUsername}
+          currentUserProfilePic={currentUserProfilePic}
+          onNewPost={handleNewPost}
+        />
+      )}
 
       {posts.map((post) => (
         <Post
           key={post.post_id}
           post={post}
           token={token}
-          onDelete={(postId) => setPosts(prev => prev.filter(p => p.post_id !== postId))}
+          onDelete={(postId) => handleDeletePost(postId)}
           currentUserId={currentUserId}
           currentUserProfilePic={currentUserProfilePic}
           setCurrentView={setCurrentView}
-          onProfileClick={(userId) => setCurrentView({ view: 'profile', userId })} // ✅ Fix profile navigation
+          onProfileClick={(userId) => setCurrentView({ view: 'profile', userId })}
+          expandedCommentId={expandedCommentId}  // Pass it along here
         />
       ))}
+
     </div>
   );
 };
