@@ -168,39 +168,43 @@ const Comment = ({
   const handleSubmitReply = async (e) => {
     e.preventDefault();
     if (!replyContent.trim()) return;
-  
+
     try {
-      const res = await axios.post(`http://localhost:5000/comments/${comment.comment_id}/reply`, 
-        { content: replyContent }, 
+      const res = await axios.post(
+        `http://localhost:5000/comments/${comment.comment_id}/reply`,
+        { content: replyContent },
         { headers: { Authorization: `Bearer ${token}` } }
       );
-  
+
       const newReplyObj = res.data;
       onAddComment(newReplyObj);
-  
-      // Extract mentions and create mention records
+
+      // If it's a group reply, pass groupId
+      const group_id = groupId || null;
+
       const mentions = extractMentionsFromMarkup(replyContent);
       mentions.forEach(async ({ id: userId }) => {
         try {
-          console.log("Sending Mention:", { comment_id: newReplyObj.comment_id, mentioned_user_id: Number(userId) }); // Debugging
-  
-          await axios.post(`http://localhost:5000/mentions/comment`, 
-            { comment_id: newReplyObj.comment_id, mentioned_user_id: Number(userId) },
-            { headers: { Authorization: `Bearer ${token}` } }
-          );
+          await axios.post('http://localhost:5000/mentions/comment', {
+            comment_id: newReplyObj.comment_id,
+            mentioned_user_id: Number(userId),
+            group_id,
+          }, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
         } catch (err) {
-          console.error("Error creating comment mention:", err);
+          console.error('Error creating comment mention:', err);
         }
       });
-  
+
       setReplyContent('');
       setShowReplyForm(false);
     } catch (err) {
-      console.error("Error creating reply:", err);
-      setError("Could not post reply. Please try again.");
+      console.error('Error creating reply:', err);
+      setError('Could not post reply. Please try again.');
     }
   };
-  
+
 
   // Parse comment content for mentions using onProfileClick from parent.
   const parsedContent = parseMentions(comment.content || '', onProfileClick);
@@ -269,7 +273,7 @@ const Comment = ({
           </form>
         </div>
       )}
-      { !isReply && comment.replies && comment.replies.length > 0 && (
+      {!isReply && comment.replies && comment.replies.length > 0 && (
         <div className="comment-replies">
           {comment.replies.map((r) => (
             <Comment

@@ -64,7 +64,7 @@ const Post = ({
   currentUserProfilePic,
   onDelete,
   setCurrentView,
-  onProfileClick = () => {},
+  onProfileClick = () => { },
   groupId,                // if provided, this post is a group post
   expandedCommentId       // optional ID to highlight & scroll to
 }) => {
@@ -189,9 +189,9 @@ const Post = ({
       setComments(prev =>
         prev.map(c => c.comment_id === newCommentObj.parent_comment_id
           ? {
-              ...c,
-              replies: c.replies ? [...c.replies, newCommentObj] : [newCommentObj]
-            }
+            ...c,
+            replies: c.replies ? [...c.replies, newCommentObj] : [newCommentObj]
+          }
           : c
         )
       );
@@ -237,7 +237,7 @@ const Post = ({
   const handlePostNewComment = async () => {
     if (!newComment.trim()) return;
     if (!effectivePostId) {
-      console.error("Post ID is undefined. Cannot add comment.");
+      console.error('Post ID is undefined. Cannot add comment.');
       return;
     }
     try {
@@ -246,24 +246,28 @@ const Post = ({
       });
       handleAddComment(res.data);
 
-      // --- Mention creation for top-level comments on a post ---
+      // If it's a group post, pass groupId when creating mention notifications
+      const group_id = groupId || null;
+
       const mentions = extractMentionsFromMarkup(newComment);
       mentions.forEach(async ({ id: userId }) => {
         try {
-          await axios.post(`http://localhost:5000/mentions/comment`,
-            { comment_id: res.data.comment_id, mentioned_user_id: userId },
-            { headers: { Authorization: `Bearer ${token}` } }
-          );
+          await axios.post('http://localhost:5000/mentions/comment', {
+            comment_id: res.data.comment_id,
+            mentioned_user_id: userId,
+            group_id, // pass group_id if it's a group
+          }, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
         } catch (err) {
           console.error('Error creating mention for comment:', err);
         }
       });
-      // ---------------------------------------------------------
 
       setNewComment('');
       setShowCommentForm(false);
     } catch (err) {
-      console.error("Error adding comment:", err);
+      console.error('Error adding comment:', err);
     }
   };
 

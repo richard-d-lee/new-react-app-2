@@ -16,7 +16,7 @@ import '../styles/HomePage.css';
 
 const HomePage = ({ updateLogged, email }) => {
   const [userId, setUserId] = useState(null);
-  const [currentUsername, setCurrentUsername] = useState(""); // NEW: store username
+  const [currentUsername, setCurrentUsername] = useState("");
   const [currentUserProfilePic, setCurrentUserProfilePic] = useState("");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [widgetsCollapsed, setWidgetsCollapsed] = useState(false);
@@ -25,6 +25,7 @@ const HomePage = ({ updateLogged, email }) => {
 
   const token = localStorage.getItem('authToken');
 
+  // Decode token for user ID
   useEffect(() => {
     if (token) {
       try {
@@ -38,6 +39,7 @@ const HomePage = ({ updateLogged, email }) => {
     }
   }, [token, updateLogged]);
 
+  // Fetch current user's profile info
   useEffect(() => {
     if (token && userId) {
       axios.get(`http://localhost:5000/users/${userId}`, {
@@ -45,7 +47,7 @@ const HomePage = ({ updateLogged, email }) => {
       })
         .then((res) => {
           setCurrentUserProfilePic(res.data.profile_picture_url || "");
-          setCurrentUsername(res.data.username || ""); // NEW: store the username
+          setCurrentUsername(res.data.username || "");
         })
         .catch((err) => {
           console.error("Error fetching user details:", err);
@@ -57,16 +59,38 @@ const HomePage = ({ updateLogged, email }) => {
     }
   }, [token, userId, updateLogged]);
 
-  // ... rest of your HomePage code ...
+  // 1) Define a function to fetch unread notifications count
+  const refreshUnreadCount = () => {
+    if (!token || !userId) return;
+    axios
+      .get('http://localhost:5000/notifications/unread-count', {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      .then((res) => {
+        setUnreadCount(res.data.unreadCount || 0);
+      })
+      .catch((err) => {
+        console.error('Error fetching unread count:', err);
+      });
+  };
+
+  // 2) On mount or whenever userId changes, fetch unread count
+  useEffect(() => {
+    if (token && userId) {
+      refreshUnreadCount();
+    }
+  }, [token, userId]);
 
   return (
     <div className="home-page">
       <div className="nav">
+        {/* Pass unreadCount to the Navbar for the badge */}
         <Navbar
           updateLogged={updateLogged}
           setCurrentView={setCurrentView}
           profilePic={currentUserProfilePic}
           userId={userId}
+          token={token}
           unreadCount={unreadCount}
         />
       </div>
@@ -75,7 +99,7 @@ const HomePage = ({ updateLogged, email }) => {
         <div className={`sidebar-container ${sidebarCollapsed ? 'collapsed' : ''}`}>
           <Sidebar
             collapsed={sidebarCollapsed}
-            toggleSidebar={() => setSidebarCollapsed(prev => !prev)}
+            toggleSidebar={() => setSidebarCollapsed((prev) => !prev)}
             setCurrentView={setCurrentView}
             token={token}
             currentUserId={userId}
@@ -83,32 +107,34 @@ const HomePage = ({ updateLogged, email }) => {
         </div>
 
         <div className="feed-container">
+          {/* Display Feed if currentView is 'feed' */}
           {((typeof currentView === 'string' && currentView === 'feed') ||
             (typeof currentView === 'object' && currentView.view === 'feed')) && (
-              <Feed
-                token={token}
-                currentUserId={userId}
-                currentUsername={currentUsername}
-                currentUserProfilePic={currentUserProfilePic}
-                setCurrentView={setCurrentView}
-                postId={currentView.postId}
-                expandedCommentId={currentView.expandedCommentId}
-              />
-            )}
+            <Feed
+              token={token}
+              currentUserId={userId}
+              currentUsername={currentUsername}
+              currentUserProfilePic={currentUserProfilePic}
+              setCurrentView={setCurrentView}
+              postId={currentView.postId}
+              expandedCommentId={currentView.expandedCommentId}
+            />
+          )}
 
           {currentView === 'friends' && <Friends />}
+          
           {currentView === 'notifications' && (
             <Notifications
               token={token}
+              // If user clicks Mark All as Read => zero out unread
               onMarkAllRead={() => setUnreadCount(0)}
               onProfileClick={(actorId) => setCurrentView({ view: 'profile', userId: actorId })}
-              onPostClick={(payload) => {
-                // payload is an object with keys: view, postId, maybe groupId and expandedCommentId
-                setCurrentView(payload);
-              }}
+              onPostClick={(payload) => setCurrentView(payload)}
+              // 3) Pass the callback to refresh unread count
+              onUnreadCountChange={refreshUnreadCount}
             />
-
           )}
+
           {typeof currentView === 'object' && currentView.view === 'profile' && (
             <Profile
               token={token}
@@ -117,6 +143,7 @@ const HomePage = ({ updateLogged, email }) => {
               setCurrentView={setCurrentView}
             />
           )}
+
           {currentView === 'settings' && (
             <Settings
               token={token}
@@ -124,6 +151,7 @@ const HomePage = ({ updateLogged, email }) => {
               setCurrentView={setCurrentView}
             />
           )}
+
           {currentView === 'groups' && (
             <Groups
               token={token}
@@ -131,6 +159,7 @@ const HomePage = ({ updateLogged, email }) => {
               setCurrentView={setCurrentView}
             />
           )}
+
           {typeof currentView === 'object' && currentView.view === 'group' && (
             <GroupPage
               token={token}
@@ -145,10 +174,15 @@ const HomePage = ({ updateLogged, email }) => {
         </div>
 
         <div className={`widgets-container ${widgetsCollapsed ? 'collapsed' : ''}`}>
-          <Widgets email={email} collapsed={widgetsCollapsed} toggleWidgets={() => setWidgetsCollapsed(prev => !prev)} />
+          <Widgets
+            email={email}
+            collapsed={widgetsCollapsed}
+            toggleWidgets={() => setWidgetsCollapsed((prev) => !prev)}
+          />
         </div>
       </div>
 
+      {/* Messenger */}
       {userId ? (
         <Messenger userId={userId} token={token} />
       ) : (

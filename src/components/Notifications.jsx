@@ -3,7 +3,13 @@ import axios from 'axios';
 import '../styles/Notifications.css';
 import ProfilePic from './ProfilePic.jsx';
 
-const Notifications = ({ token, onMarkAllRead, onProfileClick, onPostClick }) => {
+const Notifications = ({
+  token,
+  onMarkAllRead,          // existing prop
+  onProfileClick,
+  onPostClick,
+  onUnreadCountChange     // NEW: callback to update unread count in parent
+}) => {
   const [notifications, setNotifications] = useState([]);
 
   // Helper: truncate text to a maximum length
@@ -15,7 +21,7 @@ const Notifications = ({ token, onMarkAllRead, onProfileClick, onPostClick }) =>
   function removeMentionMarkup(text = '') {
     // Example: "@[zubzug](10) hey" => "zubzug hey"
     return text.replace(/@\[(.*?)\]\(\d+\)/g, '$1');
-  }  
+  }
 
   useEffect(() => {
     if (!token) return;
@@ -25,9 +31,8 @@ const Notifications = ({ token, onMarkAllRead, onProfileClick, onPostClick }) =>
       })
       .then(async (res) => {
         const rawNotifications = res.data;
-        console.log(rawNotifications)
 
-        // 1. Fetch actor data for each notification (if available)
+        // 1. Fetch actor data for each notification
         const withActors = await Promise.all(
           rawNotifications.map(async (notif) => {
             let actorObj = null;
@@ -50,14 +55,10 @@ const Notifications = ({ token, onMarkAllRead, onProfileClick, onPostClick }) =>
         const withSnippets = await Promise.all(
           withActors.map(async (notif) => {
             try {
-              // Handle post-related notifications
+              // Handle post or group_post
               if (notif.reference_type === 'post' || notif.reference_type === 'group_post') {
-                if (notif.reference_type === 'group_post') {
-                  // For group posts, require a valid group_id and call the group endpoint.
-                  if (!notif.group_id) {
-                    console.error("Missing group_id for group_post notification", notif);
-                    return notif;
-                  }
+                if (notif.group_id) {
+                  // Group post
                   const groupPostRes = await axios.get(
                     `http://localhost:5000/groups/${notif.group_id}/posts/${notif.reference_id}`,
                     { headers: { Authorization: `Bearer ${token}` } }
@@ -65,7 +66,8 @@ const Notifications = ({ token, onMarkAllRead, onProfileClick, onPostClick }) =>
                   const groupPostData = Array.isArray(groupPostRes.data)
                     ? groupPostRes.data[0]
                     : groupPostRes.data;
-                  const snippet = truncateText(groupPostData?.content || '', 15);
+                  const rawContent = groupPostData?.content || '';
+                  const snippet = truncateText(removeMentionMarkup(rawContent), 15);
                   return { ...notif, _snippet: snippet };
                 } else {
                   // Regular feed post
@@ -76,63 +78,32 @@ const Notifications = ({ token, onMarkAllRead, onProfileClick, onPostClick }) =>
                   const postData = Array.isArray(postRes.data)
                     ? postRes.data[0]
                     : postRes.data;
-                  const snippet = truncateText(postData?.content || '', 15);
+                  const rawContent = postData?.content || '';
+                  const snippet = truncateText(removeMentionMarkup(rawContent), 15);
                   return { ...notif, _snippet: snippet };
                 }
               }
-              // Handle comment notifications
+
+              // Handle comment or group_comment
               if (notif.reference_type === 'comment' || notif.reference_type === 'group_comment') {
-                let isGroup = notif.reference_type === 'group_comment' || !!notif.group_id;
-                if (isGroup) {
-                  let groupId = notif.group_id;
-                  // If group_id is missing, attempt to retrieve it from the comment's post via /feed/
-                  if (!groupId) {
-                    try {
-                      const commentRes = await axios.get(
-                        `http://localhost:5000/comments/${notif.reference_id}`,
-                        { headers: { Authorization: `Bearer ${token}` } }
-                      );
-                      const commentData = Array.isArray(commentRes.data)
-                        ? commentRes.data[0]
-                        : commentRes.data;
-                      if (commentData?.post_id) {
-                        const postRes = await axios.get(
-                          `http://localhost:5000/feed/${commentData.post_id}`,
-                          { headers: { Authorization: `Bearer ${token}` } }
-                        );
-                        const postData = Array.isArray(postRes.data)
-                          ? postRes.data[0]
-                          : postRes.data;
-                        groupId = postData?.group_id;
-                      }
-                    } catch (err) {
-                      console.error('Error fetching group_id for comment:', err);
-                    }
-                  }
-                  if (groupId) {
-                    const groupCommentRes = await axios.get(
-                      `http://localhost:5000/groups/${groupId}/comments/${notif.reference_id}`,
-                      { headers: { Authorization: `Bearer ${token}` } }
-                    );
-                    const groupCommentData = Array.isArray(groupCommentRes.data)
-                      ? groupCommentRes.data[0]
-                      : groupCommentRes.data;
-                    const snippet = truncateText(groupCommentData?.content || '', 15);
-                    const postId = groupCommentData?.post_id || null;
-                    return { ...notif, _snippet: snippet, _postId: postId, group_id: groupId };
-                  } else {
-                    // Fallback: regular comment endpoint
-                    const commentRes = await axios.get(
-                      `http://localhost:5000/comments/${notif.reference_id}`,
-                      { headers: { Authorization: `Bearer ${token}` } }
-                    );
-                    const commentData = Array.isArray(commentRes.data)
-                      ? commentRes.data[0]
-                      : commentRes.data;
-                    const snippet = truncateText(commentData?.content || '', 15);
-                    const postId = commentData?.post_id || null;
-                    return { ...notif, _snippet: snippet, _postId: postId };
-                  }
+                if (notif.group_id) {
+                  // Group comment
+                  const groupCommentRes = await axios.get(
+                    `http://localhost:5000/groups/${notif.group_id}/comments/${notif.reference_id}`,
+                    { headers: { Authorization: `Bearer ${token}` } }
+                  );
+                  const groupCommentData = Array.isArray(groupCommentRes.data)
+                    ? groupCommentRes.data[0]
+                    : groupCommentRes.data;
+                  const rawContent = groupCommentData?.content || '';
+                  const snippet = truncateText(removeMentionMarkup(rawContent), 15);
+                  const postId = groupCommentData?.post_id || null;
+                  return {
+                    ...notif,
+                    _snippet: snippet,
+                    _postId: postId,
+                    group_id: notif.group_id
+                  };
                 } else {
                   // Regular comment
                   const commentRes = await axios.get(
@@ -142,7 +113,8 @@ const Notifications = ({ token, onMarkAllRead, onProfileClick, onPostClick }) =>
                   const commentData = Array.isArray(commentRes.data)
                     ? commentRes.data[0]
                     : commentRes.data;
-                  const snippet = truncateText(commentData?.content || '', 15);
+                  const rawContent = commentData?.content || '';
+                  const snippet = truncateText(removeMentionMarkup(rawContent), 15);
                   const postId = commentData?.post_id || null;
                   return { ...notif, _snippet: snippet, _postId: postId };
                 }
@@ -151,11 +123,20 @@ const Notifications = ({ token, onMarkAllRead, onProfileClick, onPostClick }) =>
               console.error('Error fetching snippet for notification:', err);
               return notif;
             }
-            return notif;
+            return notif; // if not post/comment, just return as-is
           })
         );
 
-        setNotifications(withSnippets);
+        // 3. Sort: unread first, then by created_at descending
+        const sortedNotifications = withSnippets.sort((a, b) => {
+          // Unread first
+          if (a.is_read === 0 && b.is_read === 1) return -1;
+          if (a.is_read === 1 && b.is_read === 0) return 1;
+          // Both have same is_read => compare date (descending)
+          return new Date(b.created_at) - new Date(a.created_at);
+        });
+
+        setNotifications(sortedNotifications);
       })
       .catch((err) => console.error('Error fetching notifications:', err));
   }, [token]);
@@ -170,8 +151,11 @@ const Notifications = ({ token, onMarkAllRead, onProfileClick, onPostClick }) =>
         setNotifications((prev) =>
           prev.map((n) => (n.notification_id === id ? { ...n, is_read: 1 } : n))
         );
+        if (onUnreadCountChange) {
+          onUnreadCountChange();
+        }
       })
-      .catch(err => console.error('Error marking notification as read:', err));
+      .catch((err) => console.error('Error marking notification as read:', err));
   };
 
   // Mark all notifications as read
@@ -182,9 +166,14 @@ const Notifications = ({ token, onMarkAllRead, onProfileClick, onPostClick }) =>
       })
       .then(() => {
         setNotifications((prev) => prev.map((n) => ({ ...n, is_read: 1 })));
-        if (onMarkAllRead) onMarkAllRead();
+        if (onMarkAllRead) {
+          onMarkAllRead();
+        }
+        if (onUnreadCountChange) {
+          onUnreadCountChange();
+        }
       })
-      .catch(err => console.error('Error marking all as read:', err));
+      .catch((err) => console.error('Error marking all as read:', err));
   };
 
   // When hovering over a notification, mark it as read if not already.
@@ -221,18 +210,20 @@ const Notifications = ({ token, onMarkAllRead, onProfileClick, onPostClick }) =>
     }
   };
 
-  // Handle clicking on the snippet to navigate to the related post/comment.
   const handleSnippetClick = (notif) => {
     if (!onPostClick) return;
     if (notif.group_id) {
-      // For group-related notifications, navigate to the group view.
+      // group post/comment
       if (notif.reference_type === 'post' || notif.reference_type === 'group_post') {
         onPostClick({
           view: 'group',
           groupId: notif.group_id,
           postId: notif.reference_id
         });
-      } else if ((notif.reference_type === 'comment' || notif.reference_type === 'group_comment') && notif._postId) {
+      } else if (
+        (notif.reference_type === 'comment' || notif.reference_type === 'group_comment') &&
+        notif._postId
+      ) {
         onPostClick({
           view: 'group',
           groupId: notif.group_id,
@@ -241,7 +232,7 @@ const Notifications = ({ token, onMarkAllRead, onProfileClick, onPostClick }) =>
         });
       }
     } else {
-      // Otherwise, fallback to the feed view.
+      // feed post/comment
       if (notif.reference_type === 'post') {
         onPostClick({ view: 'feed', postId: notif.reference_id });
       } else if (notif.reference_type === 'comment' && notif._postId) {
@@ -250,7 +241,6 @@ const Notifications = ({ token, onMarkAllRead, onProfileClick, onPostClick }) =>
     }
   };
 
-  // Handle clicking on the actor's profile.
   const handleActorClick = (actorId) => {
     if (onProfileClick) onProfileClick(actorId);
   };
@@ -274,6 +264,7 @@ const Notifications = ({ token, onMarkAllRead, onProfileClick, onPostClick }) =>
           : 'https://t3.ftcdn.net/jpg/10/29/65/84/360_F_1029658445_rfwMzxeuqrvm7GTY4Yr9WaBbYKlXIRs7.jpg';
         const mainText = formatNotificationMessage(notif);
         const snippet = notif._snippet;
+
         return (
           <div
             key={notif.notification_id}

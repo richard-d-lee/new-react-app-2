@@ -5,12 +5,7 @@ import NavLink from './NavLink.jsx';
 import UserProfile from './UserProfile.jsx';
 import { FaHome, FaUserFriends, FaBell, FaUsers } from 'react-icons/fa';
 
-const Navbar = ({ updateLogged, setCurrentView, profilePic, userId }) => {
-  // You may want to pass in "unreadCount" as a prop from HomePage
-  // so that we can display the badge on the notifications icon.
-  // For example: Navbar({ unreadCount, updateLogged, ... })
-  const unreadCount = 0; // placeholder if you pass it as a prop
-
+const Navbar = ({ updateLogged, setCurrentView, profilePic, userId, token, unreadCount }) => {
   return (
     <div className="navbar">
       <div className="left-container">
@@ -43,21 +38,51 @@ const Navbar = ({ updateLogged, setCurrentView, profilePic, userId }) => {
             <NavLink icon={<FaUsers />} text="Groups" />
           </div>
 
-          {/* Wrap the notifications link in a clickable div */}
+          {/* Notification Link with Bell */}
           <div
+            style={{ cursor: 'pointer', position: 'relative', display: 'flex', alignItems: 'center' }}
             onClick={() => setCurrentView('notifications')}
-            style={{ position: 'relative', cursor: 'pointer' }}
           >
-            <NavLink icon={<FaBell />} text="Notifications" />
-            
-            {/* Show the badge if unreadCount > 0 */}
-            {unreadCount > 0 && (
-              <span className="notification-badge">
-                {unreadCount}
-              </span>
-            )}
+            {/* Bell container for the red circle + count */}
+            <div style={{ position: 'relative', display: 'inline-block' }}>
+              <FaBell
+                style={{
+                  fontSize: '1.2rem',
+                  padding: '3px 3px 3px 3px',
+                  // (1) Shift the bell down a bit
+                  position: 'relative',
+                  top: '3px',
+                  backgroundColor: unreadCount > 0 ? 'red' : 'transparent',
+                  color: '#fff',
+                  borderRadius: '50%'
+                }}
+              />
+              {/* Show the unread count if > 0, positioned inside the bell */}
+              {unreadCount > 0 && (
+                <span
+                  style={{
+                    position: 'absolute',
+                    // (2) Center the text
+                    top: '50%',
+                    left: '48%',
+                    transform: 'translate(-50%, -50%)',
+                    fontWeight: 'bold',
+                    fontSize: '0.8rem',
+                    color: '#000'
+                  }}
+                >
+                  {unreadCount}
+                </span>
+              )}
+            </div>
+
+            {/* The word 'Notifications' to the right of the bell */}
+            <span style={{ marginLeft: '8px', color: '#fff' }}>
+              Notifications
+            </span>
           </div>
         </div>
+
         <div className="user-profile-container">
           <UserProfile
             userId={userId}

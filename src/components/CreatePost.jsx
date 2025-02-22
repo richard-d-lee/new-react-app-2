@@ -22,15 +22,17 @@ const CreatePost = ({ token, currentUserId, onNewPost, groupId }) => {
   const [content, setContent] = useState('');
   const [error, setError] = useState('');
 
+  // 1) Define fetchUsers here
   const fetchUsers = async (query, callback) => {
     if (!query) return callback([]);
     try {
       const res = await axios.get(`http://localhost:5000/users/search?query=${query}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      const suggestions = res.data.map(user => ({
+      // transform response data into {id, display} objects:
+      const suggestions = res.data.map((user) => ({
         id: user.user_id.toString(),
-        display: user.username
+        display: user.username,
       }));
       callback(suggestions);
     } catch (err) {
@@ -46,25 +48,26 @@ const CreatePost = ({ token, currentUserId, onNewPost, groupId }) => {
     try {
       const url = groupId ? `http://localhost:5000/groups/${groupId}/posts` : `http://localhost:5000/feed`;
       const res = await axios.post(url, { content }, { headers: { Authorization: `Bearer ${token}` } });
-
       onNewPost(res.data);
 
+      // mention logic:
       const mentions = extractMentionsFromMarkup(content);
+      const group_id = groupId || null;
       mentions.forEach(async ({ id: userId }) => {
         try {
-          await axios.post(`http://localhost:5000/mentions/post`, 
-            { post_id: res.data.post_id, mentioned_user_id: userId },
+          await axios.post(`http://localhost:5000/mentions/post`,
+            { post_id: res.data.post_id, mentioned_user_id: userId, group_id },
             { headers: { Authorization: `Bearer ${token}` } }
           );
         } catch (err) {
-          console.error("Error processing mention for post:", err);
+          console.error('Error processing mention for post:', err);
         }
       });
 
       setContent('');
     } catch (err) {
-      console.error("Error creating post:", err);
-      setError(err.response?.data?.error || "Error creating post");
+      console.error('Error creating post:', err);
+      setError(err.response?.data?.error || 'Error creating post');
     }
   };
 
@@ -81,6 +84,7 @@ const CreatePost = ({ token, currentUserId, onNewPost, groupId }) => {
           markup="@[__display__](__id__)"
           displayTransform={(id, display) => `@${display}`}
         >
+          {/* 2) Use fetchUsers for the data prop */}
           <Mention
             trigger="@"
             data={fetchUsers}
