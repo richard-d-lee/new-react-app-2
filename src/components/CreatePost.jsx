@@ -1,37 +1,66 @@
 import React, { useState } from 'react';
 import axios from 'axios';
+import { extractMentionsFromMarkup } from '../helpers/parseMentions';
+import { MentionsInput, Mention } from 'react-mentions';
 import '../styles/CreatePost.css';
 
-const CreatePost = ({
-  token,
-  currentUserId,
-  currentUserProfilePic,
-  onNewPost,
-  groupId // If provided, we're posting in a group
-}) => {
+const mentionStyle = { backgroundColor: '#daf4fa' };
+const defaultStyle = {
+  control: { backgroundColor: '#fff', fontSize: 14 },
+  '&multiLine': {
+    control: { minHeight: 63 },
+    highlighter: { padding: 9, border: '1px solid transparent' },
+    input: { padding: 9, border: '1px solid silver' }
+  },
+  suggestions: {
+    list: { backgroundColor: 'white', border: '1px solid #ccc', fontSize: 14, maxHeight: 150, overflowY: 'auto' },
+    item: { padding: '5px 15px', borderBottom: '1px solid #ddd', '&focused': { backgroundColor: '#cee4e5' } }
+  }
+};
+
+const CreatePost = ({ token, currentUserId, onNewPost, groupId }) => {
   const [content, setContent] = useState('');
   const [error, setError] = useState('');
+
+  const fetchUsers = async (query, callback) => {
+    if (!query) return callback([]);
+    try {
+      const res = await axios.get(`http://localhost:5000/users/search?query=${query}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const suggestions = res.data.map(user => ({
+        id: user.user_id.toString(),
+        display: user.username
+      }));
+      callback(suggestions);
+    } catch (err) {
+      console.error('Error fetching mention suggestions:', err);
+      callback([]);
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!content.trim()) return;
 
     try {
-      let url = '';
-      if (groupId) {
-        // For group posts, the endpoint now inserts the post into the unified posts table
-        // with post_type set to 'group' and group_id set accordingly.
-        url = `http://localhost:5000/groups/${groupId}/posts`;
-      } else {
-        // For regular feed posts, the endpoint sets post_type to 'feed'
-        url = `http://localhost:5000/feed`;
-      }
+      const url = groupId ? `http://localhost:5000/groups/${groupId}/posts` : `http://localhost:5000/feed`;
+      const res = await axios.post(url, { content }, { headers: { Authorization: `Bearer ${token}` } });
 
-      const res = await axios.post(url, { content }, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      // onNewPost is called with the new post data returned from the server.
       onNewPost(res.data);
+
+      const mentions = extractMentionsFromMarkup(content);
+      mentions.forEach(async ({ id: userId }) => {
+        try {
+          await axios.post(`http://localhost:5000/mentions/post`, 
+            { post_id: res.data.post_id, mentioned_user_id: userId },
+            { headers: { Authorization: `Bearer ${token}` } }
+          );
+        } catch (err) {
+          console.error("Error processing mention for post:", err);
+        }
+      });
+
       setContent('');
     } catch (err) {
       console.error("Error creating post:", err);
@@ -43,11 +72,23 @@ const CreatePost = ({
     <div className="create-post">
       {error && <p className="error">{error}</p>}
       <form onSubmit={handleSubmit}>
-        <textarea
+        <MentionsInput
           value={content}
           onChange={(e) => setContent(e.target.value)}
-          placeholder="Write your post here..."
-        />
+          style={defaultStyle}
+          placeholder="Write your post here... Use @ to mention someone."
+          allowSuggestionsAboveCursor
+          markup="@[__display__](__id__)"
+          displayTransform={(id, display) => `@${display}`}
+        >
+          <Mention
+            trigger="@"
+            data={fetchUsers}
+            style={mentionStyle}
+            markup="@[__display__](__id__)"
+            displayTransform={(id, display) => `@${display}`}
+          />
+        </MentionsInput>
         <button type="submit">Post</button>
       </form>
     </div>

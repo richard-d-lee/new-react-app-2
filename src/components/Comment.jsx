@@ -2,71 +2,117 @@ import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import ProfilePic from './ProfilePic.jsx';
 import '../styles/Comment.css';
+import { parseMentions, extractMentionsFromMarkup } from '../helpers/parseMentions.js';
+import { MentionsInput, Mention } from 'react-mentions';
+
+const mentionStyle = { backgroundColor: '#daf4fa' };
+const defaultStyle = {
+  control: {
+    backgroundColor: '#fff',
+    fontSize: 14,
+    fontWeight: 'normal'
+  },
+  '&multiLine': {
+    control: {
+      minHeight: 50
+    },
+    highlighter: {
+      padding: 9,
+      border: '1px solid transparent'
+    },
+    input: {
+      padding: 9,
+      border: '1px solid silver'
+    }
+  },
+  suggestions: {
+    list: {
+      backgroundColor: 'white',
+      border: '1px solid #ccc',
+      fontSize: 14,
+      maxHeight: 150,
+      overflowY: 'auto'
+    },
+    item: {
+      padding: '5px 15px',
+      borderBottom: '1px solid #ddd',
+      '&focused': {
+        backgroundColor: '#cee4e5'
+      }
+    }
+  }
+};
 
 const Comment = ({
-  comment,
+  comment = {},
   token,
   currentUserId,
   setCurrentView,
-  onAddComment,    // Callback for when a reply is added
-  onDeleteComment, // Callback for deletion
-  onProfileClick,  // Callback to view profile
-  groupId,         // Optional: if provided, this comment is for a group post
-  groupPostId,     // Optional: group post ID (for replies)
-
-  // NEW props for highlighting and scrolling
-  isHighlighted = false,  
+  onAddComment,
+  onDeleteComment,
+  onProfileClick,
+  groupId,
+  groupPostId,
+  isHighlighted = false,
   refCallback = null
 }) => {
+  // Use default fallback values to avoid undefined errors.
   const [likes, setLikes] = useState(comment.likeCount || 0);
   const [liked, setLiked] = useState(false);
   const [replyContent, setReplyContent] = useState('');
   const [showReplyForm, setShowReplyForm] = useState(false);
   const [error, setError] = useState('');
-  const [showAllReplies, setShowAllReplies] = useState(false);
   const [profilePic, setProfilePic] = useState('');
 
-  // This comment might be a reply if parent_comment_id is set
   const isReply = !!comment.parent_comment_id;
-
-  // For referencing the DOM element
   const commentEl = useRef(null);
-
-  // If we want to pass this DOM element back to the parent for scrolling
   useEffect(() => {
     if (refCallback && commentEl.current) {
       refCallback(commentEl.current);
     }
   }, [refCallback]);
 
-  // Use group_comment_id if available when groupId is provided; otherwise, use comment_id.
-  const commentId = groupId 
+  // Use group_comment_id if available when groupId is provided; fallback to comment_id.
+  const commentId = groupId
     ? (comment.group_comment_id || comment.comment_id)
     : comment.comment_id;
 
-  // Build base URL for comment endpoints:
-  // For group comments, endpoints will be under /groups/{groupId}/comments/{commentId}
   const baseCommentUrl = groupId
     ? `http://localhost:5000/groups/${groupId}/comments/${commentId}`
     : `http://localhost:5000/comments/${commentId}`;
 
-  // Fetch commenter's profile picture
+  // For mention suggestions in the reply form
+  const fetchUsers = async (query, callback) => {
+    if (!query) return callback([]);
+    try {
+      const res = await axios.get(`http://localhost:5000/users/search?query=${query}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const suggestions = res.data.map(user => ({
+        id: user.user_id.toString(),
+        display: user.username
+      }));
+      callback(suggestions);
+    } catch (err) {
+      console.error('Error fetching mention suggestions:', err);
+      callback([]);
+    }
+  };
+
   useEffect(() => {
     if (!comment.user_id) return;
     axios.get(`http://localhost:5000/users/${comment.user_id}`, {
       headers: { Authorization: `Bearer ${token}` }
     })
       .then(res => {
-        setProfilePic(
-          res.data.profile_picture_url
-            ? `http://localhost:5000${res.data.profile_picture_url}`
-            : "https://t3.ftcdn.net/jpg/10/29/65/84/360_F_1029658445_rfwMzxeuqrvm7GTY4Yr9WaBbYKlXIRs7.jpg"
-        );
+        const picUrl = res.data.profile_picture_url
+          ? `http://localhost:5000${res.data.profile_picture_url}`
+          : "https://t3.ftcdn.net/jpg/10/29/65/84/360_F_1029658445_rfwMzxeuqrvm7GTY4Yr9WaBbYKlXIRs7.jpg";
+        setProfilePic(picUrl);
       })
       .catch(err => console.error("Error fetching commenter's profile picture:", err));
   }, [comment.user_id, token]);
 
-  // Fetch like status for the comment
   useEffect(() => {
     if (!token) return;
     axios.get(`${baseCommentUrl}/liked`, {
@@ -74,7 +120,6 @@ const Comment = ({
     })
       .then(res => {
         setLiked(res.data.liked);
-        // If your endpoint returns likeCount, you can set it here
         if (typeof res.data.likeCount === 'number') {
           setLikes(res.data.likeCount);
         }
@@ -82,7 +127,6 @@ const Comment = ({
       .catch(err => console.error("Error fetching comment like status:", err));
   }, [baseCommentUrl, token]);
 
-  // Toggle like/unlike for the comment
   const handleLike = async () => {
     try {
       if (!liked) {
@@ -104,7 +148,6 @@ const Comment = ({
     }
   };
 
-  // Delete the comment
   const handleDelete = async () => {
     if (!window.confirm("Are you sure you want to delete this comment?")) return;
     try {
@@ -118,36 +161,38 @@ const Comment = ({
     }
   };
 
-  // Toggle reply form
   const toggleReplyForm = () => {
     setShowReplyForm(prev => !prev);
   };
 
-  // Toggle showing all replies
-  const toggleShowAllReplies = () => {
-    setShowAllReplies(prev => !prev);
-  };
-
-  // Submit a reply to the comment
   const handleSubmitReply = async (e) => {
     e.preventDefault();
     if (!replyContent.trim()) return;
+  
     try {
-      // Use group-specific endpoint if groupId is provided.
-      const replyUrl = groupId
-        ? `http://localhost:5000/groups/${groupId}/comments/${commentId}/reply`
-        : `http://localhost:5000/comments/${commentId}/reply`;
-
-      // For group replies, you might include groupPostId in the payload if your backend requires it
-      const payload = groupId 
-        ? { content: replyContent, groupPostId: comment.post_id } 
-        : { content: replyContent };
-
-      const res = await axios.post(replyUrl, payload, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const res = await axios.post(`http://localhost:5000/comments/${comment.comment_id}/reply`, 
+        { content: replyContent }, 
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+  
       const newReplyObj = res.data;
       onAddComment(newReplyObj);
+  
+      // Extract mentions and create mention records
+      const mentions = extractMentionsFromMarkup(replyContent);
+      mentions.forEach(async ({ id: userId }) => {
+        try {
+          console.log("Sending Mention:", { comment_id: newReplyObj.comment_id, mentioned_user_id: Number(userId) }); // Debugging
+  
+          await axios.post(`http://localhost:5000/mentions/comment`, 
+            { comment_id: newReplyObj.comment_id, mentioned_user_id: Number(userId) },
+            { headers: { Authorization: `Bearer ${token}` } }
+          );
+        } catch (err) {
+          console.error("Error creating comment mention:", err);
+        }
+      });
+  
       setReplyContent('');
       setShowReplyForm(false);
     } catch (err) {
@@ -155,6 +200,10 @@ const Comment = ({
       setError("Could not post reply. Please try again.");
     }
   };
+  
+
+  // Parse comment content for mentions using onProfileClick from parent.
+  const parsedContent = parseMentions(comment.content || '', onProfileClick);
 
   return (
     <div
@@ -162,8 +211,6 @@ const Comment = ({
       ref={commentEl}
     >
       {error && <p className="comment-error">{error}</p>}
-
-      {/* Comment Header */}
       <div className="comment-header">
         <span
           onClick={() => onProfileClick && onProfileClick(comment.user_id)}
@@ -185,80 +232,59 @@ const Comment = ({
           {comment.created_at ? new Date(comment.created_at).toLocaleString() : ''}
         </span>
       </div>
-
-      {/* Comment Content */}
-      <div className="comment-content">{comment.content}</div>
-
-      {/* Comment Stats */}
+      <div className="comment-content">
+        {parsedContent}
+      </div>
       <div className="comment-stats">
         {likes > 0 && <span>{likes} {likes === 1 ? 'Like' : 'Likes'}</span>}
-        {!isReply && comment.replies && comment.replies.length > 0 && (
-          <span>
-            {comment.replies.length} {comment.replies.length === 1 ? 'Reply' : 'Replies'}
-          </span>
-        )}
       </div>
-
-      {/* Comment Actions */}
       <div className="comment-actions">
         <span className="comment-link" onClick={handleLike}>
           {liked ? 'Unlike' : 'Like'}
         </span>
-        {!isReply && (
-          <span className="comment-link" onClick={toggleReplyForm}>
-            Reply
-          </span>
-        )}
-        {comment.user_id === currentUserId && (
-          <span className="comment-link" onClick={handleDelete}>
-            Delete
-          </span>
-        )}
+        {!isReply && <span className="comment-link" onClick={toggleReplyForm}>Reply</span>}
+        {comment.user_id === currentUserId && <span className="comment-link" onClick={handleDelete}>Delete</span>}
       </div>
-
-      {/* Reply Form */}
       {!isReply && showReplyForm && (
         <div className="comment-reply-form">
           <form onSubmit={handleSubmitReply}>
-            <textarea
+            <MentionsInput
               value={replyContent}
               onChange={(e) => setReplyContent(e.target.value)}
-              placeholder={`Reply to ${comment.username || 'User'}`}
-            />
+              style={defaultStyle}
+              placeholder={`Reply to ${comment.username || 'User'} (use @ to mention)`}
+              allowSuggestionsAboveCursor
+              markup="@[__display__](__id__)"
+              displayTransform={(id, display) => `${display}`}
+            >
+              <Mention
+                trigger="@"
+                data={fetchUsers}
+                style={mentionStyle}
+                markup="@[__display__](__id__)"
+                displayTransform={(id, display) => `${display}`}
+              />
+            </MentionsInput>
             <button type="submit">Reply</button>
           </form>
         </div>
       )}
-
-      {/* Replies Section */}
-      {!isReply && comment.replies && comment.replies.length > 0 && (
+      { !isReply && comment.replies && comment.replies.length > 0 && (
         <div className="comment-replies">
-          {(showAllReplies ? comment.replies : comment.replies.slice(0, 1)).map((r) => (
+          {comment.replies.map((r) => (
             <Comment
               key={r.comment_id || r.group_comment_id}
               comment={r}
               token={token}
               currentUserId={currentUserId}
+              setCurrentView={setCurrentView}
               onAddComment={onAddComment}
               onDeleteComment={onDeleteComment}
               onProfileClick={onProfileClick}
-              setCurrentView={setCurrentView}
               groupId={groupId}
               groupPostId={groupPostId}
-
-              /* For nested replies, we do not highlight by default
-                 unless you pass down expandedCommentId and compare. */
             />
           ))}
-          {comment.replies.length > 1 && (
-            <div className="expand-replies-link">
-              <span className="comment-link" onClick={toggleShowAllReplies}>
-                {showAllReplies
-                  ? `Hide ${comment.replies.length} replies`
-                  : `Show ${comment.replies.length} replies`}
-              </span>
-            </div>
-          )}
         </div>
       )}
     </div>

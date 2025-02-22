@@ -4,9 +4,49 @@ import Comment from './Comment.jsx';
 import ProfilePic from './ProfilePic.jsx';
 import '../styles/Post.css';
 import { buildCommentTree } from '../helpers/buildCommentTree.js';
+import { parseMentions, extractMentionsFromMarkup } from '../helpers/parseMentions.js';
+import { MentionsInput, Mention } from 'react-mentions';
 
+const mentionStyle = { backgroundColor: '#daf4fa' };
+const defaultStyle = {
+  control: {
+    backgroundColor: '#fff',
+    fontSize: 14,
+    fontWeight: 'normal'
+  },
+  '&multiLine': {
+    control: {
+      minHeight: 50
+    },
+    highlighter: {
+      padding: 9,
+      border: '1px solid transparent'
+    },
+    input: {
+      padding: 9,
+      border: '1px solid silver'
+    }
+  },
+  suggestions: {
+    list: {
+      backgroundColor: 'white',
+      border: '1px solid #ccc',
+      fontSize: 14,
+      maxHeight: 150,
+      overflowY: 'auto'
+    },
+    item: {
+      padding: '5px 15px',
+      borderBottom: '1px solid #ddd',
+      '&focused': {
+        backgroundColor: '#cee4e5'
+      }
+    }
+  }
+};
+
+// Helper: Recursively search comment tree for a target comment ID
 function findCommentInTree(tree, targetId) {
-  // Recursively search comment tree for targetId
   for (const comment of tree) {
     if (comment.comment_id === targetId) return comment;
     if (comment.replies && comment.replies.length > 0) {
@@ -26,7 +66,7 @@ const Post = ({
   setCurrentView,
   onProfileClick = () => {},
   groupId,                // if provided, this post is a group post
-  expandedCommentId       // NEW: optional ID to highlight & scroll to
+  expandedCommentId       // optional ID to highlight & scroll to
 }) => {
   const [comments, setComments] = useState([]);
   const [newComment, setNewComment] = useState('');
@@ -40,8 +80,7 @@ const Post = ({
   });
 
   const commentsRef = useRef(null);
-  // For scrolling to a specific comment
-  const commentRefs = useRef({}); 
+  const commentRefs = useRef({});
 
   const effectivePostId = post?.post_id || post?.postId;
 
@@ -78,22 +117,17 @@ const Post = ({
       .catch(err => console.error("Error fetching comments:", err));
   }, [effectivePostId, token, commentsUrl]);
 
-  // If expandedCommentId is provided, auto-expand (showAllComments) if the target comment is not visible
+  // Auto-expand if expandedCommentId provided
   useEffect(() => {
     if (!expandedCommentId || comments.length === 0) return;
-
-    // If the target comment is in the tree, we show all so we can highlight it
     const foundComment = findCommentInTree(comments, expandedCommentId);
     if (foundComment) {
       setShowAllComments(true);
     }
   }, [expandedCommentId, comments]);
 
-  // After we've shown all comments, scroll to the highlighted comment
   useEffect(() => {
     if (!expandedCommentId || comments.length === 0) return;
-
-    // Delay slightly to ensure DOM is updated
     setTimeout(() => {
       const targetEl = commentRefs.current[expandedCommentId];
       if (targetEl) {
@@ -113,7 +147,6 @@ const Post = ({
       .catch(err => console.error("Error fetching liked status:", err));
   }, [token, effectivePostId, basePostUrl]);
 
-  // Toggle like/unlike for the post
   const handleToggleLike = async () => {
     if (!effectivePostId) {
       console.error("Post ID is undefined. Cannot like/unlike.");
@@ -138,8 +171,7 @@ const Post = ({
     }
   };
 
-  // Delete the post using the correct endpoint
-  const handleDelete = async () => {
+  const handleDeletePost = async () => {
     if (!window.confirm("Are you sure you want to delete this post?")) return;
     try {
       await axios.delete(basePostUrl, {
@@ -151,7 +183,7 @@ const Post = ({
     }
   };
 
-  // Update comments state when a new comment or reply is added
+  // handleAddComment: update comments state when a new comment or reply is added
   const handleAddComment = (newCommentObj) => {
     if (newCommentObj.parent_comment_id) {
       setComments(prev =>
@@ -168,26 +200,7 @@ const Post = ({
     }
   };
 
-  // Post a new comment
-  const handlePostNewComment = async () => {
-    if (!newComment.trim()) return;
-    if (!effectivePostId) {
-      console.error("Post ID is undefined. Cannot add comment.");
-      return;
-    }
-    try {
-      const res = await axios.post(commentsUrl, { content: newComment }, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      handleAddComment(res.data);
-      setNewComment('');
-      setShowCommentForm(false);
-    } catch (err) {
-      console.error("Error adding comment:", err);
-    }
-  };
-
-  // Delete a comment (local state update)
+  // handleDeleteComment: update local comments state by removing a comment
   const handleDeleteComment = (commentId, parentId) => {
     setComments(prev =>
       prev.map(comment => {
@@ -200,6 +213,58 @@ const Post = ({
         return comment;
       }).filter(comment => comment.comment_id !== commentId)
     );
+  };
+
+  // Define fetchUsers for mention suggestions
+  const fetchUsers = async (query, callback) => {
+    if (!query) return callback([]);
+    try {
+      const res = await axios.get(`http://localhost:5000/users/search?query=${query}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const suggestions = res.data.map(user => ({
+        id: user.user_id.toString(),
+        display: user.username
+      }));
+      callback(suggestions);
+    } catch (err) {
+      console.error('Error fetching mention suggestions:', err);
+      callback([]);
+    }
+  };
+
+  // Handle posting a new comment (top-level)
+  const handlePostNewComment = async () => {
+    if (!newComment.trim()) return;
+    if (!effectivePostId) {
+      console.error("Post ID is undefined. Cannot add comment.");
+      return;
+    }
+    try {
+      const res = await axios.post(commentsUrl, { content: newComment }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      handleAddComment(res.data);
+
+      // --- Mention creation for top-level comments on a post ---
+      const mentions = extractMentionsFromMarkup(newComment);
+      mentions.forEach(async ({ id: userId }) => {
+        try {
+          await axios.post(`http://localhost:5000/mentions/comment`,
+            { comment_id: res.data.comment_id, mentioned_user_id: userId },
+            { headers: { Authorization: `Bearer ${token}` } }
+          );
+        } catch (err) {
+          console.error('Error creating mention for comment:', err);
+        }
+      });
+      // ---------------------------------------------------------
+
+      setNewComment('');
+      setShowCommentForm(false);
+    } catch (err) {
+      console.error("Error adding comment:", err);
+    }
   };
 
   const finalUsername = author.username || "Unknown User";
@@ -229,7 +294,7 @@ const Post = ({
           {finalUsername}
         </span>
         {post.user_id === currentUserId && (
-          <span className="post-link" onClick={handleDelete} style={{ marginLeft: 'auto' }}>
+          <span className="post-link" onClick={handleDeletePost} style={{ marginLeft: 'auto' }}>
             Delete
           </span>
         )}
@@ -242,9 +307,9 @@ const Post = ({
         </div>
       )}
 
-      {/* Post Content */}
+      {/* Post Content with Mention Parsing */}
       <div className="post-content">
-        <p>{post.content || "No content available"}</p>
+        <p>{parseMentions(post.content || '', onProfileClick)}</p>
       </div>
 
       {/* Post Stats */}
@@ -265,15 +330,27 @@ const Post = ({
         </span>
       </div>
 
-      {/* Comment Input Field */}
+      {/* Comment Input Field with Mentions */}
       {showCommentForm && (
         <div className="post-reply-form">
-          <textarea
+          <MentionsInput
             value={newComment}
             onChange={(e) => setNewComment(e.target.value)}
-            placeholder="Write a comment..."
-          />
-          <button onClick={handlePostNewComment}>Post Comment</button>
+            style={defaultStyle}
+            placeholder="Write a comment... Use @ to mention"
+            allowSuggestionsAboveCursor
+            markup="@[__display__](__id__)"
+            displayTransform={(id, display) => `@${display}`}
+          >
+            <Mention
+              trigger="@"
+              data={fetchUsers}
+              style={mentionStyle}
+              markup="@[__display__](__id__)"
+              displayTransform={(id, display) => `@${display}`}
+            />
+          </MentionsInput>
+          <button onClick={handlePostNewComment}>Comment</button>
         </div>
       )}
 
@@ -287,17 +364,14 @@ const Post = ({
             currentUserId={currentUserId}
             onAddComment={handleAddComment}
             onDeleteComment={handleDeleteComment}
-            onProfileClick={handleProfileClick}
+            onProfileClick={onProfileClick}
             setCurrentView={setCurrentView}
             groupId={groupId}             // for group posts
             groupPostId={effectivePostId} // for group replies
-            // Pass a ref callback so we can store each comment DOM node
             refCallback={(el) => {
               if (el) commentRefs.current[comment.comment_id] = el;
             }}
-            // Indicate if this comment is highlighted
             isHighlighted={expandedCommentId === comment.comment_id}
-            // Also pass expandedCommentId down if you want nested replies to highlight
             expandedCommentId={expandedCommentId}
           />
         ))}

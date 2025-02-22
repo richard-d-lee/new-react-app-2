@@ -1,4 +1,3 @@
-// helpers/notificationsSideEffect.js
 import connection from '../db.js';
 
 export function createNotification({
@@ -24,11 +23,11 @@ export function createNotification({
     group_id,
     message || ''
   ];
-  connection.query(query, params, (err) => {
+  connection.query(query, params, (err, results) => {
     if (err) {
       console.error("Error creating notification:", err);
     } else {
-      console.log("Notification created");
+      console.log("Notification created with ID:", results.insertId);
     }
   });
 }

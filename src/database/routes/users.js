@@ -1,9 +1,58 @@
-// routes/users.js
 import express from 'express';
 import connection from '../db.js';
 import { authenticateToken } from '../middleware/auth.js';
 
 const router = express.Router();
+
+// Lookup endpoint for mentions
+router.get('/lookup', authenticateToken, (req, res) => {
+  const { username } = req.query;
+  if (!username) {
+    return res.status(400).json({ error: 'Username query parameter is required.' });
+  }
+  
+  const sql = `
+    SELECT user_id, username, profile_picture_url
+    FROM users
+    WHERE username = ?
+    LIMIT 1
+  `;
+  
+  connection.query(sql, [username], (err, results) => {
+    if (err) {
+      console.error("Error looking up user:", err);
+      return res.status(500).json({ error: 'Database error' });
+    }
+    if (results.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    res.json(results[0]);
+  });
+});
+
+// GET /users/search?query=...
+router.get('/search', authenticateToken, (req, res) => {
+  const queryParam = req.query.query;
+  if (!queryParam) {
+    return res.status(400).json({ error: 'Query parameter is required.' });
+  }
+
+  const sql = `
+    SELECT user_id, username, profile_picture_url
+    FROM users
+    WHERE username LIKE ?
+    LIMIT 10
+  `;
+  const sqlParam = `%${queryParam}%`;
+
+  connection.query(sql, [sqlParam], (err, results) => {
+    if (err) {
+      console.error("Error searching users:", err);
+      return res.status(500).json({ error: 'Database error' });
+    }
+    res.json(results);
+  });
+});
 
 // Get user details
 router.get('/:id', authenticateToken, (req, res) => {
@@ -70,3 +119,4 @@ router.delete('/settings/:id', authenticateToken, (req, res) => {
 });
 
 export default router;
+

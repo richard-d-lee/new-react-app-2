@@ -17,6 +17,8 @@ import messageRoutes from './routes/messages.js';
 import notificationsRoutes from './routes/notifications.js';
 import { authenticateToken } from './middleware/auth.js';
 import multer from 'multer';
+import mentionsRouter from './routes/mentions.js'; // Ensure correct path
+
 
 // ... your middleware and setup code
 
@@ -38,6 +40,7 @@ app.use('/groups', groupRoutes);
 app.use('/friends', friendRoutes);
 app.use('/messages', messageRoutes);
 app.use('/notifications', notificationsRoutes);
+app.use('/mentions', mentionsRouter);
 
 
 // Setup static folder for uploads

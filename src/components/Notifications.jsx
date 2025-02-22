@@ -12,6 +12,11 @@ const Notifications = ({ token, onMarkAllRead, onProfileClick, onPostClick }) =>
     return text.length > maxLen ? text.slice(0, maxLen) + '...' : text;
   };
 
+  function removeMentionMarkup(text = '') {
+    // Example: "@[zubzug](10) hey" => "zubzug hey"
+    return text.replace(/@\[(.*?)\]\(\d+\)/g, '$1');
+  }  
+
   useEffect(() => {
     if (!token) return;
     axios
@@ -294,7 +299,7 @@ const Notifications = ({ token, onMarkAllRead, onProfileClick, onPostClick }) =>
             {snippet && snippet.length > 0 && (
               <div className="notification-snippet">
                 <span className="snippet-text" onClick={() => handleSnippetClick(notif)}>
-                  "{snippet}"
+                  "{removeMentionMarkup(snippet)}"
                 </span>
               </div>
             )}
