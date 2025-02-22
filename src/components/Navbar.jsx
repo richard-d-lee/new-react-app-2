@@ -67,7 +67,7 @@ const Navbar = ({
                   style={{
                     position: 'absolute',
                     top: '50%',
-                    left: '48%',
+                    left: '50%',
                     transform: 'translate(-50%, -50%)',
                     fontWeight: 'bold',
                     fontSize: '0.8rem',
@@ -103,8 +103,8 @@ const Navbar = ({
               <span
                 style={{
                   position: 'absolute',
-                  top: '50%',
-                  left: '50%',
+                  top: '52%',
+                  left: '9.3%',
                   transform: 'translate(-50%, -50%)',
                   fontWeight: 'bold',
                   fontSize: '0.8rem',

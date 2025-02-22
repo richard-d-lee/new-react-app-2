@@ -79,7 +79,7 @@ const CreatePost = ({ token, currentUserId, onNewPost, groupId }) => {
           value={content}
           onChange={(e) => setContent(e.target.value)}
           style={defaultStyle}
-          placeholder="Write your post here... Use @ to mention someone."
+          placeholder="Write your post here..."
           allowSuggestionsAboveCursor
           markup="@[__display__](__id__)"
           displayTransform={(id, display) => `@${display}`}

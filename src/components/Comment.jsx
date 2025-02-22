@@ -256,7 +256,7 @@ const Comment = ({
               value={replyContent}
               onChange={(e) => setReplyContent(e.target.value)}
               style={defaultStyle}
-              placeholder={`Reply to ${comment.username || 'User'} (use @ to mention)`}
+              placeholder={`Reply to ${comment.username || 'User'}`}
               allowSuggestionsAboveCursor
               markup="@[__display__](__id__)"
               displayTransform={(id, display) => `${display}`}

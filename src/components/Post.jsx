@@ -341,7 +341,7 @@ const Post = ({
             value={newComment}
             onChange={(e) => setNewComment(e.target.value)}
             style={defaultStyle}
-            placeholder="Write a comment... Use @ to mention"
+            placeholder="Write a comment..."
             allowSuggestionsAboveCursor
             markup="@[__display__](__id__)"
             displayTransform={(id, display) => `@${display}`}
