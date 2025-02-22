@@ -5,7 +5,15 @@ import NavLink from './NavLink.jsx';
 import UserProfile from './UserProfile.jsx';
 import { FaHome, FaUserFriends, FaBell, FaUsers } from 'react-icons/fa';
 
-const Navbar = ({ updateLogged, setCurrentView, profilePic, userId, token, unreadCount }) => {
+const Navbar = ({
+  updateLogged,
+  setCurrentView,
+  profilePic,
+  userId,
+  token,
+  unreadCount,
+  friendRequestsCount // NEW from HomePage
+}) => {
   return (
     <div className="navbar">
       <div className="left-container">
@@ -28,41 +36,36 @@ const Navbar = ({ updateLogged, setCurrentView, profilePic, userId, token, unrea
       
       <div className="right-container">
         <div className="nav-links">
+          {/* Home */}
           <div onClick={() => setCurrentView('feed')}>
             <NavLink icon={<FaHome />} text="Home" />
           </div>
-          <div onClick={() => setCurrentView('friends')}>
-            <NavLink icon={<FaUserFriends />} text="Friends" />
-          </div>
+          {/* Groups */}
           <div onClick={() => setCurrentView('groups')}>
             <NavLink icon={<FaUsers />} text="Groups" />
           </div>
 
-          {/* Notification Link with Bell */}
+          {/* (1) NEW: Friend Requests Count on the Friends link */}
           <div
             style={{ cursor: 'pointer', position: 'relative', display: 'flex', alignItems: 'center' }}
-            onClick={() => setCurrentView('notifications')}
+            onClick={() => setCurrentView('friends')}
           >
-            {/* Bell container for the red circle + count */}
+            
             <div style={{ position: 'relative', display: 'inline-block' }}>
-              <FaBell
+              <FaUserFriends
                 style={{
                   fontSize: '1.2rem',
-                  padding: '3px 3px 3px 3px',
-                  // (1) Shift the bell down a bit
-                  position: 'relative',
-                  top: '3px',
-                  backgroundColor: unreadCount > 0 ? 'red' : 'transparent',
+                  padding: '3px',
+                  marginTop: '7px',
+                  backgroundColor: friendRequestsCount > 0 ? 'red' : 'transparent',
                   color: '#fff',
                   borderRadius: '50%'
                 }}
               />
-              {/* Show the unread count if > 0, positioned inside the bell */}
-              {unreadCount > 0 && (
+              {friendRequestsCount > 0 && (
                 <span
                   style={{
                     position: 'absolute',
-                    // (2) Center the text
                     top: '50%',
                     left: '48%',
                     transform: 'translate(-50%, -50%)',
@@ -71,12 +74,45 @@ const Navbar = ({ updateLogged, setCurrentView, profilePic, userId, token, unrea
                     color: '#000'
                   }}
                 >
-                  {unreadCount}
+                  {friendRequestsCount}
                 </span>
               )}
             </div>
+            <span style={{ marginLeft: '8px', color: '#fff' }}>
+              Friends
+            </span>
+          </div>
 
-            {/* The word 'Notifications' to the right of the bell */}
+          {/* Notifications logic is unchanged */}
+          <div
+            style={{ cursor: 'pointer', position: 'relative', display: 'flex', alignItems: 'center' }}
+            onClick={() => setCurrentView('notifications')}
+          >
+            {/* ... your existing notification code ... */}
+            <FaBell
+              style={{
+                fontSize: '1.2rem',
+                padding: '3px',
+                backgroundColor: unreadCount > 0 ? 'red' : 'transparent',
+                color: '#fff',
+                borderRadius: '50%'
+              }}
+            />
+            {unreadCount > 0 && (
+              <span
+                style={{
+                  position: 'absolute',
+                  top: '50%',
+                  left: '50%',
+                  transform: 'translate(-50%, -50%)',
+                  fontWeight: 'bold',
+                  fontSize: '0.8rem',
+                  color: '#000'
+                }}
+              >
+                {unreadCount}
+              </span>
+            )}
             <span style={{ marginLeft: '8px', color: '#fff' }}>
               Notifications
             </span>

@@ -2,11 +2,10 @@ import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import '../styles/Friends.css';
 
-const Friends = () => {
+const Friends = ({ refreshFriendRequestsCount }) => {
   const [pendingRequests, setPendingRequests] = useState([]);
   const [acceptedFriends, setAcceptedFriends] = useState([]);
   const [error, setError] = useState('');
-
   const token = localStorage.getItem('authToken');
 
   // Fetch inbound pending requests and accepted friends
@@ -40,9 +39,8 @@ const Friends = () => {
       await axios.post('http://localhost:5000/friends/confirm', { friendId }, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      fetchFriendsData();
-      // Refresh possible friends as well (if needed)
-      window.dispatchEvent(new Event('refreshPossibleFriends'));
+      fetchFriendsData(); // Refresh local list
+      refreshFriendRequestsCount(); // Update navbar count
     } catch (err) {
       setError(err.response?.data?.error || 'Something went wrong confirming request.');
     }
@@ -55,7 +53,7 @@ const Friends = () => {
         headers: { Authorization: `Bearer ${token}` }
       });
       fetchFriendsData();
-      window.dispatchEvent(new Event('refreshPossibleFriends'));
+      refreshFriendRequestsCount();
     } catch (err) {
       setError(err.response?.data?.error || 'Something went wrong declining request.');
     }
@@ -70,13 +68,12 @@ const Friends = () => {
         headers: { Authorization: `Bearer ${token}` }
       });
       fetchFriendsData();
-      window.dispatchEvent(new Event('refreshPossibleFriends'));
+      refreshFriendRequestsCount();
     } catch (err) {
       setError(err.response?.data?.error || 'Something went wrong removing friend.');
     }
   };
 
-  // Base URL for images
   const baseURL = "http://localhost:5000";
 
   return (
@@ -96,7 +93,7 @@ const Friends = () => {
                 <img
                   src={
                     user.profile_picture_url 
-                      ? `${baseURL}${user.profile_picture_url}` 
+                      ? `${baseURL}${user.profile_picture_url}`
                       : "https://t3.ftcdn.net/jpg/10/29/65/84/360_F_1029658445_rfwMzxeuqrvm7GTY4Yr9WaBbYKlXIRs7.jpg"
                   }
                   alt={user.username}
@@ -131,7 +128,7 @@ const Friends = () => {
                 <img
                   src={
                     user.profile_picture_url 
-                      ? `${baseURL}${user.profile_picture_url}` 
+                      ? `${baseURL}${user.profile_picture_url}`
                       : "https://t3.ftcdn.net/jpg/10/29/65/84/360_F_1029658445_rfwMzxeuqrvm7GTY4Yr9WaBbYKlXIRs7.jpg"
                   }
                   alt={user.username}

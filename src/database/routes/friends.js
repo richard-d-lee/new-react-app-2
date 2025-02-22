@@ -49,6 +49,27 @@ router.get('/status', authenticateToken, (req, res) => {
   });
 });
 
+router.get('/incoming-count', authenticateToken, (req, res) => {
+  const userId = req.user.userId; // from the JWT
+
+  // Use your existing "friends" table:
+  // user_id_2 = the target of the request
+  // status = 'pending'
+  const query = `
+    SELECT COUNT(*) AS incomingRequests
+    FROM friends
+    WHERE user_id_2 = ? AND status = 'pending'
+  `;
+
+  connection.query(query, [userId], (err, results) => {
+    if (err) {
+      console.error('Error fetching incoming friend requests count:', err);
+      return res.status(500).json({ error: 'Database error' });
+    }
+    res.json({ incomingRequests: results[0].incomingRequests });
+  });
+});
+
 // GET /friends/pending - Retrieve inbound pending friend requests
 router.get('/pending', authenticateToken, (req, res) => {
   const userId = req.user.userId;

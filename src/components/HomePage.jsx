@@ -22,10 +22,11 @@ const HomePage = ({ updateLogged, email }) => {
   const [widgetsCollapsed, setWidgetsCollapsed] = useState(false);
   const [currentView, setCurrentView] = useState('feed');
   const [unreadCount, setUnreadCount] = useState(0);
+  const [friendRequestsCount, setFriendRequestsCount] = useState(0);
 
   const token = localStorage.getItem('authToken');
 
-  // Decode token for user ID
+  // Decode the token for user ID
   useEffect(() => {
     if (token) {
       try {
@@ -39,12 +40,13 @@ const HomePage = ({ updateLogged, email }) => {
     }
   }, [token, updateLogged]);
 
-  // Fetch current user's profile info
+  // Fetch current user's profile (avatar, username, etc.)
   useEffect(() => {
     if (token && userId) {
-      axios.get(`http://localhost:5000/users/${userId}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      })
+      axios
+        .get(`http://localhost:5000/users/${userId}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        })
         .then((res) => {
           setCurrentUserProfilePic(res.data.profile_picture_url || "");
           setCurrentUsername(res.data.username || "");
@@ -59,7 +61,7 @@ const HomePage = ({ updateLogged, email }) => {
     }
   }, [token, userId, updateLogged]);
 
-  // 1) Define a function to fetch unread notifications count
+  // Fetch unread notifications count
   const refreshUnreadCount = () => {
     if (!token || !userId) return;
     axios
@@ -74,17 +76,32 @@ const HomePage = ({ updateLogged, email }) => {
       });
   };
 
-  // 2) On mount or whenever userId changes, fetch unread count
+  // Fetch friend requests count
+  const refreshFriendRequestsCount = () => {
+    if (!token || !userId) return;
+    axios
+      .get('http://localhost:5000/friends/incoming-count', {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      .then((res) => {
+        setFriendRequestsCount(res.data.incomingRequests || 0);
+      })
+      .catch((err) => {
+        console.error('Error fetching friend requests count:', err);
+      });
+  };
+
+  // On mount or when userId changes, fetch both unreadCount & friendRequestsCount
   useEffect(() => {
     if (token && userId) {
       refreshUnreadCount();
+      refreshFriendRequestsCount();
     }
   }, [token, userId]);
 
   return (
     <div className="home-page">
       <div className="nav">
-        {/* Pass unreadCount to the Navbar for the badge */}
         <Navbar
           updateLogged={updateLogged}
           setCurrentView={setCurrentView}
@@ -92,6 +109,7 @@ const HomePage = ({ updateLogged, email }) => {
           userId={userId}
           token={token}
           unreadCount={unreadCount}
+          friendRequestsCount={friendRequestsCount}
         />
       </div>
 
@@ -99,7 +117,7 @@ const HomePage = ({ updateLogged, email }) => {
         <div className={`sidebar-container ${sidebarCollapsed ? 'collapsed' : ''}`}>
           <Sidebar
             collapsed={sidebarCollapsed}
-            toggleSidebar={() => setSidebarCollapsed((prev) => !prev)}
+            toggleSidebar={() => setSidebarCollapsed(prev => !prev)}
             setCurrentView={setCurrentView}
             token={token}
             currentUserId={userId}
@@ -107,7 +125,7 @@ const HomePage = ({ updateLogged, email }) => {
         </div>
 
         <div className="feed-container">
-          {/* Display Feed if currentView is 'feed' */}
+          {/* Show Feed */}
           {((typeof currentView === 'string' && currentView === 'feed') ||
             (typeof currentView === 'object' && currentView.view === 'feed')) && (
             <Feed
@@ -121,20 +139,25 @@ const HomePage = ({ updateLogged, email }) => {
             />
           )}
 
-          {currentView === 'friends' && <Friends />}
-          
+          {/* Show Friends, pass the refreshFriendRequestsCount callback */}
+          {currentView === 'friends' && (
+            <Friends
+              refreshFriendRequestsCount={refreshFriendRequestsCount}
+            />
+          )}
+
+          {/* Show Notifications */}
           {currentView === 'notifications' && (
             <Notifications
               token={token}
-              // If user clicks Mark All as Read => zero out unread
               onMarkAllRead={() => setUnreadCount(0)}
               onProfileClick={(actorId) => setCurrentView({ view: 'profile', userId: actorId })}
               onPostClick={(payload) => setCurrentView(payload)}
-              // 3) Pass the callback to refresh unread count
               onUnreadCountChange={refreshUnreadCount}
             />
           )}
 
+          {/* Show Profile */}
           {typeof currentView === 'object' && currentView.view === 'profile' && (
             <Profile
               token={token}
@@ -144,6 +167,7 @@ const HomePage = ({ updateLogged, email }) => {
             />
           )}
 
+          {/* Show Settings */}
           {currentView === 'settings' && (
             <Settings
               token={token}
@@ -152,6 +176,7 @@ const HomePage = ({ updateLogged, email }) => {
             />
           )}
 
+          {/* Show Groups */}
           {currentView === 'groups' && (
             <Groups
               token={token}
@@ -160,6 +185,7 @@ const HomePage = ({ updateLogged, email }) => {
             />
           )}
 
+          {/* Show Single Group Page */}
           {typeof currentView === 'object' && currentView.view === 'group' && (
             <GroupPage
               token={token}
@@ -177,7 +203,7 @@ const HomePage = ({ updateLogged, email }) => {
           <Widgets
             email={email}
             collapsed={widgetsCollapsed}
-            toggleWidgets={() => setWidgetsCollapsed((prev) => !prev)}
+            toggleWidgets={() => setWidgetsCollapsed(prev => !prev)}
           />
         </div>
       </div>
