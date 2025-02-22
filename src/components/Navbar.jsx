@@ -56,7 +56,7 @@ const Navbar = ({
                 style={{
                   fontSize: '1.2rem',
                   padding: '3px',
-                  marginTop: '7px',
+                  marginTop: '5px',
                   backgroundColor: friendRequestsCount > 0 ? 'red' : 'transparent',
                   color: '#fff',
                   borderRadius: '50%'
@@ -91,7 +91,8 @@ const Navbar = ({
             {/* ... your existing notification code ... */}
             <FaBell
               style={{
-                fontSize: '1.2rem',
+                fontSize: '1.1rem',
+                marginTop: '3px',
                 padding: '3px',
                 backgroundColor: unreadCount > 0 ? 'red' : 'transparent',
                 color: '#fff',
