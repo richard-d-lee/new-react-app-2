@@ -11,7 +11,7 @@ const router = express.Router();
 router.get('/', authenticateToken, (req, res) => {
   const userId = req.user.userId;
   const query = `
-    SELECT notification_id, user_id, notification_type, reference_id, actor_id, reference_type, message, is_read, created_at
+    SELECT notification_id, group_id, user_id, notification_type, reference_id, actor_id, reference_type, message, is_read, created_at
     FROM notifications
     WHERE user_id = ?
     ORDER BY created_at DESC

@@ -9,7 +9,7 @@ import fs from 'fs';
 import connection from './db.js'; // Ensure connection is established
 import authRoutes from './routes/auth.js';
 import userRoutes from './routes/users.js';
-import postRoutes from './routes/posts.js';
+import feedRoutes from './routes/feed.js';
 import commentRoutes from './routes/comments.js';
 import groupRoutes from './routes/groups.js';
 import friendRoutes from './routes/friends.js';
@@ -32,7 +32,7 @@ app.use(cors());
 app.use(bodyParser.json());
 app.use('/auth', authRoutes);
 app.use('/users', userRoutes);
-app.use('/posts', postRoutes);
+app.use('/feed', feedRoutes);
 app.use('/comments', commentRoutes);
 app.use('/groups', groupRoutes);
 app.use('/friends', friendRoutes);
@@ -99,7 +99,7 @@ app.post('/upload-profile-pic', authenticateToken, upload.single('profilePic'), 
 // Mount routes
 app.use('/auth', authRoutes);
 app.use('/users', userRoutes);
-app.use('/posts', postRoutes);
+app.use('/feed', feedRoutes);
 app.use('/comments', commentRoutes);
 app.use('/groups', groupRoutes);
 app.use('/friends', friendRoutes);

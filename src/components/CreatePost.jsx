@@ -1,4 +1,3 @@
-// CreatePost.jsx
 import React, { useState } from 'react';
 import axios from 'axios';
 import '../styles/CreatePost.css';
@@ -8,7 +7,7 @@ const CreatePost = ({
   currentUserId,
   currentUserProfilePic,
   onNewPost,
-  groupId // optional prop: if provided, we're posting in a group
+  groupId // If provided, we're posting in a group
 }) => {
   const [content, setContent] = useState('');
   const [error, setError] = useState('');
@@ -16,20 +15,22 @@ const CreatePost = ({
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!content.trim()) return;
-  
+
     try {
       let url = '';
       if (groupId) {
-        // Post to group
+        // For group posts, the endpoint now inserts the post into the unified posts table
+        // with post_type set to 'group' and group_id set accordingly.
         url = `http://localhost:5000/groups/${groupId}/posts`;
       } else {
-        // Post to the main feed
-        url = `http://localhost:5000/posts`;
+        // For regular feed posts, the endpoint sets post_type to 'feed'
+        url = `http://localhost:5000/feed`;
       }
+
       const res = await axios.post(url, { content }, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      // Now res.data has user_id, username, etc.
+      // onNewPost is called with the new post data returned from the server.
       onNewPost(res.data);
       setContent('');
     } catch (err) {

@@ -26,7 +26,7 @@ const Profile = ({ token, userId, currentUserId, setCurrentView }) => {
   // Fetch user posts
   const fetchUserPosts = async () => {
     try {
-      const res = await axios.get(`http://localhost:5000/posts/user/${actualId}`, {
+      const res = await axios.get(`http://localhost:5000/feed/user/${actualId}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setPosts(res.data);

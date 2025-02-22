@@ -19,7 +19,7 @@ const Feed = ({
   // Fetch all posts
   const fetchAllPosts = async () => {
     try {
-      const res = await axios.get('http://localhost:5000/posts', {
+      const res = await axios.get('http://localhost:5000/feed', {
         headers: { Authorization: `Bearer ${token}` }
       });
       setPosts(res.data);
@@ -31,7 +31,7 @@ const Feed = ({
   // Fetch a single post
   const fetchSinglePost = async (id) => {
     try {
-      const res = await axios.get(`http://localhost:5000/posts/${id}`, {
+      const res = await axios.get(`http://localhost:5000/feed/${id}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       // The endpoint should return one post object

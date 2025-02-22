@@ -42,7 +42,7 @@ router.post('/:commentId/like', authenticateToken, (req, res) => {
   const commentId = req.params.commentId;
   const userId = req.user.userId;
   const query = 'INSERT INTO comment_likes (comment_id, user_id) VALUES (?, ?)';
-  
+
   connection.query(query, [commentId, userId], (err, results) => {
     if (err) {
       if (err.code === 'ER_DUP_ENTRY') {
@@ -51,7 +51,7 @@ router.post('/:commentId/like', authenticateToken, (req, res) => {
       console.error('Error liking comment:', err);
       return res.status(500).json({ error: 'Database error' });
     }
-    
+
     // Fetch the comment owner to create a notification if necessary.
     const getCommentQuery = 'SELECT user_id FROM comments WHERE comment_id = ?';
     connection.query(getCommentQuery, [commentId], (err, commentResults) => {
@@ -71,10 +71,11 @@ router.post('/:commentId/like', authenticateToken, (req, res) => {
         }
       }
     });
-    
+
     res.json({ message: 'Comment liked successfully' });
   });
 });
+
 
 /**
  * POST /comments/:commentId/reply
@@ -135,42 +136,50 @@ router.post('/:commentId/reply', authenticateToken, (req, res) => {
   });
 });
 
+// GET /comments/:commentId - Retrieve a single comment by ID
 router.get('/:commentId', authenticateToken, (req, res) => {
   const commentId = req.params.commentId;
-  
-  const query = 'SELECT * FROM comments WHERE comment_id = ? LIMIT 1';
+  const query = `
+    SELECT 
+      c.comment_id, 
+      c.post_id, 
+      c.user_id, 
+      c.content, 
+      c.created_at, 
+      c.parent_comment_id
+    FROM comments c
+    WHERE c.comment_id = ?
+  `;
   connection.query(query, [commentId], (err, results) => {
     if (err) {
-      console.error('Error fetching comment:', err);
+      console.error("Error fetching comment:", err);
       return res.status(500).json({ error: 'Database error' });
     }
-    if (!results || results.length === 0) {
+    if (results.length === 0) {
       return res.status(404).json({ error: 'Comment not found' });
     }
-    // Return the single comment object
     res.json(results[0]);
   });
 });
-
 
 // DELETE /comments/:commentId/like - Unlike a comment
 router.delete('/:commentId/like', authenticateToken, (req, res) => {
   const commentId = req.params.commentId;
   const userId = req.user.userId;
   const query = 'DELETE FROM comment_likes WHERE comment_id = ? AND user_id = ?';
-  
+
   connection.query(query, [commentId, userId], (err, results) => {
     if (err) {
-        console.error('Error unliking comment:', err);
-        return res.status(500).json({ error: 'Database error' });
-      }
-      if (results.affectedRows === 0) {
-        return res.status(404).json({ error: 'No like found to remove' });
-      }
-      res.json({ message: 'Comment unliked successfully' });
-    });
+      console.error('Error unliking comment:', err);
+      return res.status(500).json({ error: 'Database error' });
+    }
+    if (results.affectedRows === 0) {
+      return res.status(404).json({ error: 'No like found to remove' });
+    }
+    res.json({ message: 'Comment unliked successfully' });
   });
-  
+});
+
 /**
  * DELETE /comments/:commentId
  * Deletes a comment if the logged-in user is the author.

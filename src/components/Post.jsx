@@ -48,12 +48,12 @@ const Post = ({
   // Build base URL for post API calls
   const basePostUrl = groupId
     ? `http://localhost:5000/groups/${groupId}/posts/${effectivePostId}`
-    : `http://localhost:5000/posts/${effectivePostId}`;
+    : `http://localhost:5000/feed/${effectivePostId}`;
 
   // Build comments URL
   const commentsUrl = groupId
     ? `http://localhost:5000/groups/${groupId}/posts/${effectivePostId}/comments`
-    : `http://localhost:5000/posts/${effectivePostId}/comments`;
+    : `http://localhost:5000/feed/${effectivePostId}/comments`;
 
   // Fetch author info if not provided and if post.user_id exists
   useEffect(() => {

@@ -24,6 +24,10 @@
     margin-bottom: 8px;
     padding: 8px;
     transition: background-color 0.3s ease;
+    min-height: 70px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
   }
   
   .notification-unread {
@@ -34,8 +38,13 @@
     background-color: #fff;
   }
   
-  /* Main row: actor pic + main text + date in one line */
-  .actor-section {
+  .notif-top-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  
+  .notif-left {
     display: flex;
     align-items: center;
   }
@@ -53,34 +62,25 @@
   
   .notification-main-text {
     margin: 0;
-    flex-grow: 1;
   }
   
-  /* Put date on the same line, but on the far right */
   .notification-date {
-    float: right;
     font-size: 0.85rem;
     color: #666;
     margin-left: 12px;
+    flex-shrink: 0;
   }
   
-  /* Snippet below the main line */
   .notification-snippet {
     margin-top: 4px;
     font-size: 0.9rem;
     color: #333;
   }
   
-  .snippet-label {
-    font-weight: bold;
-    margin-right: 4px;
-  }
-  
   .snippet-text {
     cursor: pointer;
     color: #1877f2;
     font-style: italic;
-    text-decoration: none; /* Remove underline */
+    text-decoration: none;
   }
-  
   
