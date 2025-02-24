@@ -52,29 +52,119 @@ const Notifications = ({
           })
         );
 
-        // 2) Optionally fetch snippet for each notification if needed (e.g. for post/comment preview).
-        //    For "EVENT_INVITE" we don’t need a snippet, so skip that logic or keep it minimal.
+        // 2) Fetch snippet for each notification if needed (post/comment preview).
+        //    We'll skip snippet logic for certain notifications (like EVENT_INVITE).
         const withSnippets = await Promise.all(
           withActors.map(async (notif) => {
             try {
-              // For an EVENT_INVITE or similar, no snippet needed.
-              // For posts/comments, you can keep your snippet fetch logic if you want.
+              // Skip snippet for certain types
               if (notif.notification_type === 'EVENT_INVITE') {
-                return notif; // skip snippet logic
+                return notif;
               }
 
-              // (Optional) snippet logic for other notification types:
+              // GROUP LOGIC
               if (notif.group_id) {
-                // ... group snippet logic ...
-              } else if (notif.event_id) {
-                // ... event snippet logic ...
-              } else {
-                // ... feed snippet logic ...
+                // If reference_type is group_post or post => fetch the group post content
+                if (
+                  notif.reference_type === 'post' ||
+                  notif.reference_type === 'group_post'
+                ) {
+                  const groupPostRes = await axios.get(
+                    `http://localhost:5000/groups/${notif.group_id}/posts/${notif.reference_id}`,
+                    { headers: { Authorization: `Bearer ${token}` } }
+                  );
+                  const groupPostData = Array.isArray(groupPostRes.data)
+                    ? groupPostRes.data[0]
+                    : groupPostRes.data;
+                  const rawContent = groupPostData?.content || '';
+                  const snippet = truncateText(removeMentionMarkup(rawContent), 15);
+                  return { ...notif, _snippet: snippet };
+                } else {
+                  // group_comment => fetch the group comment
+                  const groupCommentRes = await axios.get(
+                    `http://localhost:5000/groups/${notif.group_id}/comments/${notif.reference_id}`,
+                    { headers: { Authorization: `Bearer ${token}` } }
+                  );
+                  const groupCommentData = Array.isArray(groupCommentRes.data)
+                    ? groupCommentRes.data[0]
+                    : groupCommentRes.data;
+                  const rawContent = groupCommentData?.content || '';
+                  const snippet = truncateText(removeMentionMarkup(rawContent), 15);
+                  const postId = groupCommentData?.post_id || null;
+                  return {
+                    ...notif,
+                    _snippet: snippet,
+                    _postId: postId,
+                    group_id: notif.group_id
+                  };
+                }
+              }
+              // EVENT LOGIC
+              else if (notif.event_id) {
+                // If reference_type includes 'post', it's an event post
+                if (notif.reference_type.toLowerCase().includes('post')) {
+                  const eventPostRes = await axios.get(
+                    `http://localhost:5000/events/${notif.event_id}/posts/${notif.reference_id}`,
+                    { headers: { Authorization: `Bearer ${token}` } }
+                  );
+                  const eventPostData = Array.isArray(eventPostRes.data)
+                    ? eventPostRes.data[0]
+                    : eventPostRes.data;
+                  const rawContent = eventPostData?.content || '';
+                  const snippet = truncateText(removeMentionMarkup(rawContent), 15);
+                  return { ...notif, _snippet: snippet };
+                } else {
+                  // 'comment' => fetch the event comment
+                  const eventCommentRes = await axios.get(
+                    `http://localhost:5000/events/${notif.event_id}/comments/${notif.reference_id}`,
+                    { headers: { Authorization: `Bearer ${token}` } }
+                  );
+                  const eventCommentData = Array.isArray(eventCommentRes.data)
+                    ? eventCommentRes.data[0]
+                    : eventCommentRes.data;
+                  const rawContent = eventCommentData?.content || '';
+                  const snippet = truncateText(removeMentionMarkup(rawContent), 15);
+                  const postId = eventCommentData?.post_id || null;
+                  return {
+                    ...notif,
+                    _snippet: snippet,
+                    _postId: postId,
+                    event_id: notif.event_id
+                  };
+                }
+              }
+              // FEED LOGIC
+              else {
+                if (notif.reference_type === 'post') {
+                  const postRes = await axios.get(
+                    `http://localhost:5000/feed/${notif.reference_id}`,
+                    { headers: { Authorization: `Bearer ${token}` } }
+                  );
+                  const postData = Array.isArray(postRes.data)
+                    ? postRes.data[0]
+                    : postRes.data;
+                  const rawContent = postData?.content || '';
+                  const snippet = truncateText(removeMentionMarkup(rawContent), 15);
+                  return { ...notif, _snippet: snippet };
+                } else if (notif.reference_type === 'comment') {
+                  const commentRes = await axios.get(
+                    `http://localhost:5000/comments/${notif.reference_id}`,
+                    { headers: { Authorization: `Bearer ${token}` } }
+                  );
+                  const commentData = Array.isArray(commentRes.data)
+                    ? commentRes.data[0]
+                    : commentRes.data;
+                  const rawContent = commentData?.content || '';
+                  const snippet = truncateText(removeMentionMarkup(rawContent), 15);
+                  const postId = commentData?.post_id || null;
+                  return { ...notif, _snippet: snippet, _postId: postId };
+                }
               }
             } catch (err) {
               console.error('Error fetching snippet for notification:', err);
+              return notif; // fallback if snippet fetch fails
             }
-            return notif;
+            return notif; // fallback
           })
         );
 
@@ -134,7 +224,6 @@ const Notifications = ({
 
   // Format message
   const formatNotificationMessage = (notif) => {
-    // If the notification is an event invite, we’ll do custom rendering in the return block.
     switch (notif.notification_type) {
       case 'FRIEND_REQUEST_ACCEPTED':
         return 'accepted your friend request.';
@@ -155,7 +244,6 @@ const Notifications = ({
       case 'GROUP_COMMENT_REPLY':
         return 'replied to your group comment.';
       case 'EVENT_INVITE':
-        // We will handle the text inside the render block, returning a React fragment or similar.
         return 'invited you to the event';
       case 'EVENT_POST':
         return 'posted on your event.';
@@ -173,14 +261,44 @@ const Notifications = ({
   const handleSnippetClick = (notif) => {
     if (!onPostClick) return;
 
-    // Group or feed logic ...
-    // For event invites, we won't do snippet clicks. 
-    // For event posts/comments, we can do something like:
-    if (notif.event_id) {
+    // For group or feed logic, you'd pass the appropriate payload
+    if (notif.group_id) {
+      // If it's a group post or comment
+      if (notif.reference_type === 'post' || notif.reference_type === 'group_post') {
+        onPostClick({ view: 'group', groupId: notif.group_id, postId: notif.reference_id });
+      } else {
+        onPostClick({
+          view: 'group',
+          groupId: notif.group_id,
+          postId: notif._postId,
+          expandedCommentId: notif.reference_id
+        });
+      }
+    } 
+    else if (notif.event_id) {
+      // For event posts/comments
       onPostClick({
         view: 'event',
-        eventId: notif.event_id
+        eventId: notif.event_id,
+        postId: notif.reference_type.toLowerCase().includes('post')
+          ? notif.reference_id
+          : notif._postId,
+        expandedCommentId: notif.reference_type.toLowerCase().includes('comment')
+          ? notif.reference_id
+          : null
       });
+    } 
+    else {
+      // feed logic
+      if (notif.reference_type === 'post') {
+        onPostClick({ view: 'feed', postId: notif.reference_id });
+      } else {
+        onPostClick({
+          view: 'feed',
+          postId: notif._postId,
+          expandedCommentId: notif.reference_id
+        });
+      }
     }
   };
 
@@ -206,8 +324,7 @@ const Notifications = ({
         const actorPic = actor?.profile_picture_url
           ? `http://localhost:5000${actor.profile_picture_url}`
           : 'https://t3.ftcdn.net/jpg/10/29/65/84/360_F_1029658445_rfwMzxeuqrvm7GTY4Yr9WaBbYKlXIRs7.jpg';
-
-        const baseMessage = formatNotificationMessage(notif);
+        const mainText = formatNotificationMessage(notif);
 
         return (
           <div
@@ -224,17 +341,12 @@ const Notifications = ({
                   <span className="actor-name" onClick={() => handleActorClick(notif.actor_id)}>
                     {actor?.username || 'Someone'}
                   </span>{' '}
-                  {/* If it's an EVENT_INVITE, we do custom rendering of the event name */}
                   {notif.notification_type === 'EVENT_INVITE' ? (
                     <>
                       {' invited you to the event '}
                       <span
                         className="event-invite-link"
-                        style={{
-                          color: '#1877f2',
-                          cursor: 'pointer',
-                          textDecoration: 'none'
-                        }}
+                        style={{ color: '#1877f2', cursor: 'pointer', textDecoration: 'none' }}
                         onClick={() => {
                           if (onPostClick) {
                             onPostClick({
@@ -249,8 +361,7 @@ const Notifications = ({
                       .
                     </>
                   ) : (
-                    // Otherwise, just show the base message
-                    baseMessage
+                    mainText
                   )}
                 </p>
               </div>
@@ -258,7 +369,7 @@ const Notifications = ({
                 {new Date(notif.created_at).toLocaleString()}
               </div>
             </div>
-            {/* If there's a snippet (like for a post/comment preview), show it. */}
+            {/* If there's a snippet, show it. */}
             {notif._snippet && notif._snippet.length > 0 && (
               <div className="notification-snippet">
                 <span className="snippet-text" onClick={() => handleSnippetClick(notif)}>

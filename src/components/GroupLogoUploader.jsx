@@ -1,4 +1,3 @@
-// GroupLogoUploader.jsx
 import React, { useState } from 'react';
 import axios from 'axios';
 import { FaTimes } from 'react-icons/fa';
@@ -19,14 +18,14 @@ const GroupLogoUploader = ({ token, groupId, onClose, onUploadSuccess }) => {
       return;
     }
     const formData = new FormData();
-    formData.append('groupLogo', selectedFile);
+    formData.append('logo', selectedFile); // use 'logo' as the field name
     try {
       const res = await axios.put(
         `http://localhost:5000/groups/${groupId}/logo`,
         formData,
         { headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'multipart/form-data' } }
       );
-      onUploadSuccess(res.data.logoUrl);
+      onUploadSuccess(res.data.icon);
       onClose();
     } catch (err) {
       console.error('Error uploading group logo:', err);
@@ -43,7 +42,7 @@ const GroupLogoUploader = ({ token, groupId, onClose, onUploadSuccess }) => {
         <h2>Update Group Logo</h2>
         {error && <p className="error-message">{error}</p>}
         <form onSubmit={handleUpload}>
-          <input type="file" accept="image/*" onChange={handleFileChange} />
+          <input type="file" accept="image/*" name="logo" onChange={handleFileChange} />
           <button type="submit">Upload</button>
         </form>
       </div>

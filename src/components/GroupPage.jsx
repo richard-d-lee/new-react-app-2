@@ -12,7 +12,7 @@ const GroupPage = ({
   currentUserProfilePic,
   groupId,
   setCurrentView,
-  // NEW optional props for single post view from a notification:
+  // Optional props for single post view from a notification:
   postId,            // if provided, display only this group post
   expandedCommentId  // if provided, pass to the Post to auto-expand/highlight a comment
 }) => {
@@ -88,7 +88,7 @@ const GroupPage = ({
     }
   };
 
-  // Handle new post creation (inserts new post at the top)
+  // Handle new post creation (prepend new post to list)
   const handleNewPost = (newPostObj) => {
     setPosts(prev => [newPostObj, ...prev]);
   };
@@ -98,18 +98,16 @@ const GroupPage = ({
     setPosts(prev => prev.filter(p => p.post_id !== delPostId));
   };
 
-  // Handle group logo update
+  // Handle group logo update; update group state with the new logo URL.
   const handleLogoUpdate = (newLogoUrl) => {
     setGroup(prev => ({ ...prev, icon: newLogoUrl }));
     setShowLogoUploader(false);
   };
 
-  // Determine if the user can update the logo (only owner)
+  // User can update logo only if they are the group owner.
   const canUpdateLogo = group && group.creator_id === currentUserId;
 
   // Render posts:
-  // If postId prop is provided (from a notification), show only that post.
-  // Otherwise, show all group posts.
   const renderPosts = () => {
     if (!isMember) return null;
     if (postId) {

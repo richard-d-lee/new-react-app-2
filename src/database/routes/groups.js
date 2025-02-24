@@ -2,6 +2,22 @@ import express from 'express';
 import connection from '../db.js';
 import { authenticateToken } from '../middleware/auth.js';
 import { createNotification } from '../helpers/notificationsSideEffect.js';
+import multer from 'multer';
+import path from 'path';
+import { v4 as uuidv4 } from 'uuid';
+
+const absoluteUploadsPath = "C:\\Users\\rever\\react-app\\src\\database\\uploads";
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, absoluteUploadsPath);
+  },
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname);
+    const uniqueName = uuidv4() + ext;
+    cb(null, uniqueName);
+  }
+});
+const upload = multer({ storage });
 
 const router = express.Router();
 
@@ -34,6 +50,8 @@ router.get('/:groupId/comments/:commentId/liked', authenticateToken, (req, res) 
   });
 });
 
+
+
 router.get('/:groupId/members', authenticateToken, (req, res) => {
   const groupId = req.params.groupId;
   const query = `
@@ -58,8 +76,50 @@ router.get('/:groupId/members', authenticateToken, (req, res) => {
   });
 });
 
-/* ---------- Group Creation and Membership ---------- */
+/**
+ * PUT /groups/:groupId/logo - Update a group's logo (owner only)
+ */
+router.put('/:groupId/logo', authenticateToken, upload.single('logo'), (req, res) => {
+  const groupId = req.params.groupId;
+  const userId = req.user.userId;
 
+  // Check that a file was uploaded.
+  if (!req.file) {
+    return res.status(400).json({ error: 'No logo file uploaded' });
+  }
+
+  // Verify ownership of the group (assuming group owner is stored in 'creator_id').
+  const ownershipQuery = 'SELECT creator_id FROM groups_table WHERE group_id = ? LIMIT 1';
+  connection.query(ownershipQuery, [groupId], (err, rows) => {
+    if (err) {
+      console.error('Error checking group ownership:', err);
+      return res.status(500).json({ error: 'Database error' });
+    }
+    if (!rows.length) {
+      return res.status(404).json({ error: 'Group not found' });
+    }
+    if (rows[0].creator_id !== userId) {
+      return res.status(403).json({ error: 'Not authorized to update group logo' });
+    }
+
+    // Build the image path from the uploaded file.
+    const filename = req.file.filename;
+    const imagePath = `/uploads/${filename}`;
+
+    // Update the group's logo (icon) in the database.
+    const updateQuery = 'UPDATE groups_table SET icon = ? WHERE group_id = ?';
+    connection.query(updateQuery, [imagePath, groupId], (err2) => {
+      if (err2) {
+        console.error('Error updating group logo:', err2);
+        return res.status(500).json({ error: 'Database error updating logo' });
+      }
+      res.json({ message: 'Group logo updated successfully', icon: imagePath });
+    });
+  });
+});
+
+
+/* ---------- Group Creation and Membership ---------- */
 // GET /groups - Retrieve all groups
 router.get('/', authenticateToken, (req, res) => {
   const query = `
@@ -342,6 +402,7 @@ router.post('/:groupId/posts/:postId/like', authenticateToken, (req, res) => {
             user_id: postOwner,
             notification_type: 'GROUP_POST_LIKE',
             reference_id: postId,
+            event_id: event_id,
             actor_id: userId,
             reference_type: groupId ? 'group_post' : 'post',
             group_id: groupId,
