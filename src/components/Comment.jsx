@@ -13,33 +13,13 @@ const defaultStyle = {
     fontWeight: 'normal'
   },
   '&multiLine': {
-    control: {
-      minHeight: 50
-    },
-    highlighter: {
-      padding: 9,
-      border: '1px solid transparent'
-    },
-    input: {
-      padding: 9,
-      border: '1px solid silver'
-    }
+    control: { minHeight: 50 },
+    highlighter: { padding: 9, border: '1px solid transparent' },
+    input: { padding: 9, border: '1px solid silver' }
   },
   suggestions: {
-    list: {
-      backgroundColor: 'white',
-      border: '1px solid #ccc',
-      fontSize: 14,
-      maxHeight: 150,
-      overflowY: 'auto'
-    },
-    item: {
-      padding: '5px 15px',
-      borderBottom: '1px solid #ddd',
-      '&focused': {
-        backgroundColor: '#cee4e5'
-      }
-    }
+    list: { backgroundColor: 'white', border: '1px solid #ccc', fontSize: 14, maxHeight: 150, overflowY: 'auto' },
+    item: { padding: '5px 15px', borderBottom: '1px solid #ddd', '&focused': { backgroundColor: '#cee4e5' } }
   }
 };
 
@@ -51,12 +31,16 @@ const Comment = ({
   onAddComment,
   onDeleteComment,
   onProfileClick,
+  // Group context:
   groupId,
   groupPostId,
+  // Event context:
+  eventId,
+  // If provided, event post id; if not, falls back to comment.post_id
+  eventPostId,
   isHighlighted = false,
   refCallback = null
 }) => {
-  // Use default fallback values to avoid undefined errors.
   const [likes, setLikes] = useState(comment.likeCount || 0);
   const [liked, setLiked] = useState(false);
   const [replyContent, setReplyContent] = useState('');
@@ -72,16 +56,22 @@ const Comment = ({
     }
   }, [refCallback]);
 
-  // Use group_comment_id if available when groupId is provided; fallback to comment_id.
+  // Use group_comment_id if in group context; otherwise fallback to comment_id.
   const commentId = groupId
     ? (comment.group_comment_id || comment.comment_id)
     : comment.comment_id;
 
-  const baseCommentUrl = groupId
-    ? `http://localhost:5000/groups/${groupId}/comments/${commentId}`
-    : `http://localhost:5000/comments/${commentId}`;
+  // Compute effective event post id if in event context.
+  const effectiveEventPostId = eventId ? (eventPostId || comment.post_id) : null;
 
-  // For mention suggestions in the reply form
+  // Build base URL for actions (like, delete)
+  const baseCommentUrl = eventId && effectiveEventPostId
+    ? `http://localhost:5000/events/${eventId}/posts/${effectiveEventPostId}/comments/${commentId}`
+    : groupId
+      ? `http://localhost:5000/groups/${groupId}/comments/${commentId}`
+      : `http://localhost:5000/comments/${commentId}`;
+
+  // Mention suggestions function.
   const fetchUsers = async (query, callback) => {
     if (!query) return callback([]);
     try {
@@ -99,6 +89,7 @@ const Comment = ({
     }
   };
 
+  // Fetch commenter's profile picture.
   useEffect(() => {
     if (!comment.user_id) return;
     axios.get(`http://localhost:5000/users/${comment.user_id}`, {
@@ -113,6 +104,7 @@ const Comment = ({
       .catch(err => console.error("Error fetching commenter's profile picture:", err));
   }, [comment.user_id, token]);
 
+  // Fetch like status.
   useEffect(() => {
     if (!token) return;
     axios.get(`${baseCommentUrl}/liked`, {
@@ -165,38 +157,50 @@ const Comment = ({
     setShowReplyForm(prev => !prev);
   };
 
+  /**
+   * Submit a reply.
+   * For event comments, always use the dedicated reply endpoint:
+   * POST /events/:eventId/comments/:commentId/reply
+   */
   const handleSubmitReply = async (e) => {
     e.preventDefault();
     if (!replyContent.trim()) return;
 
     try {
+      let replyUrl;
+      if (eventId) {
+        replyUrl = `http://localhost:5000/events/${eventId}/comments/${commentId}/reply`;
+      } else if (groupId) {
+        replyUrl = `http://localhost:5000/groups/${groupId}/comments/${commentId}/reply`;
+      } else {
+        replyUrl = `http://localhost:5000/comments/${commentId}/reply`;
+      }
       const res = await axios.post(
-        `http://localhost:5000/comments/${comment.comment_id}/reply`,
+        replyUrl,
         { content: replyContent },
         { headers: { Authorization: `Bearer ${token}` } }
       );
-
       const newReplyObj = res.data;
       onAddComment(newReplyObj);
 
-      // If it's a group reply, pass groupId
+      // Process any @mentions.
       const group_id = groupId || null;
-
       const mentions = extractMentionsFromMarkup(replyContent);
-      mentions.forEach(async ({ id: userId }) => {
+      for (const { id: userId } of mentions) {
         try {
-          await axios.post('http://localhost:5000/mentions/comment', {
-            comment_id: newReplyObj.comment_id,
-            mentioned_user_id: Number(userId),
-            group_id,
-          }, {
-            headers: { Authorization: `Bearer ${token}` }
-          });
-        } catch (err) {
-          console.error('Error creating comment mention:', err);
+          await axios.post(
+            'http://localhost:5000/mentions/comment',
+            {
+              comment_id: newReplyObj.comment_id,
+              mentioned_user_id: Number(userId),
+              group_id
+            },
+            { headers: { Authorization: `Bearer ${token}` } }
+          );
+        } catch (err2) {
+          console.error('Error creating comment mention:', err2);
         }
-      });
-
+      }
       setReplyContent('');
       setShowReplyForm(false);
     } catch (err) {
@@ -205,50 +209,62 @@ const Comment = ({
     }
   };
 
-
-  // Parse comment content for mentions using onProfileClick from parent.
+  // Parse comment content for @mentions.
   const parsedContent = parseMentions(comment.content || '', onProfileClick);
 
   return (
-    <div
-      className={`comment ${isReply ? 'reply' : ''} ${isHighlighted ? 'highlighted' : ''}`}
-      ref={commentEl}
-    >
+    <div className={`comment ${isReply ? 'reply' : ''} ${isHighlighted ? 'highlighted' : ''}`}
+         ref={commentEl}>
       {error && <p className="comment-error">{error}</p>}
+      
+      {/* Comment header with clickable profile picture and username */}
       <div className="comment-header">
-        <span
+        <span 
           onClick={() => onProfileClick && onProfileClick(comment.user_id)}
-          style={{ cursor: 'pointer' }}
-        >
+          style={{ cursor: 'pointer' }}>
           <ProfilePic imageUrl={profilePic} alt={comment.username || 'User'} size={30} />
         </span>
-        <span
+        <span 
           className="comment-author-link"
           onClick={() => onProfileClick && onProfileClick(comment.user_id)}
-          style={{ cursor: 'pointer', marginLeft: '8px', fontWeight: 600, color: '#1877f2' }}
-        >
+          style={{ cursor: 'pointer', marginLeft: '8px', fontWeight: 600, color: '#1877f2' }}>
           {comment.username || 'User'}
         </span>
-        <span
+        <span 
           className="comment-timestamp"
-          style={{ fontSize: '12px', color: '#555', marginLeft: 'auto' }}
-        >
+          style={{ fontSize: '12px', color: '#555', marginLeft: 'auto' }}>
           {comment.created_at ? new Date(comment.created_at).toLocaleString() : ''}
         </span>
       </div>
+
+      {/* Comment content */}
       <div className="comment-content">
         {parsedContent}
       </div>
+
+      {/* Comment stats (like count) */}
       <div className="comment-stats">
         {likes > 0 && <span>{likes} {likes === 1 ? 'Like' : 'Likes'}</span>}
       </div>
+
+      {/* Comment actions */}
       <div className="comment-actions">
         <span className="comment-link" onClick={handleLike}>
           {liked ? 'Unlike' : 'Like'}
         </span>
-        {!isReply && <span className="comment-link" onClick={toggleReplyForm}>Reply</span>}
-        {comment.user_id === currentUserId && <span className="comment-link" onClick={handleDelete}>Delete</span>}
+        {!isReply && (
+          <span className="comment-link" onClick={toggleReplyForm}>
+            Reply
+          </span>
+        )}
+        {comment.user_id === currentUserId && (
+          <span className="comment-link" onClick={handleDelete}>
+            Delete
+          </span>
+        )}
       </div>
+
+      {/* Reply form */}
       {!isReply && showReplyForm && (
         <div className="comment-reply-form">
           <form onSubmit={handleSubmitReply}>
@@ -273,6 +289,8 @@ const Comment = ({
           </form>
         </div>
       )}
+
+      {/* Nested replies */}
       {!isReply && comment.replies && comment.replies.length > 0 && (
         <div className="comment-replies">
           {comment.replies.map((r) => (
@@ -286,7 +304,8 @@ const Comment = ({
               onDeleteComment={onDeleteComment}
               onProfileClick={onProfileClick}
               groupId={groupId}
-              groupPostId={groupPostId}
+              eventId={eventId}
+              eventPostId={eventPostId}
             />
           ))}
         </div>

@@ -55,7 +55,8 @@ const Post = ({
   onDelete,
   setCurrentView,
   onProfileClick = () => {},
-  groupId,                // if provided, this post is a group post
+  groupId,
+  eventId,
   expandedCommentId       // optional ID to highlight & scroll to
 }) => {
   const [comments, setComments] = useState([]);
@@ -373,6 +374,7 @@ const Post = ({
             onProfileClick={onProfileClick}
             setCurrentView={setCurrentView}
             groupId={groupId}
+            eventId={eventId}
             groupPostId={effectivePostId}
             refCallback={(el) => {
               if (el) commentRefs.current[comment.comment_id] = el;

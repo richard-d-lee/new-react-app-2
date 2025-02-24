@@ -121,6 +121,7 @@ const Events = ({ token, currentUserId, setCurrentView }) => {
         eventData={selectedEvent}
         onBack={handleCloseEvent}
         refreshEvents={fetchEventsData}
+        setCurrentView={setCurrentView}
       />
     );
   }

@@ -7,12 +7,13 @@ export function createNotification({
   actor_id,
   reference_type,
   message,
-  group_id = null
+  group_id = null,
+  event_id = null
 }) {
   const query = `
     INSERT INTO notifications 
-      (user_id, notification_type, reference_id, actor_id, reference_type, group_id, message, is_read, created_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, 0, NOW())
+      (user_id, notification_type, reference_id, actor_id, reference_type, group_id, event_id, message, is_read, created_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, NOW())
   `;
   const params = [
     user_id,
@@ -21,6 +22,7 @@ export function createNotification({
     actor_id || null,
     reference_type || null,
     group_id,
+    event_id,
     message || ''
   ];
   connection.query(query, params, (err, results) => {

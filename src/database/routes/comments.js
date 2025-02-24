@@ -1,4 +1,3 @@
-// routes/comments.js
 import express from 'express';
 import connection from '../db.js';
 import { authenticateToken } from '../middleware/auth.js';
@@ -6,20 +5,19 @@ import { createNotification } from '../helpers/notificationsSideEffect.js';
 
 const router = express.Router();
 
-
 /**
  * GET /comments/:commentId/liked
  * Returns the like count and whether the current user liked the comment.
-*/
+ */
 router.get('/:commentId/liked', authenticateToken, (req, res) => {
   const commentId = req.params.commentId;
   const userId = req.user.userId;
   const query = `
-  SELECT 
-  COUNT(*) AS likeCount,
-  SUM(CASE WHEN user_id = ? THEN 1 ELSE 0 END) AS userLiked
-  FROM comment_likes
-  WHERE comment_id = ?
+    SELECT 
+      COUNT(*) AS likeCount,
+      SUM(CASE WHEN user_id = ? THEN 1 ELSE 0 END) AS userLiked
+    FROM comment_likes
+    WHERE comment_id = ?
   `;
   connection.query(query, [userId, commentId], (err, results) => {
     if (err) {
@@ -32,17 +30,15 @@ router.get('/:commentId/liked', authenticateToken, (req, res) => {
   });
 });
 
-
 /**
  * POST /comments/:commentId/like
  * Likes a comment. Inserts a record into comment_likes.
  * If the comment's author is different from the liker, a notification is generated.
-*/
+ */
 router.post('/:commentId/like', authenticateToken, (req, res) => {
   const commentId = req.params.commentId;
   const userId = req.user.userId;
   const query = 'INSERT INTO comment_likes (comment_id, user_id) VALUES (?, ?)';
-
   connection.query(query, [commentId, userId], (err, results) => {
     if (err) {
       if (err.code === 'ER_DUP_ENTRY') {
@@ -51,7 +47,6 @@ router.post('/:commentId/like', authenticateToken, (req, res) => {
       console.error('Error liking comment:', err);
       return res.status(500).json({ error: 'Database error' });
     }
-
     // Fetch the comment owner to create a notification if necessary.
     const getCommentQuery = 'SELECT user_id FROM comments WHERE comment_id = ?';
     connection.query(getCommentQuery, [commentId], (err, commentResults) => {
@@ -71,25 +66,23 @@ router.post('/:commentId/like', authenticateToken, (req, res) => {
         }
       }
     });
-
     res.json({ message: 'Comment liked successfully' });
   });
 });
 
-
 /**
  * POST /comments/:commentId/reply
  * Inserts a reply to an existing comment and notifies the parent comment’s author.
-*/
+ */
 router.post('/:commentId/reply', authenticateToken, (req, res) => {
   const parentCommentId = req.params.commentId;
   const userId = req.user.userId;
   const { content } = req.body;
   const insertQuery = `
-  INSERT INTO comments (post_id, parent_comment_id, user_id, content)
-  SELECT post_id, ?, ?, ?
-  FROM comments
-  WHERE comment_id = ?
+    INSERT INTO comments (post_id, parent_comment_id, user_id, content)
+    SELECT post_id, ?, ?, ?
+    FROM comments
+    WHERE comment_id = ?
   `;
   connection.query(insertQuery, [parentCommentId, userId, content, parentCommentId], (err, insertResult) => {
     if (err) {
@@ -98,11 +91,11 @@ router.post('/:commentId/reply', authenticateToken, (req, res) => {
     }
     const newCommentId = insertResult.insertId;
     const selectQuery = `
-    SELECT c.comment_id, c.post_id, c.parent_comment_id, c.user_id, c.content, c.created_at, 
-    u.username, u.profile_picture_url, 0 AS likeCount
-    FROM comments c
-    JOIN users u ON c.user_id = u.user_id
-    WHERE c.comment_id = ?
+      SELECT c.comment_id, c.post_id, c.parent_comment_id, c.user_id, c.content, c.created_at, 
+             u.username, u.profile_picture_url, 0 AS likeCount
+      FROM comments c
+      JOIN users u ON c.user_id = u.user_id
+      WHERE c.comment_id = ?
     `;
     connection.query(selectQuery, [newCommentId], (err, rows) => {
       if (err) {
@@ -136,7 +129,9 @@ router.post('/:commentId/reply', authenticateToken, (req, res) => {
   });
 });
 
-// GET /comments/:commentId - Retrieve a single comment by ID
+/**
+ * GET /comments/:commentId - Retrieve a single comment by ID
+ */
 router.get('/:commentId', authenticateToken, (req, res) => {
   const commentId = req.params.commentId;
   const query = `
@@ -162,12 +157,13 @@ router.get('/:commentId', authenticateToken, (req, res) => {
   });
 });
 
-// DELETE /comments/:commentId/like - Unlike a comment
+/**
+ * DELETE /comments/:commentId/like - Unlike a comment
+ */
 router.delete('/:commentId/like', authenticateToken, (req, res) => {
   const commentId = req.params.commentId;
   const userId = req.user.userId;
   const query = 'DELETE FROM comment_likes WHERE comment_id = ? AND user_id = ?';
-
   connection.query(query, [commentId, userId], (err, results) => {
     if (err) {
       console.error('Error unliking comment:', err);
@@ -182,7 +178,7 @@ router.delete('/:commentId/like', authenticateToken, (req, res) => {
 
 /**
  * DELETE /comments/:commentId
- * Deletes a comment if the logged-in user is the author.
+ * Deletes a comment if the logged-in user is the author and removes any notifications stemming from that comment.
  */
 router.delete('/:commentId', authenticateToken, (req, res) => {
   const commentId = req.params.commentId;
@@ -205,7 +201,17 @@ router.delete('/:commentId', authenticateToken, (req, res) => {
       if (delResults.affectedRows === 0) {
         return res.status(404).json({ error: 'Comment not found or already deleted' });
       }
-      res.json({ message: 'Comment deleted successfully' });
+      // Cascade delete notifications referencing this comment.
+      const notifDeleteQuery = `
+        DELETE FROM notifications 
+        WHERE reference_id = ? AND reference_type IN ('comment', 'event_comment')
+      `;
+      connection.query(notifDeleteQuery, [commentId], (err, notifResults) => {
+        if (err) {
+          console.error("Error deleting notifications:", err);
+        }
+        res.json({ message: 'Comment deleted successfully' });
+      });
     });
   });
 });
@@ -240,6 +246,9 @@ router.post('/:postId/comments', authenticateToken, (req, res) => {
   const postId = req.params.postId;
   const userId = req.user.userId;
   const { content } = req.body;
+  if (!content || content.trim() === "") {
+    return res.status(400).json({ error: 'Content is required' });
+  }
   const insertQuery = `
     INSERT INTO comments (post_id, user_id, content) 
     VALUES (?, ?, ?)
@@ -252,7 +261,7 @@ router.post('/:postId/comments', authenticateToken, (req, res) => {
     const newCommentId = insertResult.insertId;
     const selectQuery = `
       SELECT c.comment_id, c.post_id, c.parent_comment_id, c.user_id, c.content, c.created_at,
-             u.username, u.profile_picture_url, 0 AS likeCount
+             u.username, u.profile_picture_url, 0 AS likes
       FROM comments c
       JOIN users u ON c.user_id = u.user_id
       WHERE c.comment_id = ?
@@ -262,9 +271,7 @@ router.post('/:postId/comments', authenticateToken, (req, res) => {
         console.error("Error selecting new comment:", err);
         return res.status(500).json({ error: 'Database error' });
       }
-      if (!rows || rows.length === 0) {
-        return res.status(404).json({ error: 'Comment not found after insert' });
-      }
+      if (!rows || rows.length === 0) return res.status(404).json({ error: 'Comment not found after insert' });
       // Notify the post owner if not the same as the commenter.
       const getPostQuery = 'SELECT user_id FROM posts WHERE post_id = ?';
       connection.query(getPostQuery, [postId], (err, postResults) => {

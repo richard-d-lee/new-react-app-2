@@ -9,6 +9,7 @@ import Groups from './Groups.jsx';
 import GroupPage from './GroupPage.jsx';
 import Profile from './Profile.jsx';
 import Settings from './Settings.jsx';
+import Event from './Event.jsx';
 import Widgets from './Widgets.jsx';
 import Messenger from './Messenger.jsx';
 import Events from './Events.jsx';
@@ -17,8 +18,8 @@ import '../styles/HomePage.css';
 
 const HomePage = ({ updateLogged, email }) => {
   const [userId, setUserId] = useState(null);
-  const [currentUsername, setCurrentUsername] = useState("");
-  const [currentUserProfilePic, setCurrentUserProfilePic] = useState("");
+  const [currentUsername, setCurrentUsername] = useState('');
+  const [currentUserProfilePic, setCurrentUserProfilePic] = useState('');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [widgetsCollapsed, setWidgetsCollapsed] = useState(false);
   const [currentView, setCurrentView] = useState('feed');
@@ -49,11 +50,11 @@ const HomePage = ({ updateLogged, email }) => {
           headers: { Authorization: `Bearer ${token}` }
         })
         .then((res) => {
-          setCurrentUserProfilePic(res.data.profile_picture_url || "");
-          setCurrentUsername(res.data.username || "");
+          setCurrentUserProfilePic(res.data.profile_picture_url || '');
+          setCurrentUsername(res.data.username || '');
         })
         .catch((err) => {
-          console.error("Error fetching user details:", err);
+          console.error('Error fetching user details:', err);
           if (err.response && err.response.status === 401) {
             localStorage.removeItem('authToken');
             updateLogged(false);
@@ -102,6 +103,7 @@ const HomePage = ({ updateLogged, email }) => {
 
   return (
     <div className="home-page">
+      {/* Navbar */}
       <div className="nav">
         <Navbar
           updateLogged={updateLogged}
@@ -115,49 +117,60 @@ const HomePage = ({ updateLogged, email }) => {
       </div>
 
       <div className="main-content">
+        {/* Sidebar */}
         <div className={`sidebar-container ${sidebarCollapsed ? 'collapsed' : ''}`}>
           <Sidebar
             collapsed={sidebarCollapsed}
-            toggleSidebar={() => setSidebarCollapsed(prev => !prev)}
+            toggleSidebar={() => setSidebarCollapsed((prev) => !prev)}
             setCurrentView={setCurrentView}
             token={token}
             currentUserId={userId}
           />
         </div>
 
+        {/* Main content area */}
         <div className="feed-container">
-          {/* Show Feed */}
+          {/* Feed */}
           {((typeof currentView === 'string' && currentView === 'feed') ||
             (typeof currentView === 'object' && currentView.view === 'feed')) && (
-              <Feed
-                token={token}
-                currentUserId={userId}
-                currentUsername={currentUsername}
-                currentUserProfilePic={currentUserProfilePic}
-                setCurrentView={setCurrentView}
-                postId={currentView.postId}
-                expandedCommentId={currentView.expandedCommentId}
-              />
-            )}
-
-          {/* Show Friends, pass the refreshFriendRequestsCount callback */}
-          {currentView === 'friends' && (
-            <Friends
-              refreshFriendRequestsCount={refreshFriendRequestsCount}
-            />
-          )}
-
-          {/* Events */}
-          {currentView === 'events' && (
-            <Events
+            <Feed
               token={token}
               currentUserId={userId}
+              currentUsername={currentUsername}
+              currentUserProfilePic={currentUserProfilePic}
               setCurrentView={setCurrentView}
+              postId={currentView.postId}
+              expandedCommentId={currentView.expandedCommentId}
             />
           )}
 
+          {/* Friends */}
+          {currentView === 'friends' && (
+            <Friends refreshFriendRequestsCount={refreshFriendRequestsCount} />
+          )}
 
-          {/* Show Notifications */}
+          {/* Events List */}
+          {currentView === 'events' && (
+            <Events token={token} currentUserId={userId} setCurrentView={setCurrentView} />
+          )}
+
+          {/* Single Event */}
+          {typeof currentView === 'object' && currentView.view === 'event' && (
+            <Event
+              token={token}
+              currentUserId={userId}
+              // We can pass eventId or eventData, whichever is available
+              eventId={currentView.eventId}
+              eventData={currentView.eventData} // optional if we already have the data
+              onBack={() => setCurrentView('events')}
+              setCurrentView={setCurrentView}
+              refreshEvents={() => {}}
+              postId={currentView.postId}
+              expandedCommentId={currentView.expandedCommentId}
+            />
+          )}
+
+          {/* Notifications */}
           {currentView === 'notifications' && (
             <Notifications
               token={token}
@@ -168,7 +181,7 @@ const HomePage = ({ updateLogged, email }) => {
             />
           )}
 
-          {/* Show Profile */}
+          {/* Profile */}
           {typeof currentView === 'object' && currentView.view === 'profile' && (
             <Profile
               token={token}
@@ -178,7 +191,7 @@ const HomePage = ({ updateLogged, email }) => {
             />
           )}
 
-          {/* Show Settings */}
+          {/* Settings */}
           {currentView === 'settings' && (
             <Settings
               token={token}
@@ -187,7 +200,7 @@ const HomePage = ({ updateLogged, email }) => {
             />
           )}
 
-          {/* Show Groups */}
+          {/* Groups List */}
           {currentView === 'groups' && (
             <Groups
               token={token}
@@ -196,7 +209,7 @@ const HomePage = ({ updateLogged, email }) => {
             />
           )}
 
-          {/* Show Single Group Page */}
+          {/* Single Group Page */}
           {typeof currentView === 'object' && currentView.view === 'group' && (
             <GroupPage
               token={token}
@@ -210,11 +223,12 @@ const HomePage = ({ updateLogged, email }) => {
           )}
         </div>
 
+        {/* Widgets */}
         <div className={`widgets-container ${widgetsCollapsed ? 'collapsed' : ''}`}>
           <Widgets
             email={email}
             collapsed={widgetsCollapsed}
-            toggleWidgets={() => setWidgetsCollapsed(prev => !prev)}
+            toggleWidgets={() => setWidgetsCollapsed((prev) => !prev)}
           />
         </div>
       </div>
