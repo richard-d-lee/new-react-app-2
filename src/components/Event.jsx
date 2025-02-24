@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import Post from './Post.jsx';  // Reusable Post component
+import Post from './Post.jsx';
+import CreatePost from './CreatePost.jsx';
 import '../styles/Event.css';
 
 const Event = ({ token, currentUserId, eventData, onBack, refreshEvents }) => {
@@ -10,13 +11,15 @@ const Event = ({ token, currentUserId, eventData, onBack, refreshEvents }) => {
   const eventId = eventData.event_id;
   const isOwner = (currentUserId === eventData.user_id);
 
+  // Hardcoded fallback baseURL for images
   const baseURL = 'http://localhost:5000';
 
-  // Build the full event image URL
+  // Build the event image URL if it exists
   const eventImageUrl = eventData.event_image_url
     ? `${baseURL}${eventData.event_image_url}`
     : null;
 
+  // Fetch all posts for this event
   const fetchEventPosts = async () => {
     if (!token || !eventId) return;
     try {
@@ -34,16 +37,23 @@ const Event = ({ token, currentUserId, eventData, onBack, refreshEvents }) => {
 
   useEffect(() => {
     fetchEventPosts();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [eventId, token]);
 
+  // Called when a new post is created via CreatePost
+  const handleNewPost = (newPost) => {
+    // Prepend the new post to the existing list
+    setPosts((prev) => [newPost, ...prev]);
+  };
+
+  // Refresh if a post is deleted
   const handlePostDelete = () => {
     fetchEventPosts();
   };
 
   return (
     <div className="event-container">
-      {/* Render the event image at the very top */}
-      <button className="back-button" onClick={onBack}>Back to Events</button>
+      {/* Render the event image at the top */}
       {eventImageUrl && (
         <div className="event-image" style={{ textAlign: 'center', marginBottom: '20px' }}>
           <img
@@ -54,6 +64,7 @@ const Event = ({ token, currentUserId, eventData, onBack, refreshEvents }) => {
         </div>
       )}
 
+      <button className="back-button" onClick={onBack}>Back to Events</button>
       <h2 className="event-title">{eventData.event_name}</h2>
 
       <div className="event-details">
@@ -66,6 +77,15 @@ const Event = ({ token, currentUserId, eventData, onBack, refreshEvents }) => {
       </div>
 
       <h3 className="posts-header">Posts for {eventData.event_name}</h3>
+
+      {/* CreatePost is now placed directly under the "Posts for..." header */}
+      <CreatePost
+        token={token}
+        currentUserId={currentUserId}
+        onNewPost={handleNewPost}
+        eventId={eventId}
+      />
+
       {loading && <p className="loading-text">Loading event posts...</p>}
       {!loading && posts.length === 0 && <p className="empty">No posts yet for this event.</p>}
 
