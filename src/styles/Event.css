@@ -1,0 +1,236 @@
+/* EVENT DETAIL PAGE */
+.event-container {
+    padding: 20px;
+    font-family: sans-serif;
+    max-width: 800px;
+    margin: 0 auto; /* center horizontally if desired */
+    background-color: #fff;
+    border-radius: 8px;
+  }
+  
+  /* The back button at the top */
+  .event-container .back-button {
+    background-color: #f0f2f5;
+    color: #555;
+    margin-bottom: 15px;
+    border: none;
+    border-radius: 4px;
+    padding: 6px 12px;
+    cursor: pointer;
+    font-size: 0.85rem;
+  }
+  
+  .event-container .back-button:hover {
+    background-color: #e2e2e2;
+  }
+  
+  /* Event title & details */
+  .event-title {
+    font-size: 1.8rem;
+    margin-bottom: 10px;
+  }
+  
+  .event-details p {
+    margin: 6px 0;
+    line-height: 1.4em;
+    font-size: 0.95rem;
+  }
+  
+  .event-details strong {
+    font-weight: 600;
+    color: #333;
+  }
+  
+  .event-image img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 6px;
+    margin-top: 10px;
+  }
+  
+  /* Section for creating a post */
+  .create-post-section {
+    margin: 20px 0;
+    background-color: #fafafa;
+    border: 1px solid #ddd;
+    padding: 15px;
+    border-radius: 6px;
+  }
+  
+  .create-post-section h3 {
+    margin-top: 0;
+    font-size: 1.2rem;
+    margin-bottom: 10px;
+  }
+  
+  .create-post-form {
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .create-post-form textarea {
+    min-height: 60px;
+    margin-bottom: 10px;
+    padding: 8px;
+    border-radius: 4px;
+    border: 1px solid #ccc;
+    font-family: inherit;
+    font-size: 0.95rem;
+  }
+  
+  .create-post-form button {
+    align-self: flex-start;
+    background-color: #1877f2;
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    padding: 6px 12px;
+    cursor: pointer;
+    font-size: 0.85rem;
+  }
+  
+  .create-post-form button:hover {
+    background-color: #145db2;
+  }
+  
+  /* Posts header */
+  .posts-header {
+    font-size: 1.2rem;
+    margin-top: 30px;
+  }
+  
+  /* Post list */
+  .event-posts-list {
+    margin-top: 10px;
+  }
+  
+  /* Single post styling */
+  .event-post {
+    background-color: #f7f7f7;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    padding: 12px;
+    margin-bottom: 15px;
+  }
+  
+  .post-header {
+    display: flex;
+    align-items: center;
+    margin-bottom: 8px;
+  }
+  
+  .post-header strong {
+    margin-right: 4px;
+  }
+  
+  .delete-post-button {
+    margin-left: auto;
+    background-color: #d9534f; /* red */
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    padding: 4px 8px;
+    cursor: pointer;
+    font-size: 0.75rem;
+  }
+  
+  .delete-post-button:hover {
+    background-color: #c9302c;
+  }
+  
+  .post-content {
+    font-size: 0.95rem;
+    margin-bottom: 6px;
+  }
+  
+  .post-timestamp {
+    font-size: 0.8rem;
+    color: #777;
+    margin-bottom: 10px;
+  }
+  
+  /* Show/Hide Comments button */
+  .toggle-comments-button {
+    background-color: #e7e7e7;
+    color: #333;
+    border: none;
+    border-radius: 4px;
+    padding: 5px 10px;
+    cursor: pointer;
+    font-size: 0.8rem;
+  }
+  
+  .toggle-comments-button:hover {
+    background-color: #dcdcdc;
+  }
+  
+  /* Post's comments section */
+  .post-comments {
+    background-color: #fff;
+    border: 1px solid #ddd;
+    padding: 10px;
+    border-radius: 6px;
+    margin-top: 10px;
+  }
+  
+  .comment-item {
+    background: #f8f8f8;
+    padding: 8px;
+    margin-bottom: 8px;
+    border-radius: 4px;
+  }
+  
+  .comment-item strong {
+    margin-right: 5px;
+  }
+  
+  .comment-timestamp {
+    font-size: 0.8rem;
+    color: #888;
+    margin-top: 2px;
+  }
+  
+  /* Form for adding a new comment */
+  .comment-form {
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .comment-form textarea {
+    min-height: 40px;
+    margin-bottom: 6px;
+    padding: 6px;
+    border-radius: 4px;
+    border: 1px solid #ccc;
+    font-family: inherit;
+    font-size: 0.9rem;
+  }
+  
+  .comment-form button {
+    align-self: flex-start;
+    background-color: #1877f2;
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    padding: 5px 12px;
+    cursor: pointer;
+    font-size: 0.8rem;
+  }
+  
+  .comment-form button:hover {
+    background-color: #145db2;
+  }
+  
+  /* General states */
+  .loading-text {
+    color: #999;
+    font-style: italic;
+    margin: 10px 0;
+  }
+  
+  .empty {
+    color: #666;
+    font-style: italic;
+    margin: 8px 0;
+  }
+  

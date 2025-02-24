@@ -26,8 +26,12 @@ const Sidebar = ({ collapsed, toggleSidebar, setCurrentView, token, currentUserI
   }, [token, currentUserId]);
 
   const handleGroupClick = (groupId) => {
-    // Use an object for the view
     setCurrentView({ view: 'group', groupId });
+  };
+
+  // (1) handleEventsClick: sets currentView to "events"
+  const handleEventsClick = () => {
+    setCurrentView('events');
   };
 
   return (
@@ -36,12 +40,15 @@ const Sidebar = ({ collapsed, toggleSidebar, setCurrentView, token, currentUserI
         {collapsed ? '→' : '←'}
       </button>
 
-      <UserProfileSection setCurrentView={setCurrentView}/>
+      <UserProfileSection setCurrentView={setCurrentView} />
 
       <div className="shortcuts">
         <h3>Shortcuts</h3>
         <Shortcut icon="📌" text="Saved Posts" />
-        <Shortcut icon="📅" text="Events" />
+        {/* (2) Wrap the Shortcut in a clickable div to set currentView */}
+        <div onClick={handleEventsClick}>
+          <Shortcut icon="📅" text="Events" />
+        </div>
         <Shortcut icon="📸" text="Memories" />
       </div>
 
@@ -49,7 +56,7 @@ const Sidebar = ({ collapsed, toggleSidebar, setCurrentView, token, currentUserI
         <h3>Groups</h3>
         {myGroups.length > 0 ? (
           myGroups.map((group) => (
-            <Group 
+            <Group
               key={group.group_id}
               icon={group.icon}
               text={group.group_name}

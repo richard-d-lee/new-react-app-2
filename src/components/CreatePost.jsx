@@ -18,18 +18,17 @@ const defaultStyle = {
   }
 };
 
-const CreatePost = ({ token, currentUserId, onNewPost, groupId }) => {
+const CreatePost = ({ token, currentUserId, onNewPost, groupId, eventId }) => {
   const [content, setContent] = useState('');
   const [error, setError] = useState('');
 
-  // 1) Define fetchUsers here
+  // Fetch users for mentions
   const fetchUsers = async (query, callback) => {
     if (!query) return callback([]);
     try {
       const res = await axios.get(`http://localhost:5000/users/search?query=${query}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      // transform response data into {id, display} objects:
       const suggestions = res.data.map((user) => ({
         id: user.user_id.toString(),
         display: user.username,
@@ -46,17 +45,23 @@ const CreatePost = ({ token, currentUserId, onNewPost, groupId }) => {
     if (!content.trim()) return;
 
     try {
-      const url = groupId ? `http://localhost:5000/groups/${groupId}/posts` : `http://localhost:5000/feed`;
+      // Determine the URL based on props: eventId, groupId, or fallback to feed.
+      const url = eventId 
+        ? `http://localhost:5000/events/${eventId}/posts`
+        : groupId 
+          ? `http://localhost:5000/groups/${groupId}/posts`
+          : `http://localhost:5000/feed`;
+
       const res = await axios.post(url, { content }, { headers: { Authorization: `Bearer ${token}` } });
       onNewPost(res.data);
 
-      // mention logic:
+      // Process mentions
       const mentions = extractMentionsFromMarkup(content);
-      const group_id = groupId || null;
+      const extraId = groupId || eventId || null;
       mentions.forEach(async ({ id: userId }) => {
         try {
           await axios.post(`http://localhost:5000/mentions/post`,
-            { post_id: res.data.post_id, mentioned_user_id: userId, group_id },
+            { post_id: res.data.post_id, mentioned_user_id: userId, group_id: groupId || null },
             { headers: { Authorization: `Bearer ${token}` } }
           );
         } catch (err) {
@@ -84,7 +89,6 @@ const CreatePost = ({ token, currentUserId, onNewPost, groupId }) => {
           markup="@[__display__](__id__)"
           displayTransform={(id, display) => `@${display}`}
         >
-          {/* 2) Use fetchUsers for the data prop */}
           <Mention
             trigger="@"
             data={fetchUsers}

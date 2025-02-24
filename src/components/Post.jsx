@@ -15,17 +15,9 @@ const defaultStyle = {
     fontWeight: 'normal'
   },
   '&multiLine': {
-    control: {
-      minHeight: 50
-    },
-    highlighter: {
-      padding: 9,
-      border: '1px solid transparent'
-    },
-    input: {
-      padding: 9,
-      border: '1px solid silver'
-    }
+    control: { minHeight: 50 },
+    highlighter: { padding: 9, border: '1px solid transparent' },
+    input: { padding: 9, border: '1px solid silver' }
   },
   suggestions: {
     list: {
@@ -38,9 +30,7 @@ const defaultStyle = {
     item: {
       padding: '5px 15px',
       borderBottom: '1px solid #ddd',
-      '&focused': {
-        backgroundColor: '#cee4e5'
-      }
+      '&focused': { backgroundColor: '#cee4e5' }
     }
   }
 };
@@ -58,13 +48,13 @@ function findCommentInTree(tree, targetId) {
 }
 
 const Post = ({
-  post,
+  post = {},
   token,
   currentUserId,
   currentUserProfilePic,
   onDelete,
   setCurrentView,
-  onProfileClick = () => { },
+  onProfileClick = () => {},
   groupId,                // if provided, this post is a group post
   expandedCommentId       // optional ID to highlight & scroll to
 }) => {
@@ -82,19 +72,27 @@ const Post = ({
   const commentsRef = useRef(null);
   const commentRefs = useRef({});
 
-  const effectivePostId = post?.post_id || post?.postId;
+  const effectivePostId = post.post_id || post.postId;
 
-  // Build base URL for post API calls
-  const basePostUrl = groupId
-    ? `http://localhost:5000/groups/${groupId}/posts/${effectivePostId}`
-    : `http://localhost:5000/feed/${effectivePostId}`;
+  // 1) Build base URLs for post calls. (Group vs feed vs event)
+  let basePostUrl = '';
+  let commentsUrl = '';
 
-  // Build comments URL
-  const commentsUrl = groupId
-    ? `http://localhost:5000/groups/${groupId}/posts/${effectivePostId}/comments`
-    : `http://localhost:5000/feed/${effectivePostId}/comments`;
+  if (post.event_id) {
+    // For an event post, use the unified endpoint including the post ID
+    basePostUrl = `http://localhost:5000/events/${post.event_id}/posts/${effectivePostId}`;
+    commentsUrl = `http://localhost:5000/events/${post.event_id}/posts/${effectivePostId}/comments`;
+  } else if (groupId) {
+    // Group post endpoints
+    basePostUrl = `http://localhost:5000/groups/${groupId}/posts/${effectivePostId}`;
+    commentsUrl = `http://localhost:5000/groups/${groupId}/posts/${effectivePostId}/comments`;
+  } else {
+    // Regular feed post endpoints
+    basePostUrl = `http://localhost:5000/feed/${effectivePostId}`;
+    commentsUrl = `http://localhost:5000/feed/${effectivePostId}/comments`;
+  }
 
-  // Fetch author info if not provided and if post.user_id exists
+  // 2) Fetch author info if not provided
   useEffect(() => {
     if (!effectivePostId || post.username || !post.user_id) return;
     axios.get(`http://localhost:5000/users/${post.user_id}`, {
@@ -109,7 +107,7 @@ const Post = ({
       .catch(err => console.error("Error fetching post author:", err));
   }, [effectivePostId, post.user_id, post.username, token]);
 
-  // Fetch comments for this post
+  // 3) Fetch comments for this post using the updated commentsUrl
   useEffect(() => {
     if (!effectivePostId) return;
     axios.get(commentsUrl, { headers: { Authorization: `Bearer ${token}` } })
@@ -136,12 +134,15 @@ const Post = ({
     }, 100);
   }, [expandedCommentId, comments, showAllComments]);
 
-  // Fetch like count and liked status for this post
+  // 4) Fetch like count and liked status for this post
   useEffect(() => {
     if (!token || !effectivePostId) return;
+    // GET like count
     axios.get(`${basePostUrl}/likes/count`, { headers: { Authorization: `Bearer ${token}` } })
       .then(res => setLikeCount(res.data.likeCount))
       .catch(err => console.error("Error fetching like count:", err));
+
+    // GET liked status
     axios.get(`${basePostUrl}/liked`, { headers: { Authorization: `Bearer ${token}` } })
       .then(res => setLiked(res.data.liked))
       .catch(err => console.error("Error fetching liked status:", err));
@@ -171,6 +172,7 @@ const Post = ({
     }
   };
 
+  // 5) Delete post
   const handleDeletePost = async () => {
     if (!window.confirm("Are you sure you want to delete this post?")) return;
     try {
@@ -183,15 +185,15 @@ const Post = ({
     }
   };
 
-  // handleAddComment: update comments state when a new comment or reply is added
+  // Update comments state when a new top-level comment or reply is added
   const handleAddComment = (newCommentObj) => {
     if (newCommentObj.parent_comment_id) {
       setComments(prev =>
         prev.map(c => c.comment_id === newCommentObj.parent_comment_id
           ? {
-            ...c,
-            replies: c.replies ? [...c.replies, newCommentObj] : [newCommentObj]
-          }
+              ...c,
+              replies: c.replies ? [...c.replies, newCommentObj] : [newCommentObj]
+            }
           : c
         )
       );
@@ -200,7 +202,7 @@ const Post = ({
     }
   };
 
-  // handleDeleteComment: update local comments state by removing a comment
+  // Remove a comment locally
   const handleDeleteComment = (commentId, parentId) => {
     setComments(prev =>
       prev.map(comment => {
@@ -215,7 +217,7 @@ const Post = ({
     );
   };
 
-  // Define fetchUsers for mention suggestions
+  // For mention suggestions
   const fetchUsers = async (query, callback) => {
     if (!query) return callback([]);
     try {
@@ -233,11 +235,11 @@ const Post = ({
     }
   };
 
-  // Handle posting a new comment (top-level)
+  // 6) Post a new top-level comment using the updated endpoint
   const handlePostNewComment = async () => {
     if (!newComment.trim()) return;
     if (!effectivePostId) {
-      console.error('Post ID is undefined. Cannot add comment.');
+      console.error("Post ID is undefined. Cannot add comment.");
       return;
     }
     try {
@@ -246,16 +248,15 @@ const Post = ({
       });
       handleAddComment(res.data);
 
-      // If it's a group post, pass groupId when creating mention notifications
+      // Process any mentions in the comment
       const group_id = groupId || null;
-
       const mentions = extractMentionsFromMarkup(newComment);
       mentions.forEach(async ({ id: userId }) => {
         try {
           await axios.post('http://localhost:5000/mentions/comment', {
             comment_id: res.data.comment_id,
             mentioned_user_id: userId,
-            group_id, // pass group_id if it's a group
+            group_id
           }, {
             headers: { Authorization: `Bearer ${token}` }
           });
@@ -267,11 +268,12 @@ const Post = ({
       setNewComment('');
       setShowCommentForm(false);
     } catch (err) {
-      console.error('Error adding comment:', err);
+      console.error("Error adding comment:", err);
     }
   };
 
-  const finalUsername = author.username || "Unknown User";
+  // Render section
+  const finalUsername = author.username || 'Unknown User';
   const finalProfilePic = author.profile_picture_url
     ? `http://localhost:5000${author.profile_picture_url}`
     : "https://t3.ftcdn.net/jpg/10/29/65/84/360_F_1029658445_rfwMzxeuqrvm7GTY4Yr9WaBbYKlXIRs7.jpg";
@@ -311,7 +313,7 @@ const Post = ({
         </div>
       )}
 
-      {/* Post Content with Mention Parsing */}
+      {/* Post Content */}
       <div className="post-content">
         <p>{parseMentions(post.content || '', onProfileClick)}</p>
       </div>
@@ -319,8 +321,8 @@ const Post = ({
       {/* Post Stats */}
       {(likeCount > 0 || totalCommentCount > 0) && (
         <div className="post-stats">
-          {likeCount > 0 && <span>{likeCount} {likeCount === 1 ? "Like" : "Likes"}</span>}
-          {totalCommentCount > 0 && <span>{totalCommentCount} {totalCommentCount === 1 ? "Comment" : "Comments"}</span>}
+          {likeCount > 0 && <span>{likeCount} {likeCount === 1 ? 'Like' : 'Likes'}</span>}
+          {totalCommentCount > 0 && <span>{totalCommentCount} {totalCommentCount === 1 ? 'Comment' : 'Comments'}</span>}
         </div>
       )}
 
@@ -334,7 +336,7 @@ const Post = ({
         </span>
       </div>
 
-      {/* Comment Input Field with Mentions */}
+      {/* Comment Input Field */}
       {showCommentForm && (
         <div className="post-reply-form">
           <MentionsInput
@@ -360,7 +362,7 @@ const Post = ({
 
       {/* Comments Section */}
       <div className="comments" ref={commentsRef}>
-        {visibleComments.map(comment => (
+        {visibleComments.map((comment) => (
           <Comment
             key={comment.comment_id}
             comment={comment}
@@ -370,8 +372,8 @@ const Post = ({
             onDeleteComment={handleDeleteComment}
             onProfileClick={onProfileClick}
             setCurrentView={setCurrentView}
-            groupId={groupId}             // for group posts
-            groupPostId={effectivePostId} // for group replies
+            groupId={groupId}
+            groupPostId={effectivePostId}
             refCallback={(el) => {
               if (el) commentRefs.current[comment.comment_id] = el;
             }}

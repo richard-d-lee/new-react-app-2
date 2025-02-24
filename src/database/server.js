@@ -15,13 +15,10 @@ import groupRoutes from './routes/groups.js';
 import friendRoutes from './routes/friends.js';
 import messageRoutes from './routes/messages.js';
 import notificationsRoutes from './routes/notifications.js';
+import mentionsRouter from './routes/mentions.js';
+import eventRoutes from './routes/events.js';
 import { authenticateToken } from './middleware/auth.js';
 import multer from 'multer';
-import mentionsRouter from './routes/mentions.js'; // Ensure correct path
-
-
-// ... your middleware and setup code
-
 
 // Setup __dirname for ES modules
 const __filename = fileURLToPath(import.meta.url);
@@ -32,6 +29,8 @@ console.log('__dirname:', __dirname);
 const app = express();
 app.use(cors());
 app.use(bodyParser.json());
+
+// Mount routes
 app.use('/auth', authRoutes);
 app.use('/users', userRoutes);
 app.use('/feed', feedRoutes);
@@ -41,14 +40,18 @@ app.use('/friends', friendRoutes);
 app.use('/messages', messageRoutes);
 app.use('/notifications', notificationsRoutes);
 app.use('/mentions', mentionsRouter);
+app.use('/events', eventRoutes);
 
+// Use your absolute path for uploads (profile pics & event images)
+const uploadsDir = "C:\\Users\\rever\\react-app\\src\\database\\uploads";
 
-// Setup static folder for uploads
-const uploadsDir = path.join(__dirname, 'uploads');
+// Ensure the uploads directory exists
 if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
-  console.log('Created uploads directory.');
+  console.log('Created uploads directory at', uploadsDir);
 }
+
+// Serve static files from the uploads directory at /uploads
 app.use('/uploads', express.static(uploadsDir));
 
 // Configure Multer for file uploads
@@ -58,6 +61,7 @@ const storage = multer.diskStorage({
   },
   filename: (req, file, cb) => {
     const ext = path.extname(file.originalname);
+    // Generate a unique filename; you can use Date.now and random number or uuid
     const uniqueName = `${Date.now()}-${Math.round(Math.random() * 1e9)}${ext}`;
     cb(null, uniqueName);
   }
@@ -83,7 +87,8 @@ app.post('/upload-profile-pic', authenticateToken, upload.single('profilePic'), 
   connection.query(getPicQuery, [userId], (err, results) => {
     if (err) return res.status(500).json({ error: 'Database error' });
     if (results.length > 0 && results[0].profile_picture_url) {
-      const oldFilePath = path.join(__dirname, results[0].profile_picture_url);
+      // Construct the absolute path to the old file (using uploadsDir)
+      const oldFilePath = path.join(uploadsDir, path.basename(results[0].profile_picture_url));
       if (fs.existsSync(oldFilePath)) {
         fs.unlink(oldFilePath, err => {
           if (err) console.error('Error deleting old profile picture:', err);
@@ -98,15 +103,6 @@ app.post('/upload-profile-pic', authenticateToken, upload.single('profilePic'), 
     });
   });
 });
-
-// Mount routes
-app.use('/auth', authRoutes);
-app.use('/users', userRoutes);
-app.use('/feed', feedRoutes);
-app.use('/comments', commentRoutes);
-app.use('/groups', groupRoutes);
-app.use('/friends', friendRoutes);
-app.use('/messages', messageRoutes);
 
 // Start the server
 const PORT = 5000;

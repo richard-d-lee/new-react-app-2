@@ -11,6 +11,7 @@ import Profile from './Profile.jsx';
 import Settings from './Settings.jsx';
 import Widgets from './Widgets.jsx';
 import Messenger from './Messenger.jsx';
+import Events from './Events.jsx';
 import Notifications from './Notifications.jsx';
 import '../styles/HomePage.css';
 
@@ -128,16 +129,16 @@ const HomePage = ({ updateLogged, email }) => {
           {/* Show Feed */}
           {((typeof currentView === 'string' && currentView === 'feed') ||
             (typeof currentView === 'object' && currentView.view === 'feed')) && (
-            <Feed
-              token={token}
-              currentUserId={userId}
-              currentUsername={currentUsername}
-              currentUserProfilePic={currentUserProfilePic}
-              setCurrentView={setCurrentView}
-              postId={currentView.postId}
-              expandedCommentId={currentView.expandedCommentId}
-            />
-          )}
+              <Feed
+                token={token}
+                currentUserId={userId}
+                currentUsername={currentUsername}
+                currentUserProfilePic={currentUserProfilePic}
+                setCurrentView={setCurrentView}
+                postId={currentView.postId}
+                expandedCommentId={currentView.expandedCommentId}
+              />
+            )}
 
           {/* Show Friends, pass the refreshFriendRequestsCount callback */}
           {currentView === 'friends' && (
@@ -145,6 +146,16 @@ const HomePage = ({ updateLogged, email }) => {
               refreshFriendRequestsCount={refreshFriendRequestsCount}
             />
           )}
+
+          {/* Events */}
+          {currentView === 'events' && (
+            <Events
+              token={token}
+              currentUserId={userId}
+              setCurrentView={setCurrentView}
+            />
+          )}
+
 
           {/* Show Notifications */}
           {currentView === 'notifications' && (
