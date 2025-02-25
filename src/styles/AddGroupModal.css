@@ -1,71 +1,82 @@
 .modal-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0,0,0,0.5);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 10000;
-  }
-  
-  .modal {
-    background: #fff;
-    padding: 20px;
-    border-radius: 8px;
-    max-width: 400px;
-    width: 90%;
-    position: relative;
-  }
-  
-  .close-modal {
-    position: absolute;
-    top: 10px;
-    right: 10px;
-    background: none;
-    border: none;
-    font-size: 20px;
-    cursor: pointer;
-  }
-  
-  .modal h2 {
-    text-align: center;
-    color: #1877f2;
-  }
-  
-  .modal form {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-  }
-  
-  .modal input[type="text"],
-  .modal textarea {
-    padding: 8px;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-    font-size: 14px;
-  }
-  
-  .modal button[type="submit"] {
-    align-self: flex-end;
-    background-color: #1877f2;
-    color: #fff;
-    border: none;
-    border-radius: 20px;
-    padding: 8px 16px;
-    cursor: pointer;
-    transition: background 0.2s ease;
-  }
-  
-  .modal button[type="submit"]:hover {
-    background-color: #145db2;
-  }
-  
-  .error-message {
-    color: #d9534f;
-    text-align: center;
-  }
-  
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 10000;
+}
+
+.modal {
+  background: #fff;
+  padding: 20px;
+  border-radius: 8px;
+  max-width: 400px;
+  width: 90%;
+  position: relative;
+}
+
+
+
+.close-modal {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: none;
+  border: none;
+  font-size: 20px;
+  cursor: pointer;
+}
+
+/* Ensure all text fields use the same font & size */
+.modal input[type="text"],
+.modal input[type="datetime-local"],
+.modal textarea,
+.modal select {
+  font-family: inherit;
+  font-size: 14px;
+  /* or match your preferred base font size */
+}
+
+.modal h2 {
+  text-align: center;
+  color: #1877f2;
+}
+
+.modal form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.modal input[type="text"],
+.modal textarea {
+  padding: 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.modal button[type="submit"] {
+  align-self: flex-end;
+  background-color: #1877f2;
+  color: #fff;
+  border: none;
+  border-radius: 20px;
+  padding: 8px 16px;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.modal button[type="submit"]:hover {
+  background-color: #145db2;
+}
+
+.error-message {
+  color: #d9534f;
+  text-align: center;
+}

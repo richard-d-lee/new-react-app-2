@@ -35,7 +35,8 @@ router.post('/', authenticateToken, (req, res) => {
         start_time,
         end_time,
         event_privacy,
-        event_image_url
+        event_image_url,
+        event_type_id  // New: Event Type ID
     } = req.body;
 
     if (!event_name) {
@@ -44,8 +45,8 @@ router.post('/', authenticateToken, (req, res) => {
 
     const insertQuery = `
     INSERT INTO events
-      (user_id, event_name, event_description, event_location, event_image_url, start_time, end_time, event_privacy)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      (user_id, event_name, event_description, event_location, event_image_url, start_time, end_time, event_privacy, event_type_id)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
   `;
     connection.query(
         insertQuery,
@@ -57,7 +58,8 @@ router.post('/', authenticateToken, (req, res) => {
             event_image_url || null,
             start_time || null,
             end_time || null,
-            event_privacy || 'public'
+            event_privacy || 'public',
+            event_type_id || null
         ],
         (err, results) => {
             if (err) {
@@ -70,6 +72,21 @@ router.post('/', authenticateToken, (req, res) => {
             });
         }
     );
+});
+
+/**
+ * GET event types
+ * GET /events/event_types
+ */
+router.get('/event_types', authenticateToken, (req, res) => {
+    const query = `SELECT * FROM event_types ORDER BY type_name ASC`;
+    connection.query(query, (err, results) => {
+        if (err) {
+            console.error('Error fetching event types:', err);
+            return res.status(500).json({ error: 'Database error.' });
+        }
+        res.json(results);
+    });
 });
 
 /**
@@ -106,13 +123,14 @@ router.get('/:id', authenticateToken, (req, res) => {
     const userId = req.user.userId;
 
     const selectQuery = `
-    SELECT *
-      FROM events
-     WHERE event_id = ?
+    SELECT e.*, et.type_name 
+      FROM events e
+      LEFT JOIN event_types et ON e.event_type_id = et.event_type_id
+     WHERE e.event_id = ?
        AND (
-         event_privacy = 'public'
-         OR user_id = ?
-         OR event_privacy = 'friends_only'
+         e.event_privacy = 'public'
+         OR e.user_id = ?
+         OR e.event_privacy = 'friends_only'
        )
      LIMIT 1
   `;
@@ -126,6 +144,7 @@ router.get('/:id', authenticateToken, (req, res) => {
     });
 });
 
+
 /**
  * LIST / GET All Events
  * GET /events
@@ -133,9 +152,10 @@ router.get('/:id', authenticateToken, (req, res) => {
 router.get('/', authenticateToken, (req, res) => {
     const userId = req.user.userId;
     const query = `
-    SELECT *
-      FROM events
-     WHERE event_privacy = 'public' OR user_id = ?
+    SELECT e.*, et.type_name 
+      FROM events e
+      LEFT JOIN event_types et ON e.event_type_id = et.event_type_id
+     WHERE e.event_privacy = 'public' OR e.user_id = ?
      ORDER BY created_at DESC
   `;
     connection.query(query, [userId], (err, rows) => {
@@ -146,6 +166,7 @@ router.get('/', authenticateToken, (req, res) => {
         res.json(rows);
     });
 });
+
 
 /**
  * UPDATE an Event (owner only)
@@ -160,7 +181,8 @@ router.patch('/:id', authenticateToken, (req, res) => {
         event_location,
         start_time,
         end_time,
-        event_privacy
+        event_privacy,
+        event_type_id  // New: Event Type ID
     } = req.body;
 
     const ownershipQuery = 'SELECT user_id FROM events WHERE event_id = ? LIMIT 1';
@@ -176,7 +198,8 @@ router.patch('/:id', authenticateToken, (req, res) => {
              event_location = ?,
              start_time = ?,
              end_time = ?,
-             event_privacy = ?
+             event_privacy = ?,
+             event_type_id = ?
        WHERE event_id = ? AND user_id = ?
     `;
         connection.query(updateQuery, [
@@ -186,6 +209,7 @@ router.patch('/:id', authenticateToken, (req, res) => {
             start_time || null,
             end_time || null,
             event_privacy || 'public',
+            event_type_id || null,
             eventId,
             userId
         ], (err2, results) => {
@@ -195,6 +219,7 @@ router.patch('/:id', authenticateToken, (req, res) => {
         });
     });
 });
+
 
 /**
  * DELETE an Event (owner only) with cascading deletion of notifications.

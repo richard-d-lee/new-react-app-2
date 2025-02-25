@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { FaTimes, FaCaretDown } from 'react-icons/fa';
+import { FaTimes } from 'react-icons/fa';
 import ProfilePic from './ProfilePic.jsx';
-import '../styles/GroupMembersModal.css'; // Reusing the same CSS
+import '../styles/AddGroupModal.css'; // Reuse the same CSS as AddGroupModal
 
 const EventInviteModal = ({ token, eventId, currentUserId, onClose }) => {
   const [friends, setFriends] = useState([]);
@@ -12,7 +12,7 @@ const EventInviteModal = ({ token, eventId, currentUserId, onClose }) => {
   const [filteredFriends, setFilteredFriends] = useState([]);
   const [error, setError] = useState('');
 
-  // Fetch your friends
+  // Fetch friends
   const fetchFriends = async () => {
     try {
       const res = await axios.get(`http://localhost:5000/friends/`, {
@@ -44,7 +44,6 @@ const EventInviteModal = ({ token, eventId, currentUserId, onClose }) => {
     if (attendees.length > 0) {
       const map = {};
       attendees.forEach(a => {
-        // Mark friend as invited if status is 'invited'
         if (a.status === 'invited') {
           map[a.user_id] = true;
         }
@@ -65,19 +64,19 @@ const EventInviteModal = ({ token, eventId, currentUserId, onClose }) => {
       setFilteredFriends(friends);
     } else {
       const lower = searchQuery.toLowerCase();
-      setFilteredFriends(friends.filter(friend =>
-        friend.username.toLowerCase().includes(lower)
-      ));
+      setFilteredFriends(
+        friends.filter(friend =>
+          friend.username.toLowerCase().includes(lower)
+        )
+      );
     }
   }, [searchQuery, friends]);
 
-  // Handle inviting a friend
   const handleInviteFriend = async (friendId) => {
     try {
-      await axios.post(`http://localhost:5000/events/${eventId}/invite`, 
-        { invitee_id: friendId, 
-            event_id: eventId
-        },
+      await axios.post(
+        `http://localhost:5000/events/${eventId}/invite`, 
+        { invitee_id: friendId },
         { headers: { Authorization: `Bearer ${token}` } }
       );
       setInvitedMap(prev => ({ ...prev, [friendId]: true }));
@@ -87,13 +86,12 @@ const EventInviteModal = ({ token, eventId, currentUserId, onClose }) => {
     }
   };
 
-  // Handle uninviting a friend (assumes DELETE /events/:id/invite endpoint)
   const handleUninviteFriend = async (friendId) => {
     try {
-      await axios.delete(`http://localhost:5000/events/${eventId}/invite`, {
-        headers: { Authorization: `Bearer ${token}` },
-        data: { invitee_id: friendId }
-      });
+      await axios.delete(
+        `http://localhost:5000/events/${eventId}/invite`,
+        { headers: { Authorization: `Bearer ${token}` }, data: { invitee_id: friendId } }
+      );
       setInvitedMap(prev => ({ ...prev, [friendId]: false }));
     } catch (err) {
       console.error("Error uninviting friend:", err);
@@ -101,47 +99,42 @@ const EventInviteModal = ({ token, eventId, currentUserId, onClose }) => {
     }
   };
 
-  // Render the invite/uninvite button dynamically
   const renderInviteButton = (friend) => {
     const isInvited = invitedMap[friend.user_id];
-    if (isInvited) {
-      return (
-        <button
-          style={{
-            backgroundColor: '#e0e0e0',
-            color: '#333',
-            border: 'none',
-            padding: '5px 10px',
-            borderRadius: '4px',
-            cursor: 'pointer'
-          }}
-          onClick={() => handleUninviteFriend(friend.user_id)}
-        >
-          Uninvite
-        </button>
-      );
-    } else {
-      return (
-        <button
-          style={{
-            backgroundColor: '#1877f2',
-            color: '#fff',
-            border: 'none',
-            padding: '5px 10px',
-            borderRadius: '4px',
-            cursor: 'pointer'
-          }}
-          onClick={() => handleInviteFriend(friend.user_id)}
-        >
-          Invite
-        </button>
-      );
-    }
+    return isInvited ? (
+      <button
+        style={{
+          backgroundColor: '#e0e0e0',
+          color: '#333',
+          border: 'none',
+          padding: '5px 10px',
+          borderRadius: '4px',
+          cursor: 'pointer'
+        }}
+        onClick={() => handleUninviteFriend(friend.user_id)}
+      >
+        Uninvite
+      </button>
+    ) : (
+      <button
+        style={{
+          backgroundColor: '#1877f2',
+          color: '#fff',
+          border: 'none',
+          padding: '5px 10px',
+          borderRadius: '4px',
+          cursor: 'pointer'
+        }}
+        onClick={() => handleInviteFriend(friend.user_id)}
+      >
+        Invite
+      </button>
+    );
   };
 
   return (
-    <div className="modal-overlay fade-in">
-      <div className="group-members-modal fade-in">
+    <div className="modal-overlay">
+      <div className="modal">
         <button className="close-modal" onClick={onClose}>
           <FaTimes />
         </button>
@@ -153,18 +146,22 @@ const EventInviteModal = ({ token, eventId, currentUserId, onClose }) => {
           onChange={(e) => setSearchQuery(e.target.value)}
         />
         {error && <p className="error-message">{error}</p>}
-        <ul className="members-list">
+        <ul style={{ listStyle: 'none', padding: 0, marginTop: '15px' }}>
           {filteredFriends.map(friend => (
-            <li key={friend.user_id} className="member-item">
-              <div className="member-info">
+            <li key={friend.user_id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+              <div style={{ display: 'flex', alignItems: 'center' }}>
                 <ProfilePic
-                  imageUrl={friend.profile_picture_url ? `http://localhost:5000${friend.profile_picture_url}` : null}
+                  imageUrl={
+                    friend.profile_picture_url
+                      ? `http://localhost:5000${friend.profile_picture_url}`
+                      : null
+                  }
                   alt={friend.username}
                   size={40}
                 />
-                <span>{friend.username}</span>
+                <span style={{ marginLeft: '10px' }}>{friend.username}</span>
               </div>
-              <div className="admin-actions">
+              <div>
                 {renderInviteButton(friend)}
               </div>
             </li>

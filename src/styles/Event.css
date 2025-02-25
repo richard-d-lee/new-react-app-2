@@ -3,13 +3,14 @@
     padding: 20px;
     font-family: sans-serif;
     max-width: 800px;
-    margin: 0 auto; /* center horizontally if desired */
+    margin: 0 auto;
+    /* center horizontally if desired */
     background-color: #fff;
     border-radius: 8px;
-  }
-  
-  /* The back button at the top */
-  .event-container .back-button {
+}
+
+/* The back button at the top */
+.event-container .back-button {
     background-color: #f0f2f5;
     color: #555;
     margin-bottom: 15px;
@@ -18,57 +19,105 @@
     padding: 6px 12px;
     cursor: pointer;
     font-size: 0.85rem;
-  }
-  
-  .event-container .back-button:hover {
+}
+
+.event-container .back-button:hover {
     background-color: #e2e2e2;
-  }
-  
-  /* Event title & details */
-  .event-title {
+}
+
+/* Container to hold the three-dot button and the dropdown */
+.event-actions-menu-container {
+    position: relative;
+    margin-left: auto;
+    /* push to the right if you like */
+}
+
+/* The three-dot button itself */
+.three-dot-button {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    padding: 0 8px;
+    line-height: 1;
+}
+
+/* The dropdown that appears on click */
+.event-actions-dropdown {
+    position: absolute;
+    top: 30px;
+    /* adjust if needed */
+    right: 0;
+    background: #fff;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    min-width: 140px;
+    z-index: 10;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    display: flex;
+    flex-direction: column;
+}
+
+.event-actions-dropdown button {
+    background: none;
+    border: none;
+    text-align: left;
+    padding: 8px 12px;
+    width: 100%;
+    cursor: pointer;
+    font-size: 0.9rem;
+}
+
+.event-actions-dropdown button:hover {
+    background: #f0f2f5;
+}
+
+
+/* Event title & details */
+.event-title {
     font-size: 1.8rem;
     margin-bottom: 10px;
-  }
-  
-  .event-details p {
+}
+
+.event-details p {
     margin: 6px 0;
     line-height: 1.4em;
     font-size: 0.95rem;
-  }
-  
-  .event-details strong {
+}
+
+.event-details strong {
     font-weight: 600;
     color: #333;
-  }
-  
-  .event-image img {
+}
+
+.event-image img {
     max-width: 100%;
     height: auto;
     border-radius: 6px;
     margin-top: 10px;
-  }
-  
-  /* Section for creating a post */
-  .create-post-section {
+}
+
+/* Section for creating a post */
+.create-post-section {
     margin: 20px 0;
     background-color: #fafafa;
     border: 1px solid #ddd;
     padding: 15px;
     border-radius: 6px;
-  }
-  
-  .create-post-section h3 {
+}
+
+.create-post-section h3 {
     margin-top: 0;
     font-size: 1.2rem;
     margin-bottom: 10px;
-  }
-  
-  .create-post-form {
+}
+
+.create-post-form {
     display: flex;
     flex-direction: column;
-  }
-  
-  .create-post-form textarea {
+}
+
+.create-post-form textarea {
     min-height: 60px;
     margin-bottom: 10px;
     padding: 8px;
@@ -76,9 +125,9 @@
     border: 1px solid #ccc;
     font-family: inherit;
     font-size: 0.95rem;
-  }
-  
-  .create-post-form button {
+}
+
+.create-post-form button {
     align-self: flex-start;
     background-color: #1877f2;
     color: #fff;
@@ -87,70 +136,71 @@
     padding: 6px 12px;
     cursor: pointer;
     font-size: 0.85rem;
-  }
-  
-  .create-post-form button:hover {
+}
+
+.create-post-form button:hover {
     background-color: #145db2;
-  }
-  
-  /* Posts header */
-  .posts-header {
+}
+
+/* Posts header */
+.posts-header {
     font-size: 1.2rem;
     margin-top: 30px;
-  }
-  
-  /* Post list */
-  .event-posts-list {
+}
+
+/* Post list */
+.event-posts-list {
     margin-top: 10px;
-  }
-  
-  /* Single post styling */
-  .event-post {
+}
+
+/* Single post styling */
+.event-post {
     background-color: #f7f7f7;
     border: 1px solid #ccc;
     border-radius: 6px;
     padding: 12px;
     margin-bottom: 15px;
-  }
-  
-  .post-header {
+}
+
+.post-header {
     display: flex;
     align-items: center;
     margin-bottom: 8px;
-  }
-  
-  .post-header strong {
+}
+
+.post-header strong {
     margin-right: 4px;
-  }
-  
-  .delete-post-button {
+}
+
+.delete-post-button {
     margin-left: auto;
-    background-color: #d9534f; /* red */
+    background-color: #d9534f;
+    /* red */
     color: #fff;
     border: none;
     border-radius: 4px;
     padding: 4px 8px;
     cursor: pointer;
     font-size: 0.75rem;
-  }
-  
-  .delete-post-button:hover {
+}
+
+.delete-post-button:hover {
     background-color: #c9302c;
-  }
-  
-  .post-content {
+}
+
+.post-content {
     font-size: 0.95rem;
     margin-bottom: 6px;
-  }
-  
-  .post-timestamp {
+}
+
+.post-timestamp {
     font-size: 0.8rem;
     color: #777;
     margin-bottom: 10px;
-  }
-  
-  /* Show/Hide Comments button */
-  .toggle-comments-button {
+}
+
+/* Show/Hide Comments button */
+.toggle-comments-button {
     background-color: #e7e7e7;
     color: #333;
     border: none;
@@ -158,45 +208,45 @@
     padding: 5px 10px;
     cursor: pointer;
     font-size: 0.8rem;
-  }
-  
-  .toggle-comments-button:hover {
+}
+
+.toggle-comments-button:hover {
     background-color: #dcdcdc;
-  }
-  
-  /* Post's comments section */
-  .post-comments {
+}
+
+/* Post's comments section */
+.post-comments {
     background-color: #fff;
     border: 1px solid #ddd;
     padding: 10px;
     border-radius: 6px;
     margin-top: 10px;
-  }
-  
-  .comment-item {
+}
+
+.comment-item {
     background: #f8f8f8;
     padding: 8px;
     margin-bottom: 8px;
     border-radius: 4px;
-  }
-  
-  .comment-item strong {
+}
+
+.comment-item strong {
     margin-right: 5px;
-  }
-  
-  .comment-timestamp {
+}
+
+.comment-timestamp {
     font-size: 0.8rem;
     color: #888;
     margin-top: 2px;
-  }
-  
-  /* Form for adding a new comment */
-  .comment-form {
+}
+
+/* Form for adding a new comment */
+.comment-form {
     display: flex;
     flex-direction: column;
-  }
-  
-  .comment-form textarea {
+}
+
+.comment-form textarea {
     min-height: 40px;
     margin-bottom: 6px;
     padding: 6px;
@@ -204,9 +254,9 @@
     border: 1px solid #ccc;
     font-family: inherit;
     font-size: 0.9rem;
-  }
-  
-  .comment-form button {
+}
+
+.comment-form button {
     align-self: flex-start;
     background-color: #1877f2;
     color: #fff;
@@ -215,22 +265,21 @@
     padding: 5px 12px;
     cursor: pointer;
     font-size: 0.8rem;
-  }
-  
-  .comment-form button:hover {
+}
+
+.comment-form button:hover {
     background-color: #145db2;
-  }
-  
-  /* General states */
-  .loading-text {
+}
+
+/* General states */
+.loading-text {
     color: #999;
     font-style: italic;
     margin: 10px 0;
-  }
-  
-  .empty {
+}
+
+.empty {
     color: #666;
     font-style: italic;
     margin: 8px 0;
-  }
-  
+}
