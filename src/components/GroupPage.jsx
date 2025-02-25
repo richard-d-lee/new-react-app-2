@@ -12,9 +12,8 @@ const GroupPage = ({
   currentUserProfilePic,
   groupId,
   setCurrentView,
-  // Optional props for single post view from a notification:
-  postId,            // if provided, display only this group post
-  expandedCommentId  // if provided, pass to the Post to auto-expand/highlight a comment
+  postId,            // optional: display only this group post if provided
+  expandedCommentId  // optional: auto-expand/highlight a comment
 }) => {
   const [group, setGroup] = useState(null);
   const [isMember, setIsMember] = useState(false);
@@ -31,8 +30,8 @@ const GroupPage = ({
       });
       setGroup(res.data);
     } catch (err) {
-      console.error("Error fetching group details:", err);
-      setError(err.response?.data?.error || "Error fetching group details");
+      console.error('Error fetching group details:', err);
+      setError(err.response?.data?.error || 'Error fetching group details');
     }
   };
 
@@ -44,7 +43,7 @@ const GroupPage = ({
       });
       setIsMember(res.data.isMember);
     } catch (err) {
-      console.error("Error checking membership:", err);
+      console.error('Error checking membership:', err);
     }
   };
 
@@ -56,8 +55,8 @@ const GroupPage = ({
       });
       setPosts(res.data);
     } catch (err) {
-      console.error("Error fetching group posts:", err);
-      setError(err.response?.data?.error || "Error fetching group posts");
+      console.error('Error fetching group posts:', err);
+      setError(err.response?.data?.error || 'Error fetching group posts');
     }
   };
 
@@ -83,12 +82,12 @@ const GroupPage = ({
       setIsMember(true);
       fetchGroupPosts();
     } catch (err) {
-      console.error("Error joining group:", err);
-      setError(err.response?.data?.error || "Error joining group");
+      console.error('Error joining group:', err);
+      setError(err.response?.data?.error || 'Error joining group');
     }
   };
 
-  // Handle new post creation (prepend new post to list)
+  // Handle new post creation (prepend new post)
   const handleNewPost = (newPostObj) => {
     setPosts(prev => [newPostObj, ...prev]);
   };
@@ -98,16 +97,16 @@ const GroupPage = ({
     setPosts(prev => prev.filter(p => p.post_id !== delPostId));
   };
 
-  // Handle group logo update; update group state with the new logo URL.
+  // Handle group logo update
   const handleLogoUpdate = (newLogoUrl) => {
     setGroup(prev => ({ ...prev, icon: newLogoUrl }));
     setShowLogoUploader(false);
   };
 
-  // User can update logo only if they are the group owner.
+  // Allow logo update only if user is the group owner
   const canUpdateLogo = group && group.creator_id === currentUserId;
 
-  // Render posts:
+  // Render posts
   const renderPosts = () => {
     if (!isMember) return null;
     if (postId) {
@@ -174,7 +173,7 @@ const GroupPage = ({
             </div>
             <div className="view-members-link">
               {isMember && (
-                <button onClick={() => setShowMembersModal(true)} className="members-link">
+                <button onClick={() => setShowMembersModal(true)}>
                   View Group Members
                 </button>
               )}

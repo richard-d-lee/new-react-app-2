@@ -25,7 +25,8 @@
   
   /* The close (X) button in top-right corner */
   .close-modal {
-    background: none;
+    background: none !important;
+    color: #000 !important;
     border: none;
     font-size: 20px;
     position: absolute;

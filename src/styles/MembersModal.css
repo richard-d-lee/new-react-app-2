@@ -1,0 +1,118 @@
+/* MembersModal.css */
+
+/* Full-screen overlay behind the modal */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 999; /* ensure it appears above other elements */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    animation: fadeInOverlay 0.2s ease forwards;
+  }
+  
+  /* The modal container */
+  .members-modal {
+    position: relative;
+    background-color: #fff;
+    width: 500px;
+    max-width: 90%;
+    padding: 20px;
+    border-radius: 6px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    animation: fadeInModal 0.3s ease forwards;
+  }
+  
+  /* Close (X) button in top-right corner */
+  .close-modal {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    background: none;
+    border: none;
+    font-size: 1.2rem;
+    cursor: pointer;
+    color: #666;
+  }
+  
+  .close-modal:hover {
+    color: #333;
+  }
+  
+  /* Heading text for the modal */
+  .members-modal h2 {
+    margin-top: 0;
+    margin-bottom: 15px;
+    font-size: 1.3rem;
+    color: #1877f2;
+  }
+  
+  /* Search input for filtering */
+  .members-modal input[type="text"] {
+    width: 100%;
+    padding: 8px;
+    margin-bottom: 12px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 0.9rem;
+  }
+  
+  /* Error message */
+  .error-message {
+    color: #d9534f;
+    margin-bottom: 10px;
+  }
+  
+  /* The list of members */
+  .members-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    max-height: 400px;
+    overflow-y: auto; /* scroll if the list is long */
+  }
+  
+  /* Each member row */
+  .member-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 0;
+    border-bottom: 1px solid #f0f0f0;
+  }
+  
+  .member-item:last-child {
+    border-bottom: none;
+  }
+  
+  /* Info section with avatar and name */
+  .member-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  
+  /* Buttons (Add Friend, Accept, etc.) in friend status area */
+  .member-info button {
+    border: none;
+    border-radius: 4px;
+    padding: 4px 8px;
+    cursor: pointer;
+    font-size: 0.8rem;
+  }
+  
+  /* fade-in animations */
+  @keyframes fadeInOverlay {
+    0% { opacity: 0; }
+    100% { opacity: 1; }
+  }
+  
+  @keyframes fadeInModal {
+    0% { transform: translateY(-10px); opacity: 0; }
+    100% { transform: translateY(0); opacity: 1; }
+  }
+  

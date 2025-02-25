@@ -29,50 +29,96 @@ const router = express.Router();
 router.post('/', authenticateToken, (req, res) => {
     const userId = req.user.userId;
     const {
-        event_name,
-        event_description,
-        event_location,
-        start_time,
-        end_time,
-        event_privacy,
-        event_image_url,
-        event_type_id  // New: Event Type ID
+      event_name,
+      event_description,
+      event_location,
+      start_time,
+      end_time,
+      event_privacy,
+      event_image_url,
+      event_type_id
     } = req.body;
-
+  
     if (!event_name) {
-        return res.status(400).json({ error: 'Event name is required.' });
+      return res.status(400).json({ error: 'Event name is required.' });
     }
-
+  
+    // Validate privacy setting
+    if (event_privacy && !['public', 'friends_only', 'private'].includes(event_privacy)) {
+      return res.status(400).json({ error: 'Invalid event privacy setting.' });
+    }
+  
     const insertQuery = `
-    INSERT INTO events
-      (user_id, event_name, event_description, event_location, event_image_url, start_time, end_time, event_privacy, event_type_id)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `;
+      INSERT INTO events
+        (user_id, event_name, event_description, event_location, event_image_url, start_time, end_time, event_privacy, event_type_id)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `;
     connection.query(
-        insertQuery,
-        [
-            userId,
-            event_name,
-            event_description || '',
-            event_location || '',
-            event_image_url || null,
-            start_time || null,
-            end_time || null,
-            event_privacy || 'public',
-            event_type_id || null
-        ],
-        (err, results) => {
-            if (err) {
-                console.error('Error creating event:', err);
-                return res.status(500).json({ error: 'Database error.' });
-            }
-            return res.status(201).json({
-                event_id: results.insertId,
-                message: 'Event created successfully.'
-            });
+      insertQuery,
+      [
+        userId,
+        event_name,
+        event_description || '',
+        event_location || '',
+        event_image_url || null,
+        start_time || null,
+        end_time || null,
+        event_privacy || 'public',
+        event_type_id || null
+      ],
+      (err, results) => {
+        if (err) {
+          console.error('Error creating event:', err);
+          return res.status(500).json({ error: 'Database error.' });
         }
+        const newEventId = results.insertId;
+        
+        // Automatically add the event owner as an attendee with status "going"
+        const attendQuery = `
+          INSERT INTO event_attendees (event_id, user_id, status)
+          VALUES (?, ?, 'going')
+        `;
+        connection.query(attendQuery, [newEventId, userId], (attendErr) => {
+          if (attendErr) {
+            console.error('Error adding owner attendance:', attendErr);
+            // Optionally rollback the event creation or just log the error.
+          }
+          return res.status(201).json({
+            event_id: newEventId,
+            message: 'Event created successfully.'
+          });
+        });
+      }
     );
-});
+  });
+
+// POST /events/:eventId/attend
+// Allows a user (not event owner) to set their attendance status.
+// Expects a JSON body with: { status: "going" } or { status: "declined" }
+router.post('/:eventId/attend', authenticateToken, (req, res) => {
+    const eventId = req.params.eventId;
+    const userId = req.user.userId;
+    const { status } = req.body;
+    
+    if (!status || !["going", "declined"].includes(status)) {
+      return res.status(400).json({ error: "Invalid attendance status." });
+    }
+    
+    // Upsert attendance using INSERT ... ON DUPLICATE KEY UPDATE
+    const upsertQuery = `
+      INSERT INTO event_attendees (event_id, user_id, status)
+      VALUES (?, ?, ?)
+      ON DUPLICATE KEY UPDATE status = VALUES(status)
+    `;
+    connection.query(upsertQuery, [eventId, userId, status], (err, results) => {
+      if (err) {
+        console.error("Error updating attendance status:", err);
+        return res.status(500).json({ error: "Database error" });
+      }
+      res.json({ message: "Attendance updated", status });
+    });
+  });
+  
 
 /**
  * GET event types
@@ -123,26 +169,52 @@ router.get('/:id', authenticateToken, (req, res) => {
     const userId = req.user.userId;
 
     const selectQuery = `
-    SELECT e.*, et.type_name 
-      FROM events e
-      LEFT JOIN event_types et ON e.event_type_id = et.event_type_id
-     WHERE e.event_id = ?
-       AND (
-         e.event_privacy = 'public'
-         OR e.user_id = ?
-         OR e.event_privacy = 'friends_only'
-       )
-     LIMIT 1
-  `;
-    connection.query(selectQuery, [eventId, userId], (err, rows) => {
+      SELECT e.*, et.type_name 
+        FROM events e
+        LEFT JOIN event_types et ON e.event_type_id = et.event_type_id
+       WHERE e.event_id = ?
+         AND (
+           e.event_privacy = 'public'
+           OR e.user_id = ?
+           OR (
+             e.event_privacy = 'friends_only'
+             AND EXISTS (
+               SELECT 1 FROM friends f
+                WHERE (
+                  (f.user_id_1 = e.user_id AND f.user_id_2 = ?)
+                  OR (f.user_id_2 = e.user_id AND f.user_id_1 = ?)
+                )
+                AND f.status = 'accepted'
+             )
+           )
+           OR (
+             e.event_privacy = 'private'
+             AND (
+               e.user_id = ?
+               OR EXISTS (
+                 SELECT 1 FROM event_attendees ea
+                  WHERE ea.event_id = e.event_id AND ea.user_id = ?
+               )
+             )
+           )
+         )
+       LIMIT 1
+    `;
+    connection.query(
+      selectQuery,
+      [eventId, userId, userId, userId, userId, userId],
+      (err, rows) => {
         if (err) {
-            console.error('Error fetching event:', err);
-            return res.status(500).json({ error: 'Database error.' });
+          console.error('Error fetching event:', err);
+          return res.status(500).json({ error: 'Database error.' });
         }
-        if (!rows.length) return res.status(404).json({ error: 'Event not found or access denied.' });
+        if (!rows.length)
+          return res.status(404).json({ error: 'Event not found or access denied.' });
         res.json(rows[0]);
-    });
+      }
+    );
 });
+
 
 
 /**
@@ -152,13 +224,37 @@ router.get('/:id', authenticateToken, (req, res) => {
 router.get('/', authenticateToken, (req, res) => {
     const userId = req.user.userId;
     const query = `
-    SELECT e.*, et.type_name 
-      FROM events e
-      LEFT JOIN event_types et ON e.event_type_id = et.event_type_id
-     WHERE e.event_privacy = 'public' OR e.user_id = ?
-     ORDER BY created_at DESC
-  `;
-    connection.query(query, [userId], (err, rows) => {
+      SELECT e.*, et.type_name 
+        FROM events e
+        LEFT JOIN event_types et ON e.event_type_id = et.event_type_id
+       WHERE (
+         e.event_privacy = 'public'
+         OR e.user_id = ?
+         OR (
+           e.event_privacy = 'friends_only'
+           AND EXISTS (
+             SELECT 1 FROM friends f
+              WHERE (
+                (f.user_id_1 = e.user_id AND f.user_id_2 = ?)
+                OR (f.user_id_2 = e.user_id AND f.user_id_1 = ?)
+              )
+              AND f.status = 'accepted'
+           )
+         )
+         OR (
+           e.event_privacy = 'private'
+           AND (
+             e.user_id = ?
+             OR EXISTS (
+               SELECT 1 FROM event_attendees ea
+                WHERE ea.event_id = e.event_id AND ea.user_id = ?
+             )
+           )
+         )
+       )
+       ORDER BY created_at DESC
+    `;
+    connection.query(query, [userId, userId, userId, userId, userId], (err, rows) => {
         if (err) {
             console.error('Error listing events:', err);
             return res.status(500).json({ error: 'Database error.' });
@@ -166,7 +262,6 @@ router.get('/', authenticateToken, (req, res) => {
         res.json(rows);
     });
 });
-
 
 /**
  * UPDATE an Event (owner only)
@@ -222,32 +317,39 @@ router.patch('/:id', authenticateToken, (req, res) => {
 
 
 /**
- * DELETE an Event (owner only) with cascading deletion of notifications.
+ * DELETE an Event (owner only) with cascading deletion of attendance records and notifications.
  * DELETE /events/:id
  */
 router.delete('/:id', authenticateToken, (req, res) => {
     const eventId = req.params.id;
     const userId = req.user.userId;
-
+  
     const ownershipQuery = 'SELECT user_id FROM events WHERE event_id = ? LIMIT 1';
     connection.query(ownershipQuery, [eventId], (err, rows) => {
-        if (err) return res.status(500).json({ error: 'Database error.' });
-        if (!rows.length) return res.status(404).json({ error: 'Event not found.' });
-        if (rows[0].user_id !== userId) return res.status(403).json({ error: 'Not authorized.' });
-
+      if (err) return res.status(500).json({ error: 'Database error.' });
+      if (!rows.length) return res.status(404).json({ error: 'Event not found.' });
+      if (rows[0].user_id !== userId) return res.status(403).json({ error: 'Not authorized.' });
+  
+      // Delete attendance records first if not already handled by FK ON DELETE CASCADE.
+      const deleteAttendanceQuery = 'DELETE FROM event_attendees WHERE event_id = ?';
+      connection.query(deleteAttendanceQuery, [eventId], (attErr) => {
+        if (attErr) console.error("Error deleting attendance records:", attErr);
+        
+        // Now delete the event.
         const deleteQuery = 'DELETE FROM events WHERE event_id = ? AND user_id = ?';
         connection.query(deleteQuery, [eventId, userId], (err2, results) => {
-            if (err2) return res.status(500).json({ error: 'Database error.' });
-            if (!results.affectedRows) return res.status(404).json({ error: 'Event not found.' });
-            // Cascade delete notifications for this event.
-            const notifDeleteQuery = "DELETE FROM notifications WHERE event_id = ?";
-            connection.query(notifDeleteQuery, [eventId], (err3) => {
-                if (err3) console.error("Error deleting event notifications:", err3);
-                res.json({ message: 'Event deleted successfully.' });
-            });
+          if (err2) return res.status(500).json({ error: 'Database error.' });
+          if (!results.affectedRows) return res.status(404).json({ error: 'Event not found.' });
+          // Cascade delete notifications for this event.
+          const notifDeleteQuery = "DELETE FROM notifications WHERE event_id = ?";
+          connection.query(notifDeleteQuery, [eventId], (err3) => {
+            if (err3) console.error("Error deleting event notifications:", err3);
+            res.json({ message: 'Event deleted successfully.' });
+          });
         });
+      });
     });
-});
+  });
 
 /**
  * INVITE an Attendee to an Event (owner only)
@@ -369,23 +471,23 @@ router.patch('/:eventId/invite/accept', authenticateToken, (req, res) => {
     });
 });
 
-/**
- * GET LIST of Attendees for an Event
- * GET /events/:id/attendees
- */
+// GET /events/:id/attendees
 router.get('/:id/attendees', authenticateToken, (req, res) => {
     const eventId = req.params.id;
     const query = `
-    SELECT ea.user_id, ea.status, u.username, u.profile_picture_url
-      FROM event_attendees ea
-      JOIN users u ON ea.user_id = u.user_id
-     WHERE ea.event_id = ?
-  `;
+      SELECT ea.user_id, ea.status,
+             u.username, u.profile_picture_url,
+             u.email  /* <-- include email here */
+        FROM event_attendees ea
+        JOIN users u ON ea.user_id = u.user_id
+       WHERE ea.event_id = ? AND ea.status = 'going'
+    `;
     connection.query(query, [eventId], (err, rows) => {
-        if (err) return res.status(500).json({ error: 'Database error' });
-        res.json(rows);
+      if (err) return res.status(500).json({ error: 'Database error' });
+      res.json(rows);
     });
-});
+  });
+  
 
 /**
  * UPDATE ATTENDEE STATUS

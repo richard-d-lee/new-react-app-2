@@ -1,368 +1,215 @@
-/* EVENTS PAGE STYLES
-   Applied in Events.jsx
-*/
-.events-page {
-    padding: 20px;
-    font-family: sans-serif;
+/* Base container styles */
+.events-page,
+.event-container {
+  padding: 20px;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  color: #333;
 }
 
-.events-page h2 {
-    font-size: 1.8rem;
-    margin-bottom: 15px;
+/* Headers */
+.events-page h2,
+.event-container h2 {
+  font-size: 1.8rem;
+  margin-bottom: 15px;
+  color: #1877f2;
 }
 
-/* Modal Overlay */
-.modal-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-color: rgba(0, 0, 0, 0.5);
-    z-index: 999;
-    display: flex;
-    justify-content: center;
-    align-items: center;
+.events-page h3,
+.event-container h3 {
+  font-size: 1.3rem;
+  margin-bottom: 10px;
 }
 
-
-.modal-content {
-    background-color: #fff;
-    width: 500px;
-    max-width: 90%;
-    padding: 20px;
-    border-radius: 6px;
-    position: relative;
+/* Buttons */
+.events-page button,
+.event-container > button,
+.event-card button,
+.attendee-actions button,
+.owner-actions button,
+.create-event-form button,
+.edit-event-form button {
+  background-color: #1877f2;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  padding: 8px 12px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: background-color 0.2s ease;
 }
 
-/* Comments */
-.event-comments {
-    margin-top: 20px;
+.events-page button:hover,
+.event-container > button:hover,
+.event-card button:hover,
+.attendee-actions button:hover,
+.owner-actions button:hover,
+.create-event-form button:hover,
+.edit-event-form button:hover {
+  background-color: #145db2;
 }
 
-.event-comments .comment-item {
-    background: #f7f7f7;
-    padding: 8px;
-    margin-bottom: 8px;
-    border-radius: 4px;
+/* Event card & image */
+.event-card {
+  background-color: #fff;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  padding: 12px;
+  margin-bottom: 12px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
 }
 
-.event-comments .comment-item strong {
-    margin-right: 5px;
+.event-card p {
+  margin: 4px 0;
+  font-size: 0.95rem;
 }
 
-.event-comments form {
-    margin-top: 10px;
-}
-
-.event-comments textarea {
-    width: 100%;
-    padding: 8px;
-    border-radius: 4px;
-    border: 1px solid #ccc;
-    min-height: 60px;
-    margin-bottom: 8px;
-}
-
-/* Horizontal layout for the event card */
 .event-card.horizontal-layout {
-    display: flex;
-    align-items: flex-start;
+  display: flex;
+  align-items: flex-start;
 }
 
-/* Truncate the description to 2 lines with an ellipsis */
-.event-description {
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    /* number of lines to show */
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    margin: 6px 0;
-    /* spacing between text elements */
-    max-height: 2.6em;
-    /* approximate for 2 lines */
-    line-height: 1.3em;
-    /* ensures line clamp lines up */
+/* Hover effects for clickable events */
+.clickable-event {
+  cursor: pointer;
+  transition: background-color 0.2s ease;
 }
 
-/* Container for the image */
+.clickable-event:hover {
+  background-color: #f7f7f7;
+}
+
 .event-image-wrapper {
-    margin-right: 15px;
-    /* space between image and text */
+  width: 100px;
+  height: 100px;
+  overflow: hidden;
+  border-radius: 4px;
+  margin-right: 15px;
 }
 
-/* Limit the image width */
 .event-image-wrapper img {
-    max-width: 150px;
-    height: auto;
-    border-radius: 4px;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
-/* The right side content */
 .event-info {
-    flex: 1;
+  flex: 1;
 }
 
-/* optional styling for the uploaded event image */
-.event-card img {
-    width: 100%;
-    max-width: 198px;
-    display: block;
-    margin-top: 8px;
-    border-radius: 4px;
+/* Truncated description */
+.event-description {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin: 6px 0;
+  max-height: 2.6em;
+  line-height: 1.3em;
 }
 
-
-.events-page button:hover {
-    background-color: #145db2;
+/* Form styles */
+.create-event-form,
+.edit-event-form {
+  background-color: #f7f7f7;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  padding: 15px;
+  max-width: 500px;
+  margin: 15px 0;
 }
 
-.create-event-form {
-    background-color: #f7f7f7;
-    border: 1px solid #ccc;
-    border-radius: 6px;
-    padding: 15px;
-    max-width: 500px;
-    margin: 15px 0;
+.create-event-form h3,
+.edit-event-form h3 {
+  margin-top: 0;
+  margin-bottom: 10px;
+  font-size: 1.3rem;
 }
 
-.create-event-form h3 {
-    margin-top: 0;
-    margin-bottom: 10px;
-    font-size: 1.2rem;
+.create-event-form label,
+.edit-event-form label {
+  display: block;
+  margin-top: 10px;
+  font-weight: 600;
 }
 
-.create-event-form label {
-    display: block;
-    margin-top: 10px;
-    font-weight: 600;
-}
-
-.create-event-form input[type='text'],
-.create-event-form input[type='datetime-local'],
+.create-event-form input[type="text"],
+.create-event-form input[type="datetime-local"],
 .create-event-form textarea,
-.create-event-form select {
-    width: 100%;
-    padding: 6px;
-    margin-top: 5px;
-    border: 1px solid #ccc;
-    border-radius: 4px;
+.create-event-form select,
+.edit-event-form input[type="text"],
+.edit-event-form input[type="datetime-local"],
+.edit-event-form textarea,
+.edit-event-form select {
+  width: 100%;
+  padding: 6px;
+  margin-top: 5px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
 }
 
+/* Sections */
 .my-events-section,
 .upcoming-events-section,
 .recent-events-section {
-    margin-bottom: 30px;
+  margin-bottom: 30px;
 }
 
 .my-events-section h3,
 .upcoming-events-section h3,
 .recent-events-section h3 {
-    font-size: 1.3rem;
-    margin-bottom: 10px;
-}
-
-.event-card {
-    background-color: #fff;
-    border: 1px solid #ddd;
-    border-radius: 6px;
-    padding: 12px;
-    margin-bottom: 12px;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
-}
-
-.event-card p {
-    margin: 4px 0;
-    font-size: 0.95rem;
-}
-
-.event-card button {
-    margin-left: 0;
-    margin-top: 8px;
-    display: inline-block;
-}
-
-/* EVENT DETAIL PAGE STYLES
-     Applied in Event.jsx
-  */
-.event-container {
-    padding: 20px;
-    font-family: sans-serif;
-}
-
-.event-container>button {
-    background-color: #f0f2f5;
-    color: #555;
-    margin-bottom: 15px;
-    border: none;
-    border-radius: 4px;
-    padding: 6px 10px;
-    cursor: pointer;
-    font-size: 0.85rem;
-}
-
-.event-container>button:hover {
-    background-color: #e2e2e2;
-}
-
-.event-container h2 {
-    font-size: 1.8rem;
-    margin-bottom: 10px;
-}
-
-.event-container p {
-    margin: 6px 0;
-    line-height: 1.4em;
-    font-size: 0.95rem;
-}
-
-.event-container strong {
-    font-weight: 600;
-    color: #333;
-}
-
-.event-container em {
-    font-style: italic;
-    color: #666;
-}
-
-.attendee-actions {
-    margin-top: 20px;
-}
-
-.attendee-actions button {
-    margin-right: 8px;
-    margin-bottom: 8px;
-    background-color: #1877f2;
-    color: #fff;
-    font-size: 0.85rem;
-    border: none;
-    border-radius: 4px;
-    padding: 6px 10px;
-    cursor: pointer;
-}
-
-.attendee-actions button:hover {
-    background-color: #145db2;
-}
-
-.owner-actions button {
-    margin-right: 8px;
-    margin-bottom: 8px;
-    background-color: #1976d2;
-    color: #fff;
-    font-size: 0.85rem;
-    border: none;
-    border-radius: 4px;
-    padding: 6px 10px;
-    cursor: pointer;
-}
-
-.owner-actions button:hover {
-    background-color: #13539e;
-}
-
-.edit-event-form {
-    background-color: #f7f7f7;
-    border: 1px solid #ccc;
-    border-radius: 6px;
-    padding: 15px;
-    max-width: 500px;
-}
-
-.edit-event-form label {
-    display: block;
-    margin-top: 10px;
-    font-weight: 600;
-}
-
-.edit-event-form input[type='text'],
-.edit-event-form input[type='datetime-local'],
-.edit-event-form textarea,
-.edit-event-form select {
-    width: 100%;
-    padding: 6px;
-    margin-top: 5px;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-}
-
-.attendees-section {
-    margin-top: 20px;
-}
-
-.attendee-card {
-    border: 1px solid #ddd;
-    background-color: #fff;
-    border-radius: 6px;
-    padding: 10px;
-    margin-bottom: 8px;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
-}
-
-.attendee-card p {
-    margin: 0;
-    font-size: 0.9rem;
-}
-
-.attendee-card strong {
-    color: #333;
-}
-
-.empty {
-    font-style: italic;
-    color: #555;
-}
-
-/* Modal Overlay */
-.modal-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-color: rgba(0, 0, 0, 0.5);
-    z-index: 999;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-}
-
-.modal-content {
-    background-color: #fff;
-    width: 500px;
-    max-width: 90%;
-    padding: 20px;
-    border-radius: 6px;
-    position: relative;
+  font-size: 1.3rem;
+  margin-bottom: 10px;
 }
 
 /* Comments */
 .event-comments {
-    margin-top: 20px;
+  margin-top: 20px;
 }
 
 .event-comments .comment-item {
-    background: #f7f7f7;
-    padding: 8px;
-    margin-bottom: 8px;
-    border-radius: 4px;
+  background: #f7f7f7;
+  padding: 8px;
+  margin-bottom: 8px;
+  border-radius: 4px;
 }
 
 .event-comments .comment-item strong {
-    margin-right: 5px;
+  margin-right: 5px;
 }
 
 .event-comments form {
-    margin-top: 10px;
+  margin-top: 10px;
 }
 
 .event-comments textarea {
-    width: 100%;
-    padding: 8px;
-    border-radius: 4px;
-    border: 1px solid #ccc;
-    min-height: 60px;
-    margin-bottom: 8px;
+  width: 100%;
+  padding: 8px;
+  border-radius: 4px;
+  border: 1px solid #ccc;
+  min-height: 60px;
+  margin-bottom: 8px;
+}
+
+/* Modal overlay */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 999;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.modal-content {
+  background-color: #fff;
+  width: 500px;
+  max-width: 90%;
+  padding: 20px;
+  border-radius: 6px;
+  position: relative;
 }

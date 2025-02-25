@@ -36,9 +36,16 @@ const Groups = ({ token, currentUserId, setCurrentView }) => {
     <div className="groups-container">
       <div className="groups-header">
         <h3>All Groups</h3>
-        <button className="add-group-btn" onClick={() => setShowModal(true)}>+</button>
       </div>
+      
+      <div className="create-group-container">
+        <button className="add-group-btn" onClick={() => setShowModal(true)}>
+          Create New Group
+        </button>
+      </div>
+      
       {error && <p className="error-message">{error}</p>}
+      
       {groups.length === 0 ? (
         <p>No groups available</p>
       ) : (
@@ -50,6 +57,7 @@ const Groups = ({ token, currentUserId, setCurrentView }) => {
           ))}
         </ul>
       )}
+      
       {showModal && (
         <AddGroupModal 
           token={token} 

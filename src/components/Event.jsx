@@ -3,364 +3,445 @@ import axios from 'axios';
 import Post from './Post.jsx';
 import CreatePost from './CreatePost.jsx';
 import EventInviteModal from './EventInviteModal.jsx';
-import '../styles/Event.css';
 import EventModal from './EventModal.jsx';
+import MembersModal from './MembersModal.jsx'; 
+import '../styles/Event.css';
 
 const Event = ({
-    token,
-    currentUserId,
-    eventData: propEventData,
-    eventId: propEventId,
-    onBack,
-    setCurrentView,
-    refreshEvents,
-    postId,
-    expandedCommentId
+  token,
+  currentUserId,
+  eventData: propEventData,
+  eventId: propEventId,
+  onBack,
+  setCurrentView,
+  refreshEvents,
+  postId,
+  expandedCommentId
 }) => {
-    const [eventData, setEventData] = useState(propEventData || null);
-    const [loadingEvent, setLoadingEvent] = useState(false);
-    const [posts, setPosts] = useState([]);
-    const [loadingPosts, setLoadingPosts] = useState(false);
+  const PRIVACY_LABELS = {
+    public: 'Public',
+    friends_only: 'Friends Only',
+    private: 'Private'
+  };
 
-    // For the Invite Attendees modal
-    const [showInviteModal, setShowInviteModal] = useState(false);
+  const [eventData, setEventData] = useState(propEventData || null);
+  const [loadingEvent, setLoadingEvent] = useState(false);
+  const [posts, setPosts] = useState([]);
+  const [loadingPosts, setLoadingPosts] = useState(false);
+  // "going" or "declined" or null
+  const [attendanceStatus, setAttendanceStatus] = useState(null);
 
-    // For the "three-dot" menu
-    const [showMenu, setShowMenu] = useState(false);
+  const [showInviteModal, setShowInviteModal] = useState(false);
+  const [showMenu, setShowMenu] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showAttendeesModal, setShowAttendeesModal] = useState(false);
 
-    // For editing the event
-    const [showEditModal, setShowEditModal] = useState(false);
+  // Fields for editing the event
+  const [editEventName, setEditEventName] = useState('');
+  const [editEventDescription, setEditEventDescription] = useState('');
+  const [editEventLocation, setEditEventLocation] = useState('');
+  const [editStartTime, setEditStartTime] = useState('');
+  const [editEndTime, setEditEndTime] = useState('');
+  const [editEventPrivacy, setEditEventPrivacy] = useState('public');
+  const [editImageFile, setEditImageFile] = useState(null);
 
-    // Fields for editing the event
-    const [editEventName, setEditEventName] = useState('');
-    const [editEventDescription, setEditEventDescription] = useState('');
-    const [editEventLocation, setEditEventLocation] = useState('');
-    const [editStartTime, setEditStartTime] = useState('');
-    const [editEndTime, setEditEndTime] = useState('');
-    const [editEventPrivacy, setEditEventPrivacy] = useState('public');
-    const [editImageFile, setEditImageFile] = useState(null);
+  const [showFullDescription, setShowFullDescription] = useState(false);
+  const postRef = useRef(null);
 
-    const [showFullDescription, setShowFullDescription] = useState(false);
-    const postRef = useRef(null);
+  const baseURL = 'http://localhost:5000';
+  const realEventId = eventData?.event_id || propEventId;
+  const isOwner = currentUserId && eventData && eventData.user_id === currentUserId;
 
-    const baseURL = 'http://localhost:5000';
+  // Possibly show event image
+  const eventImageUrl = eventData?.event_image_url
+    ? `${baseURL}${eventData.event_image_url}`
+    : null;
 
-    // Decide which event ID we're dealing with
-    const eventId = eventData?.event_id || propEventId;
+  // Toggling the event description
+  const fullDescription = eventData?.event_description || '';
+  const shouldTruncate = fullDescription.length > 200;
+  const displayedDescription = shouldTruncate && !showFullDescription
+    ? `${fullDescription.slice(0, 200)}...`
+    : fullDescription;
 
-    // Owner check
-    const isOwner = (currentUserId && eventData && eventData.user_id === currentUserId);
+  const toggleDescription = () => setShowFullDescription(prev => !prev);
 
-    // Possibly show event image
-    const eventImageUrl = eventData?.event_image_url
-        ? `${baseURL}${eventData.event_image_url}`
-        : null;
+  // Format date/time
+  const formatDateTime = (dateStr) => {
+    if (!dateStr) return '';
+    const date = new Date(dateStr);
+    const formattedTime = date.toLocaleTimeString('en-US', {
+      hour12: true,
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+    const formattedDate = date.toLocaleDateString('en-US');
+    return `${formattedTime} ${formattedDate}`;
+  };
 
-    // Description toggling (long vs short)
-    const fullDescription = eventData?.event_description || '';
-    const shouldTruncate = fullDescription.length > 500;
-    const displayedDescription = shouldTruncate && !showFullDescription
-        ? fullDescription.slice(0, 500) + '...'
-        : fullDescription;
-
-    const toggleDescription = () => setShowFullDescription((prev) => !prev);
-
-    /** Fetch the event data if not provided from props */
-    const fetchEventData = async () => {
-        if (!token || !eventId) return;
-        setLoadingEvent(true);
-        try {
-            const res = await axios.get(`${baseURL}/events/${eventId}`, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
-            setEventData(res.data);
-        } catch (err) {
-            console.error('Error fetching event data:', err);
-        } finally {
-            setLoadingEvent(false);
-        }
-    };
-
-    /** Fetch posts for this event */
-    const fetchEventPosts = async () => {
-        if (!token || !eventId) return;
-        setLoadingPosts(true);
-        try {
-            if (postId) {
-                // Fetch a single post if postId is specified
-                const res = await axios.get(`${baseURL}/events/${eventId}/posts/${postId}`, {
-                    headers: { Authorization: `Bearer ${token}` }
-                });
-                const postData = Array.isArray(res.data) ? res.data[0] : res.data;
-                setPosts(postData ? [postData] : []);
-            } else {
-                // Otherwise fetch all posts
-                const res = await axios.get(`${baseURL}/events/${eventId}/posts`, {
-                    headers: { Authorization: `Bearer ${token}` }
-                });
-                setPosts(res.data);
-            }
-        } catch (err) {
-            console.error('Error fetching event posts:', err);
-        } finally {
-            setLoadingPosts(false);
-        }
-    };
-
-    // Load event data if we didn't get it via props
-    useEffect(() => {
-        if (!eventData) {
-            fetchEventData();
-        }
-    }, [eventId]);
-
-    // Once we have event data (or if we already did), fetch posts
-    useEffect(() => {
-        if (eventId) {
-            fetchEventPosts();
-        }
-    }, [eventId, token, postId]);
-
-    // Scroll to the targeted post if postId was provided
-    useEffect(() => {
-        if (postRef.current) {
-            postRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }
-    }, [posts]);
-
-    // Handle post deletion (remove from local state)
-    const handleDeletePost = (deletedPostId) => {
-        setPosts((prev) => prev.filter((post) => post.post_id !== deletedPostId));
-    };
-
-    // Delete the entire event
-    const handleDeleteEvent = async () => {
-        if (!window.confirm('Are you sure you want to delete this event?')) return;
-        try {
-            await axios.delete(`${baseURL}/events/${eventId}`, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
-            // After deletion, go back to events list
-            if (setCurrentView) setCurrentView('events');
-        } catch (err) {
-            console.error('Error deleting event:', err);
-            alert(err.response?.data?.error || 'Error deleting event');
-        }
-    };
-
-    // Invite modal toggles
-    const handleOpenInviteModal = () => {
-        setShowMenu(false);
-        setShowInviteModal(true);
-    };
-    const handleCloseInviteModal = () => setShowInviteModal(false);
-
-    // Edit modal toggles
-    const handleOpenEditModal = () => {
-        setShowMenu(false);
-        // Populate form fields with current event data
-        if (eventData) {
-            setEditEventName(eventData.event_name || '');
-            setEditEventDescription(eventData.event_description || '');
-            setEditEventLocation(eventData.event_location || '');
-            setEditEventPrivacy(eventData.event_privacy || 'public');
-            setEditImageFile(null);
-
-            // Convert event times to datetime-local format
-            setEditStartTime(formatDateTimeLocal(eventData.start_time));
-            setEditEndTime(formatDateTimeLocal(eventData.end_time));
-        }
-        setShowEditModal(true);
-    };
-    const handleCloseEditModal = () => setShowEditModal(false);
-
-    // Utility to convert e.g. "2025-02-25T14:00" from a date string
-    const formatDateTimeLocal = (dateStr) => {
-        if (!dateStr) return '';
-        const date = new Date(dateStr);
-        const pad = (num) => (num < 10 ? '0' + num : num);
-        const year = date.getFullYear();
-        const month = pad(date.getMonth() + 1);
-        const day = pad(date.getDate());
-        const hours = pad(date.getHours());
-        const minutes = pad(date.getMinutes());
-        return `${year}-${month}-${day}T${hours}:${minutes}`;
-    };
-
-    // Update event on form submission
-    const handleUpdateEvent = async (e) => {
-        e.preventDefault();
-        try {
-            const payload = {
-                event_name: editEventName,
-                event_description: editEventDescription,
-                event_location: editEventLocation,
-                start_time: editStartTime,
-                end_time: editEndTime,
-                event_privacy: editEventPrivacy
-            };
-            // Update event details
-            await axios.patch(`${baseURL}/events/${eventId}`, payload, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
-
-            // If a new image was selected, upload it
-            if (editImageFile) {
-                const formData = new FormData();
-                formData.append('image', editImageFile);
-                await axios.post(`${baseURL}/events/${eventId}/upload-image`, formData, {
-                    headers: {
-                        Authorization: `Bearer ${token}`,
-                        'Content-Type': 'multipart/form-data'
-                    }
-                });
-            }
-
-            // Refresh data
-            await fetchEventData();
-            if (refreshEvents) refreshEvents();
-
-            // Close modal
-            setShowEditModal(false);
-        } catch (err) {
-            console.error('Error updating event:', err);
-            alert(err.response?.data?.error || 'Error updating event');
-        }
-    };
-
-    // Loading / not found states
-    if (!eventData && loadingEvent) {
-        return <div className="event-container">Loading event data...</div>;
+  // Fetch event data
+  const fetchEventData = async () => {
+    if (!token || !realEventId) return;
+    setLoadingEvent(true);
+    try {
+      const res = await axios.get(`${baseURL}/events/${realEventId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setEventData(res.data);
+    } catch (err) {
+      console.error('Error fetching event data:', err);
+    } finally {
+      setLoadingEvent(false);
     }
-    if (!eventData) {
-        return <div className="event-container">Event not found or access denied.</div>;
+  };
+
+  // Fetch event posts
+  const fetchEventPosts = async () => {
+    if (!token || !realEventId) return;
+    setLoadingPosts(true);
+    try {
+      if (postId) {
+        const res = await axios.get(`${baseURL}/events/${realEventId}/posts/${postId}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const postData = Array.isArray(res.data) ? res.data[0] : res.data;
+        setPosts(postData ? [postData] : []);
+      } else {
+        const res = await axios.get(`${baseURL}/events/${realEventId}/posts`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        setPosts(res.data);
+      }
+    } catch (err) {
+      console.error('Error fetching event posts:', err);
+    } finally {
+      setLoadingPosts(false);
     }
+  };
 
-    return (
-        <div className="event-container">
-            {/* Event image */}
-            {eventImageUrl && (
-                <div className="event-image" style={{ textAlign: 'center', marginBottom: '20px' }}>
-                    <img
-                        src={eventImageUrl}
-                        alt="Event"
-                        style={{ maxWidth: '300px', height: 'auto', borderRadius: '6px' }}
-                    />
-                </div>
-            )}
+  // Fetch user attendance status
+  const fetchAttendanceStatus = async () => {
+    if (!token || !realEventId) return;
+    try {
+      const res = await axios.get(`${baseURL}/events/${realEventId}/attendees`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const myAttendance = res.data.find(att => att.user_id === currentUserId);
+      setAttendanceStatus(myAttendance ? myAttendance.status : null);
+    } catch (err) {
+      console.error('Error fetching attendance status:', err);
+    }
+  };
 
-            {/* Top bar: Back button + (optionally) 3-dot menu */}
-            <div style={{ display: 'flex', alignItems: 'center', marginBottom: '10px' }}>
-                <button
-                    className="back-button"
-                    onClick={onBack || (() => setCurrentView('events'))}
-                >
-                    Back to Events
-                </button>
+  // Load data
+  useEffect(() => {
+    if (realEventId) {
+      fetchEventData();
+      fetchAttendanceStatus();
+    }
+  }, [realEventId, token]);
 
-                {/* Show the 3-dot menu only if the user is the event owner */}
-                {isOwner && (
-                    <div className="event-actions-menu-container">
-                        <button
-                            className="three-dot-button"
-                            onClick={() => setShowMenu((prev) => !prev)}
-                        >
-                            &#x22EE; {/* or just "..." */}
-                        </button>
-                        {showMenu && (
-                            <div className="event-actions-dropdown">
-                                <button onClick={handleOpenInviteModal}>Invite Attendees</button>
-                                <button onClick={handleOpenEditModal}>Edit Event Details</button>
-                                <button onClick={handleDeleteEvent}>Delete Event</button>
-                            </div>
-                        )}
-                    </div>
-                )}
-            </div>
+  useEffect(() => {
+    if (realEventId) {
+      fetchEventPosts();
+    }
+  }, [realEventId, token, postId]);
 
-            <h2 className="event-title">{eventData.event_name}</h2>
+  // Scroll if postRef
+  useEffect(() => {
+    if (postRef.current) {
+      postRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }, [posts]);
 
-            <div className="event-details">
-                <p><strong>Owner:</strong> {isOwner ? 'You' : `User #${eventData.user_id}`}</p>
-                <p>
-                    <strong>Description:</strong>{' '}
-                    {displayedDescription}{' '}
-                    {shouldTruncate && (
-                        <span
-                            style={{ color: '#1877f2', cursor: 'pointer' }}
-                            onClick={toggleDescription}
-                        >
-                            {showFullDescription ? 'hide description' : 'show more'}
-                        </span>
-                    )}
-                </p>
-                <p><strong>Location:</strong> {eventData.event_location}</p>
-                <p><strong>Start:</strong> {new Date(eventData.start_time).toLocaleString()}</p>
-                <p><strong>End:</strong> {new Date(eventData.end_time).toLocaleString()}</p>
-                {eventData.type_name && <p><strong>Type:</strong> {eventData.type_name}</p>}
-                <p><strong>Privacy:</strong> {eventData.event_privacy}</p>
-            </div>
+  // Delete post from local
+  const handleDeletePost = (deletedPostId) => {
+    setPosts(prev => prev.filter(post => post.post_id !== deletedPostId));
+  };
 
-            <h3 className="posts-header">
-                {postId ? 'Viewing Post' : `Posts for ${eventData.event_name}`}
-            </h3>
+  // Delete event
+  const handleDeleteEvent = async () => {
+    if (!window.confirm('Are you sure you want to delete this event?')) return;
+    try {
+      await axios.delete(`${baseURL}/events/${realEventId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (onBack) {
+        onBack();
+      } else if (setCurrentView) {
+        setCurrentView('events');
+      }
+      if (refreshEvents) refreshEvents();
+    } catch (err) {
+      console.error('Error deleting event:', err);
+      alert(err.response?.data?.error || 'Error deleting event');
+    }
+  };
 
-            {/* Create a post (only if not viewing single post and if owner) */}
-            {!postId && isOwner && (
-                <CreatePost
-                    token={token}
-                    currentUserId={currentUserId}
-                    onNewPost={(newPost) => setPosts((prev) => [newPost, ...prev])}
-                    eventId={eventId}
-                />
-            )}
+  // Toggle attendance
+  const toggleAttendance = async () => {
+    if (isOwner) return;
+    const newStatus = attendanceStatus === 'going' ? 'declined' : 'going';
+    try {
+      await axios.post(
+        `${baseURL}/events/${realEventId}/attend`,
+        { status: newStatus },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setAttendanceStatus(newStatus);
+    } catch (err) {
+      console.error('Error updating attendance status:', err);
+      alert(err.response?.data?.error || 'Error updating attendance status');
+    }
+  };
 
-            {/* Loading / no posts */}
-            {loadingPosts && <p className="loading-text">Loading event posts...</p>}
-            {!loadingPosts && posts.length === 0 && (
-                <p className="empty">No posts yet for this event.</p>
-            )}
+  // Invite modal
+  const handleOpenInviteModal = () => {
+    setShowMenu(false);
+    setShowInviteModal(true);
+  };
+  const handleCloseInviteModal = () => setShowInviteModal(false);
 
-            {/* Render posts */}
-            <div className="event-posts-list">
-                {posts.map((post) => (
-                    <div key={post.post_id} ref={postId ? postRef : null}>
-                        <Post
-                            post={post}
-                            token={token}
-                            currentUserId={currentUserId}
-                            onDelete={handleDeletePost}
-                            setCurrentView={setCurrentView}
-                            onProfileClick={(actorId) => setCurrentView({ view: 'profile', userId: actorId })}
-                            eventId={eventId}
-                            eventPostId={post.post_id}
-                            expandedCommentId={expandedCommentId}
-                        />
-                    </div>
-                ))}
-            </div>
+  // Edit event modal
+  const handleOpenEditModal = () => {
+    setShowMenu(false);
+    if (eventData) {
+      setEditEventName(eventData.event_name || '');
+      setEditEventDescription(eventData.event_description || '');
+      setEditEventLocation(eventData.event_location || '');
+      setEditEventPrivacy(eventData.event_privacy || 'public');
+      setEditImageFile(null);
+      setEditStartTime(formatDateTimeLocal(eventData.start_time));
+      setEditEndTime(formatDateTimeLocal(eventData.end_time));
+    }
+    setShowEditModal(true);
+  };
+  const handleCloseEditModal = () => setShowEditModal(false);
 
-            {/* Invite Attendees Modal */}
-            {showInviteModal && (
-                <EventInviteModal
-                    token={token}
-                    eventId={eventId}
-                    currentUserId={currentUserId}
-                    onClose={handleCloseInviteModal}
-                />
-            )}
+  // For datetime-local
+  const formatDateTimeLocal = (dateStr) => {
+    if (!dateStr) return '';
+    const date = new Date(dateStr);
+    const pad = (num) => (num < 10 ? '0' + num : num);
+    const year = date.getFullYear();
+    const month = pad(date.getMonth() + 1);
+    const day = pad(date.getDate());
+    const hours = pad(date.getHours());
+    const minutes = pad(date.getMinutes());
+    return `${year}-${month}-${day}T${hours}:${minutes}`;
+  };
 
-            {/* Edit Event Modal */}
-            {showEditModal && (
-                <EventModal
-                    token={token}
-                    eventData={eventData} // pass the existing event
-                    onClose={() => setShowEditModal(false)}
-                    onEventSaved={fetchEventData}
-                />
-            )}
+  // Update event
+  const handleUpdateEvent = async (e) => {
+    e.preventDefault();
+    try {
+      const payload = {
+        event_name: editEventName,
+        event_description: editEventDescription,
+        event_location: editEventLocation,
+        start_time: editStartTime,
+        end_time: editEndTime,
+        event_privacy: editEventPrivacy
+      };
+      await axios.patch(`${baseURL}/events/${realEventId}`, payload, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (editImageFile) {
+        const formData = new FormData();
+        formData.append('image', editImageFile);
+        await axios.post(`${baseURL}/events/${realEventId}/upload-image`, formData, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'multipart/form-data'
+          }
+        });
+      }
+      await fetchEventData();
+      if (refreshEvents) refreshEvents();
+      setShowEditModal(false);
+    } catch (err) {
+      console.error('Error updating event:', err);
+      alert(err.response?.data?.error || 'Error updating event');
+    }
+  };
+
+  if (!eventData && loadingEvent) {
+    return <div className="event-container">Loading event data...</div>;
+  }
+  if (!eventData) {
+    return <div className="event-container">Event not found or access denied.</div>;
+  }
+
+  return (
+    <div className="event-container">
+      {/* Top "Back to Events" */}
+      <div className="back-button-container">
+        <button
+          className="common-button"
+          onClick={onBack || (() => setCurrentView('events'))}
+        >
+          Back to Events
+        </button>
+      </div>
+
+      {/* Event image */}
+      {eventImageUrl && (
+        <div className="event-image">
+          <img src={eventImageUrl} alt="Event" />
         </div>
-    );
+      )}
+
+      {/* Action row: left side has Attend (if not owner) + View Attendees, right side has 3-dot if owner */}
+      <div className="action-row">
+        <div className="left-actions">
+          {/* If not owner => Attend Event button */}
+          {!isOwner && (
+            <button
+              onClick={toggleAttendance}
+              className={`common-button ${attendanceStatus === 'going' ? 'attending' : ''}`}
+            >
+              {attendanceStatus === 'going' ? 'Cancel Attendance' : 'Attend Event'}
+            </button>
+          )}
+
+          {/* If owner or user is going => View Attendees */}
+          {(isOwner || attendanceStatus === 'going') && (
+            <button
+              className="common-button"
+              onClick={() => setShowAttendeesModal(true)}
+            >
+              View Attendees
+            </button>
+          )}
+        </div>
+
+        <div className="right-actions">
+          {isOwner && (
+            <div className="owner-dropdown-container">
+              <button
+                className="owner-dropdown"
+                onClick={() => setShowMenu(prev => !prev)}
+              >
+                &#x22EE;
+              </button>
+              {showMenu && (
+                <div className="event-actions-dropdown">
+                  <button onClick={handleOpenInviteModal}>Invite Attendees</button>
+                  <button onClick={handleOpenEditModal}>Edit Event Details</button>
+                  <button onClick={handleDeleteEvent}>Delete Event</button>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+
+      <h2 className="event-title">{eventData.event_name}</h2>
+      <div className="event-details">
+        <p><strong>Owner:</strong> {isOwner ? 'You' : `User #${eventData.user_id}`}</p>
+        <p>
+          <strong>Description:</strong>{' '}
+          {displayedDescription}{' '}
+          {shouldTruncate && (
+            <span
+              style={{ color: '#1877f2', cursor: 'pointer' }}
+              onClick={toggleDescription}
+            >
+              {showFullDescription ? 'hide description' : 'show more'}
+            </span>
+          )}
+        </p>
+        <p>
+          <strong>Location:</strong>{' '}
+          <a
+            href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+              eventData.event_location
+            )}`}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            {eventData.event_location}
+          </a>
+        </p>
+        <p><strong>Start:</strong> {formatDateTime(eventData.start_time)}</p>
+        <p><strong>End:</strong> {formatDateTime(eventData.end_time)}</p>
+        {eventData.type_name && <p><strong>Type:</strong> {eventData.type_name}</p>}
+        <p>
+          <strong>Privacy:</strong>{' '}
+          {PRIVACY_LABELS[eventData.event_privacy] || eventData.event_privacy}
+        </p>
+      </div>
+
+      <h3 className="posts-header">
+        {postId ? 'Viewing Post' : `Posts for ${eventData.event_name}`}
+      </h3>
+
+      {/* Create post if owner or user is "going" */}
+      {(!postId && (isOwner || attendanceStatus === 'going')) && (
+        <CreatePost
+          token={token}
+          currentUserId={currentUserId}
+          onNewPost={(newPost) => setPosts(prev => [newPost, ...prev])}
+          eventId={realEventId}
+        />
+      )}
+
+      {loadingPosts && <p className="loading-text">Loading event posts...</p>}
+      {!loadingPosts && posts.length === 0 && (
+        <p className="empty">No posts yet for this event.</p>
+      )}
+
+      <div className="event-posts-list">
+        {posts.map(post => (
+          <div key={post.post_id} ref={postId ? postRef : null}>
+            <Post
+              post={post}
+              token={token}
+              currentUserId={currentUserId}
+              onDelete={handleDeletePost}
+              setCurrentView={setCurrentView}
+              eventId={realEventId}
+              eventPostId={post.post_id}
+              expandedCommentId={expandedCommentId}
+            />
+          </div>
+        ))}
+      </div>
+
+      {/* Invite Attendees Modal */}
+      {showInviteModal && (
+        <EventInviteModal
+          token={token}
+          eventId={realEventId}
+          currentUserId={currentUserId}
+          onClose={handleCloseInviteModal}
+        />
+      )}
+
+      {/* Edit Event Modal */}
+      {showEditModal && (
+        <EventModal
+          token={token}
+          eventData={eventData}
+          onClose={() => setShowEditModal(false)}
+          onEventSaved={fetchEventData}
+        />
+      )}
+
+      {/* Members Modal for viewing attendees */}
+      {showAttendeesModal && (
+        <MembersModal
+          token={token}
+          type="event"
+          itemId={realEventId}
+          title={eventData.event_name}
+          currentUserId={currentUserId}
+          onClose={() => setShowAttendeesModal(false)}
+          isOwnerOrAdmin={isOwner}
+        />
+      )}
+    </div>
+  );
 };
 
 export default Event;

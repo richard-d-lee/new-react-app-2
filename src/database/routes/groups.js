@@ -50,6 +50,84 @@ router.get('/:groupId/comments/:commentId/liked', authenticateToken, (req, res) 
   });
 });
 
+/**
+ * DELETE /groups/:groupId/comments/:commentId/like - Unlike a group comment
+ */
+router.delete('/:groupId/comments/:commentId/like', authenticateToken, (req, res) => {
+  const { groupId, commentId } = req.params;
+  const userId = req.user.userId;
+  const deleteQuery = `
+    DELETE FROM comment_likes
+    WHERE comment_id = ? AND user_id = ?
+  `;
+  connection.query(deleteQuery, [commentId, userId], (err, results) => {
+    if (err) {
+      console.error("Error unliking group comment:", err);
+      return res.status(500).json({ error: 'Database error' });
+    }
+    if (results.affectedRows === 0) {
+      return res.status(404).json({ error: 'Like not found or already removed' });
+    }
+    res.json({ message: 'Group comment like removed successfully' });
+  });
+});
+
+
+/**
+ * CREATE a Group
+ * POST /groups
+ */
+router.post('/', authenticateToken, (req, res) => {
+  const userId = req.user.userId;
+  const { group_name, group_description, group_privacy, icon } = req.body;
+
+  if (!group_name) {
+    return res.status(400).json({ error: 'Group name is required.' });
+  }
+
+  // Insert into groups_table
+  const insertGroupQuery = `
+    INSERT INTO groups_table
+      (creator_id, group_name, group_description, group_privacy, icon)
+    VALUES (?, ?, ?, ?, ?)
+  `;
+
+  connection.query(
+    insertGroupQuery,
+    [
+      userId,
+      group_name,
+      group_description || '',
+      group_privacy || 'public',
+      icon || null
+    ],
+    (err, results) => {
+      if (err) {
+        console.error('Error creating group:', err);
+        return res.status(500).json({ error: 'Database error.' });
+      }
+
+      const newGroupId = results.insertId;
+
+      // Insert creator into user_groups with role "owner"
+      const insertMembershipQuery = `
+        INSERT INTO user_groups (user_id, group_id, role)
+        VALUES (?, ?, 'owner')
+      `;
+      connection.query(insertMembershipQuery, [userId, newGroupId], (err2) => {
+        if (err2) {
+          console.error('Error adding user as owner to new group:', err2);
+          return res.status(500).json({ error: 'Database error adding membership.' });
+        }
+
+        return res.status(201).json({
+          groupId: newGroupId,
+          message: 'Group created successfully and user added as owner.'
+        });
+      });
+    }
+  );
+});
 
 
 router.get('/:groupId/members', authenticateToken, (req, res) => {

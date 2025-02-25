@@ -97,7 +97,7 @@ const CreatePost = ({ token, currentUserId, onNewPost, groupId, eventId }) => {
             displayTransform={(id, display) => `@${display}`}
           />
         </MentionsInput>
-        <button type="submit">Post</button>
+        <button className={"post-button"} type="submit">Post</button>
       </form>
     </div>
   );
