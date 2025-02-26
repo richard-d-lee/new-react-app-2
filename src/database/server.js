@@ -34,7 +34,7 @@ app.use(bodyParser.json());
 // Short-term limiter: 100 requests per 15 minutes per IP
 const shortTermLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 300, // limit each IP to 100 requests per window
+  max: 500, // limit each IP to 100 requests per window
   message: "Too many requests from this IP, please try again after 15 minutes."
 });
 app.use(shortTermLimiter);

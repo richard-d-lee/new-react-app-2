@@ -20,7 +20,6 @@ const HomePage = ({ updateLogged, email }) => {
   const [currentUsername, setCurrentUsername] = useState('');
   const [currentUserProfilePic, setCurrentUserProfilePic] = useState('');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [widgetsCollapsed, setWidgetsCollapsed] = useState(false);
   const [currentView, setCurrentView] = useState('feed');
   const [unreadCount, setUnreadCount] = useState(0);
   const [friendRequestsCount, setFriendRequestsCount] = useState(0);

@@ -172,6 +172,95 @@ router.get('/profile-settings/:id', authenticateToken, (req, res) => {
 });
 
 /**
+ * GET /users/search-all - Combined search endpoint.
+ * Searches for users, groups, and events based on a query.
+ * Returns results as { users: [...], groups: [...], events: [...] }.
+ */
+router.get('/search-all', authenticateToken, (req, res) => {
+  const queryParam = req.query.query;
+  const currentUser = req.user.userId;
+  if (!queryParam) {
+    return res.status(400).json({ error: 'Query parameter is required.' });
+  }
+  const sqlParam = `%${queryParam}%`;
+
+  // Query for users (excludes users in a block relationship)
+  const userQuery = `
+    SELECT user_id, username, profile_picture_url
+    FROM users
+    WHERE username LIKE ?
+      ${blockFilter(currentUser)}
+    LIMIT 10
+  `;
+
+  // Query for groups – alias icon as group_pic (groups_table is used)
+  const groupQuery = `
+    SELECT group_id, group_name, icon AS group_pic
+    FROM groups_table
+    WHERE group_name LIKE ?
+    LIMIT 10
+  `;
+
+  // Query for events – alias event_image_url as event_pic
+  const eventQuery = `
+    SELECT event_id, event_name, event_image_url AS event_pic
+    FROM events
+    WHERE event_name LIKE ?
+    LIMIT 10
+  `;
+
+  // Object to hold all results
+  let results = { users: [], groups: [], events: [] };
+  let queriesCompleted = 0;
+  let responded = false; // flag to ensure we only send a response once
+
+  const checkCompletion = () => {
+    queriesCompleted++;
+    if (queriesCompleted === 3 && !responded) {
+      responded = true;
+      res.json(results);
+    }
+  };
+
+  connection.query(userQuery, [sqlParam], (err, userResults) => {
+    if (err) {
+      console.error("Error searching users:", err);
+      if (!responded) {
+        responded = true;
+        return res.status(500).json({ error: 'Database error searching users' });
+      } else return;
+    }
+    results.users = userResults;
+    checkCompletion();
+  });
+
+  connection.query(groupQuery, [sqlParam], (err, groupResults) => {
+    if (err) {
+      console.error("Error searching groups:", err);
+      if (!responded) {
+        responded = true;
+        return res.status(500).json({ error: 'Database error searching groups' });
+      } else return;
+    }
+    results.groups = groupResults;
+    checkCompletion();
+  });
+
+  connection.query(eventQuery, [sqlParam], (err, eventResults) => {
+    if (err) {
+      console.error("Error searching events:", err);
+      if (!responded) {
+        responded = true;
+        return res.status(500).json({ error: 'Database error searching events' });
+      } else return;
+    }
+    results.events = eventResults;
+    checkCompletion();
+  });
+});
+
+
+/**
  * GET /users/search - Search for users by username.
  * Excludes users in a block relationship with the current user.
  */

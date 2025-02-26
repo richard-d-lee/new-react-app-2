@@ -1,103 +1,81 @@
-:root {
-  --primary-color: #1877f2;
-  --background-color: #f0f2f5;
-  --hover-background-color: #e4e6e9;
-  --text-color: #333;
-  --font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+.search-bar {
+  position: relative;
+  width: 300px;
+  font-family: var(--font-family);
 }
 
-/* Sidebar Styles */
-.sidebar {
-  background-color: var(--background-color);
-  padding: 20px;
-  box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
-  font-family: var(--font-family);
+.search-input-container {
+  display: flex;
+  align-items: center;
+  background-color: #fff;
+  border: 1px solid #ccc;
+  border-radius: 20px;
+  padding: 5px 10px;
+}
+
+.search-input-container input {
+  flex: 1;
+  border: none;
+  outline: none;
+  font-size: 14px;
+  padding: 5px;
+}
+
+.search-input-container .search-icon {
+  color: var(--primary-color);
+  font-size: 16px;
+  margin-left: 5px;
+}
+
+.search-results {
+  position: absolute;
+  top: 45px;
+  width: 100%;
+  background-color: #fff;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  max-height: 300px;
+  overflow-y: auto;
+  box-shadow: 0px 2px 5px rgba(0, 0, 0, 0.2);
+  z-index: 100;
+}
+
+.results-section {
+  padding: 5px 10px;
+  border-bottom: 1px solid #eee;
+}
+
+.results-section:last-child {
+  border-bottom: none;
+}
+
+.results-section h4 {
+  margin: 5px 0;
+  font-size: 14px;
   color: var(--text-color);
 }
 
-/* User Profile Section Styles */
-.user-profile-section {
-  text-align: center;
-  margin-bottom: 20px;
+.result-item {
+  display: flex;
+  align-items: center;
+  padding: 5px 0;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
 }
 
-.user-profile-section .profile-pic {
-  width: 80px;
-  height: 80px;
+.result-item:hover {
+  background-color: var(--hover-background-color);
+}
+
+.result-avatar {
+  width: 30px;
+  height: 30px;
   border-radius: 50%;
-  margin-bottom: 10px;
+  object-fit: cover;
+  margin-right: 10px;
 }
 
-.user-profile-section h3 {
-  margin: 10px 0;
-  font-size: 18px;
-}
-
-.user-profile-section a {
-  color: var(--primary-color);
-  text-decoration: none;
-}
-
-.user-profile-section a:hover {
-  text-decoration: underline;
-}
-
-/* Shortcuts Styles */
-.shortcuts {
-  margin-bottom: 20px;
-}
-
-.shortcuts h3 {
-  font-size: 16px;
-  margin-bottom: 10px;
-}
-
-.shortcut {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px;
-  cursor: pointer;
-  transition: background-color 0.2s ease;
-}
-
-.shortcut:hover {
-  background-color: var(--hover-background-color);
-  border-radius: 5px;
-}
-
-.shortcut .icon {
-  font-size: 20px;
-}
-
-.shortcut .text {
+.result-item span {
   font-size: 14px;
-}
-
-/* Groups Styles */
-.groups h3 {
-  font-size: 16px;
-  margin-bottom: 10px;
-}
-
-.group {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px;
-  cursor: pointer;
-  transition: background-color 0.2s ease;
-}
-
-.group:hover {
-  background-color: var(--hover-background-color);
-  border-radius: 5px;
-}
-
-.group .icon {
-  font-size: 20px;
-}
-
-.group .text {
-  font-size: 14px;
+  color: var(--text-color);
 }

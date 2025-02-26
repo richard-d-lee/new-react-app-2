@@ -32,7 +32,7 @@ const Navbar = ({
           </a>
         </div>
         <div className="search-bar-container">
-          <SearchBar />
+          <SearchBar token={token} setCurrentView={setCurrentView}/>
         </div>
       </div>
       
