@@ -1,4 +1,4 @@
-const path = require('path');
+const path = require('path'); 
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 
 module.exports = {
@@ -6,6 +6,7 @@ module.exports = {
   output: {
     path: path.resolve(__dirname, 'dist'), // Output directory
     filename: 'bundle.js', // Output file
+    assetModuleFilename: 'images/[name].[hash][ext][query]', // Default output for asset modules
   },
   module: {
     rules: [
@@ -19,6 +20,13 @@ module.exports = {
       {
         test: /\.css$/, // Handle CSS files
         use: ['style-loader', 'css-loader'],
+      },
+      {
+        test: /\.(png|jpe?g|gif|svg)$/, // Handle image files
+        type: 'asset/resource', // Built-in asset module for copying files
+        generator: {
+          filename: 'images/[name].[hash][ext]', // Output folder for images
+        },
       },
     ],
   },

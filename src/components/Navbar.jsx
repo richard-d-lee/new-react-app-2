@@ -4,6 +4,7 @@ import SearchBar from './SearchBar.jsx';
 import NavLink from './NavLink.jsx';
 import UserProfile from './UserProfile.jsx';
 import { FaHome, FaUserFriends, FaBell, FaUsers } from 'react-icons/fa';
+import logo from '../files/logo.jpg'; // Adjust the path if necessary
 
 const Navbar = ({
   updateLogged,
@@ -12,7 +13,7 @@ const Navbar = ({
   userId,
   token,
   unreadCount,
-  friendRequestsCount // NEW from HomePage
+  friendRequestsCount
 }) => {
   return (
     <div className="navbar">
@@ -24,9 +25,10 @@ const Navbar = ({
               e.preventDefault();
               setCurrentView('feed');
             }}
-            style={{ textDecoration: 'none', color: '#fff' }}
+            style={{ textDecoration: 'none' }}
           >
-            <h1>BuzApp</h1>
+            {/* Replace the text header with an image */}
+            <img src={logo} alt="BuzApp Logo" className="logo-img" />
           </a>
         </div>
         <div className="search-bar-container">
@@ -44,13 +46,11 @@ const Navbar = ({
           <div onClick={() => setCurrentView('groups')}>
             <NavLink icon={<FaUsers />} text="Groups" />
           </div>
-
-          {/* (1) NEW: Friend Requests Count on the Friends link */}
+          {/* Friends with Friend Requests Count */}
           <div
             style={{ cursor: 'pointer', position: 'relative', display: 'flex', alignItems: 'center' }}
             onClick={() => setCurrentView('friends')}
           >
-            
             <div style={{ position: 'relative', display: 'inline-block' }}>
               <FaUserFriends
                 style={{
@@ -82,13 +82,11 @@ const Navbar = ({
               Friends
             </span>
           </div>
-
-          {/* Notifications logic is unchanged */}
+          {/* Notifications */}
           <div
             style={{ cursor: 'pointer', position: 'relative', display: 'flex', alignItems: 'center' }}
             onClick={() => setCurrentView('notifications')}
           >
-            {/* ... your existing notification code ... */}
             <FaBell
               style={{
                 fontSize: '1.1rem',
@@ -119,7 +117,6 @@ const Navbar = ({
             </span>
           </div>
         </div>
-
         <div className="user-profile-container">
           <UserProfile
             userId={userId}

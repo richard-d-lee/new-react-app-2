@@ -2,7 +2,7 @@
 .navbar {
   display: flex;
   align-items: center;
-  background-color: #1877f2; /* Facebook-like blue */
+  background-color: #0b5fc1 !important;
   color: #fff;
   padding: 10px 20px;
   position: sticky;
@@ -14,13 +14,6 @@
 .logo h1 {
   margin: 0;
   font-size: 24px;
-}
-
-/* Search Bar Container */
-.search-bar-container {
-  /* A fixed width keeps it from pushing nav items away */
-  width: 250px; 
-  margin: 0 20px;
 }
 
 .left-container {
@@ -59,4 +52,9 @@
   font-size: 12px;
   padding: 2px 6px;
   font-weight: bold;
+}
+
+.logo-img {
+  height: 70px; /* Adjust as needed */
+  max-width: 400px;
 }
