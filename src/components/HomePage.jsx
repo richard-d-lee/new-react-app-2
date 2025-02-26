@@ -10,7 +10,6 @@ import GroupPage from './GroupPage.jsx';
 import Profile from './Profile.jsx';
 import Settings from './Settings.jsx';
 import Event from './Event.jsx';
-import Widgets from './Widgets.jsx';
 import Messenger from './Messenger.jsx';
 import Events from './Events.jsx';
 import Notifications from './Notifications.jsx';
@@ -221,15 +220,6 @@ const HomePage = ({ updateLogged, email }) => {
               expandedCommentId={currentView.expandedCommentId}
             />
           )}
-        </div>
-
-        {/* Widgets */}
-        <div className={`widgets-container ${widgetsCollapsed ? 'collapsed' : ''}`}>
-          <Widgets
-            email={email}
-            collapsed={widgetsCollapsed}
-            toggleWidgets={() => setWidgetsCollapsed((prev) => !prev)}
-          />
         </div>
       </div>
 

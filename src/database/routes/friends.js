@@ -14,9 +14,14 @@ router.get('/outbound', authenticateToken, (req, res) => {
     FROM friends f
     JOIN users u ON f.user_id_2 = u.user_id
     WHERE f.user_id_1 = ? AND f.status = 'pending'
+      AND u.user_id NOT IN (
+        SELECT blocked_id FROM blocked_users WHERE blocker_id = ?
+        UNION
+        SELECT blocker_id FROM blocked_users WHERE blocked_id = ?
+      )
     ORDER BY u.username ASC
   `;
-  connection.query(query, [userId], (err, results) => {
+  connection.query(query, [userId, userId, userId], (err, results) => {
     if (err) {
       console.error('Error fetching outbound requests:', err);
       return res.status(500).json({ error: 'Database error' });
@@ -33,9 +38,19 @@ router.get('/status', authenticateToken, (req, res) => {
     SELECT user_id_1 AS sender, status, created_at AS friendAddedDate
     FROM friends
     WHERE ((user_id_1 = ? AND user_id_2 = ?) OR (user_id_1 = ? AND user_id_2 = ?))
+      AND NOT EXISTS (
+        SELECT 1 FROM blocked_users
+        WHERE (blocker_id = ? AND blocked_id = ?)
+           OR (blocker_id = ? AND blocked_id = ?)
+      )
     LIMIT 1
   `;
-  connection.query(query, [currentUser, otherUser, otherUser, currentUser], (err, results) => {
+  connection.query(query, [
+    currentUser, otherUser,
+    otherUser, currentUser,
+    currentUser, otherUser,
+    otherUser, currentUser
+  ], (err, results) => {
     if (err) {
       console.error("Error fetching friend status:", err);
       return res.status(500).json({ error: 'Database error' });
@@ -49,19 +64,20 @@ router.get('/status', authenticateToken, (req, res) => {
   });
 });
 
+// GET /friends/incoming-count - Retrieve count of inbound pending friend requests
 router.get('/incoming-count', authenticateToken, (req, res) => {
-  const userId = req.user.userId; // from the JWT
-
-  // Use your existing "friends" table:
-  // user_id_2 = the target of the request
-  // status = 'pending'
+  const userId = req.user.userId;
   const query = `
     SELECT COUNT(*) AS incomingRequests
     FROM friends
     WHERE user_id_2 = ? AND status = 'pending'
+      AND user_id_1 NOT IN (
+        SELECT blocked_id FROM blocked_users WHERE blocker_id = ?
+        UNION
+        SELECT blocker_id FROM blocked_users WHERE blocked_id = ?
+      )
   `;
-
-  connection.query(query, [userId], (err, results) => {
+  connection.query(query, [userId, userId, userId], (err, results) => {
     if (err) {
       console.error('Error fetching incoming friend requests count:', err);
       return res.status(500).json({ error: 'Database error' });
@@ -78,9 +94,14 @@ router.get('/pending', authenticateToken, (req, res) => {
     FROM friends f
     JOIN users u ON f.user_id_1 = u.user_id
     WHERE f.user_id_2 = ? AND f.status = 'pending'
+      AND u.user_id NOT IN (
+        SELECT blocked_id FROM blocked_users WHERE blocker_id = ?
+        UNION
+        SELECT blocker_id FROM blocked_users WHERE blocked_id = ?
+      )
     ORDER BY u.username ASC
   `;
-  connection.query(query, [userId], (err, results) => {
+  connection.query(query, [userId, userId, userId], (err, results) => {
     if (err) {
       console.error('Error fetching inbound pending requests:', err);
       return res.status(500).json({ error: 'Database error' });
@@ -99,12 +120,55 @@ router.get('/', authenticateToken, (req, res) => {
     WHERE f.status = 'accepted'
       AND (f.user_id_1 = ? OR f.user_id_2 = ?)
       AND u.user_id != ?
+      AND u.user_id NOT IN (
+        SELECT blocked_id FROM blocked_users WHERE blocker_id = ?
+        UNION
+        SELECT blocker_id FROM blocked_users WHERE blocked_id = ?
+      )
     ORDER BY u.username ASC
   `;
-  connection.query(query, [userId, userId, userId], (err, results) => {
+  connection.query(query, [userId, userId, userId, userId, userId], (err, results) => {
     if (err) {
       console.error('Error fetching accepted friends:', err);
       return res.status(500).json({ error: 'Database error' });
+    }
+    res.json(results);
+  });
+});
+
+// GET /friends/possible-friends - Retrieve possible friends (users not already friends or pending)
+router.get('/possible-friends', authenticateToken, (req, res) => {
+  const me = req.user.userId;
+  const query = `
+    SELECT 
+      u.user_id,
+      u.username,
+      u.email,
+      u.profile_picture_url
+    FROM users u
+    WHERE 
+      u.user_id != ?
+      AND u.user_id NOT IN (
+          SELECT blocked_id FROM blocked_users WHERE blocker_id = ?
+          UNION
+          SELECT blocker_id FROM blocked_users WHERE blocked_id = ?
+      )
+      AND NOT EXISTS (
+        SELECT 1
+        FROM friends f
+        WHERE (
+          (f.user_id_1 = ? AND f.user_id_2 = u.user_id)
+          OR
+          (f.user_id_1 = u.user_id AND f.user_id_2 = ?)
+        )
+        AND f.status IN ('pending','accepted')
+      )
+    ORDER BY u.username ASC
+  `;
+  connection.query(query, [me, me, me, me, me], (err, results) => {
+    if (err) {
+      console.error('Error retrieving possible friends:', err);
+      return res.status(500).json({ error: 'Error retrieving possible friends' });
     }
     res.json(results);
   });
@@ -168,7 +232,6 @@ router.post('/confirm', authenticateToken, (req, res) => {
     if (results.affectedRows === 0) {
       return res.status(404).json({ error: 'No pending request found' });
     }
-    // Notify the requester that their request was accepted
     createNotification({
       user_id: friendId,
       notification_type: 'FRIEND_REQUEST_ACCEPTED',

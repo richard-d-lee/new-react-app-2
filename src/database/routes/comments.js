@@ -130,10 +130,12 @@ router.post('/:commentId/reply', authenticateToken, (req, res) => {
 });
 
 /**
- * GET /comments/:commentId - Retrieve a single comment by ID
+ * GET /comments/:commentId - Retrieve a single comment by ID,
+ * excluding comments from users in a blocking relationship with the current user.
  */
 router.get('/:commentId', authenticateToken, (req, res) => {
   const commentId = req.params.commentId;
+  const userId = req.user.userId;
   const query = `
     SELECT 
       c.comment_id, 
@@ -144,8 +146,13 @@ router.get('/:commentId', authenticateToken, (req, res) => {
       c.parent_comment_id
     FROM comments c
     WHERE c.comment_id = ?
+      AND c.user_id NOT IN (
+        SELECT blocked_id FROM blocked_users WHERE blocker_id = ?
+        UNION
+        SELECT blocker_id FROM blocked_users WHERE blocked_id = ?
+      )
   `;
-  connection.query(query, [commentId], (err, results) => {
+  connection.query(query, [commentId, userId, userId], (err, results) => {
     if (err) {
       console.error("Error fetching comment:", err);
       return res.status(500).json({ error: 'Database error' });
@@ -218,18 +225,24 @@ router.delete('/:commentId', authenticateToken, (req, res) => {
 
 /**
  * GET /comments/:postId/comments
- * Retrieves all comments for a given post.
+ * Retrieves all comments for a given post, excluding comments from users blocked by or who have blocked the current user.
  */
 router.get('/:postId/comments', authenticateToken, (req, res) => {
   const postId = req.params.postId;
+  const userId = req.user.userId;
   const query = `
     SELECT c.*, u.username 
     FROM comments c 
     JOIN users u ON c.user_id = u.user_id 
-    WHERE c.post_id = ? 
+    WHERE c.post_id = ?
+      AND c.user_id NOT IN (
+        SELECT blocked_id FROM blocked_users WHERE blocker_id = ?
+        UNION
+        SELECT blocker_id FROM blocked_users WHERE blocked_id = ?
+      )
     ORDER BY c.created_at ASC
   `;
-  connection.query(query, [postId], (err, results) => {
+  connection.query(query, [postId, userId, userId], (err, results) => {
     if (err) {
       console.error("Error fetching comments:", err);
       return res.status(500).json({ error: 'Error fetching comments' });

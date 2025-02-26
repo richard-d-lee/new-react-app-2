@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import "../styles/Settings.css";
+import UnblockUsersModal from "./UnblockUsersModal.jsx";
 
 const Settings = ({ token, currentUserId, setCurrentView }) => {
   const [user, setUser] = useState({
@@ -10,14 +11,12 @@ const Settings = ({ token, currentUserId, setCurrentView }) => {
     birthday: "",
     profile_picture_url: ""
   });
-  // This state holds the profile display preferences
   const [profileSettings, setProfileSettings] = useState({
     show_first_name: true,
     show_last_name: true,
     show_email: true,
     show_birthday: true
   });
-  // Edit toggles for inline editing
   const [editMode, setEditMode] = useState({
     first_name: false,
     last_name: false,
@@ -27,7 +26,13 @@ const Settings = ({ token, currentUserId, setCurrentView }) => {
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
 
-  // Fetch current user details
+  // Block / Unblock state
+  const [blockUsername, setBlockUsername] = useState("");
+  const [blockMessage, setBlockMessage] = useState("");
+  const [blockError, setBlockError] = useState("");
+  const [showUnblockModal, setShowUnblockModal] = useState(false);
+
+  // Fetch user details
   const fetchUserDetails = async () => {
     try {
       const res = await axios.get(`http://localhost:5000/users/${currentUserId}`, {
@@ -39,14 +44,13 @@ const Settings = ({ token, currentUserId, setCurrentView }) => {
     }
   };
 
-  // Fetch current profile settings (for display preferences)
+  // Fetch profile settings
   const fetchProfileSettings = async () => {
     try {
       const res = await axios.get(
         `http://localhost:5000/users/profile-settings/${currentUserId}`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      // Assuming res.data is an object with keys: show_first_name, etc.
       setProfileSettings({
         show_first_name:
           res.data.show_first_name === "true" || res.data.show_first_name === true,
@@ -68,22 +72,19 @@ const Settings = ({ token, currentUserId, setCurrentView }) => {
     }
   }, [token, currentUserId]);
 
-  // Handle form field changes for user details
+  // Handlers for updating user details
   const handleChange = (e) => {
     setUser({ ...user, [e.target.name]: e.target.value });
   };
 
-  // Toggle edit mode for inline editing
   const toggleEditMode = (field) => {
     setEditMode((prev) => ({ ...prev, [field]: !prev[field] }));
   };
 
-  // Handle changes for the display preference toggles
   const handleToggleSetting = (key, value) => {
     setProfileSettings((prev) => ({ ...prev, [key]: value }));
   };
 
-  // Submit updated settings: this endpoint should update both user details and profile display preferences.
   const handleUpdateSettings = async (e) => {
     e.preventDefault();
     try {
@@ -92,7 +93,6 @@ const Settings = ({ token, currentUserId, setCurrentView }) => {
         last_name: user.last_name,
         email: user.email,
         birthday: user.birthday,
-        // Include profile display preferences as part of the same update
         show_first_name: profileSettings.show_first_name,
         show_last_name: profileSettings.show_last_name,
         show_email: profileSettings.show_email,
@@ -106,7 +106,6 @@ const Settings = ({ token, currentUserId, setCurrentView }) => {
       setMessage(res.data.message || "Settings updated successfully");
       fetchUserDetails();
       fetchProfileSettings();
-      // Turn off edit modes
       setEditMode({
         first_name: false,
         last_name: false,
@@ -118,7 +117,6 @@ const Settings = ({ token, currentUserId, setCurrentView }) => {
     }
   };
 
-  // Delete account
   const handleDeleteAccount = async () => {
     const confirmDelete = window.confirm(
       "Are you sure you want to delete your account? This action cannot be undone."
@@ -132,6 +130,49 @@ const Settings = ({ token, currentUserId, setCurrentView }) => {
       setCurrentView("login");
     } catch (err) {
       setError(err.response?.data?.error || "Error deleting account");
+    }
+  };
+
+  // Block user by exact username and show unblock modal to manage list
+  const handleBlockUser = async (e) => {
+    e.preventDefault();
+    setBlockMessage("");
+    setBlockError("");
+
+    if (!blockUsername.trim()) {
+      setBlockError("Please enter a complete username.");
+      return;
+    }
+
+    try {
+      const lookupRes = await axios.get(`http://localhost:5000/users/lookup`, {
+        params: { username: blockUsername.trim() },
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      const foundUser = lookupRes.data;
+      if (!foundUser || !foundUser.user_id) {
+        setBlockError("User not found.");
+        return;
+      }
+
+      const confirmBlock = window.confirm(
+        `Block "${blockUsername}"?`
+      );
+
+      if (!confirmBlock) return;
+
+      await axios.post(
+        `http://localhost:5000/users/block`,
+        { blockedId: foundUser.user_id },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      setBlockMessage(`"${blockUsername}" has been blocked.`);
+      setBlockUsername("");
+    } catch (err) {
+      console.error("Error blocking user:", err);
+      setBlockError(err.response?.data?.error || "Error blocking user.");
     }
   };
 
@@ -154,11 +195,7 @@ const Settings = ({ token, currentUserId, setCurrentView }) => {
                 onChange={handleChange}
                 disabled={!editMode.first_name}
               />
-              <button
-                type="button"
-                className="edit-btn"
-                onClick={() => toggleEditMode("first_name")}
-              >
+              <button type="button" className="edit-btn" onClick={() => toggleEditMode("first_name")}>
                 &#9998;
               </button>
             </div>
@@ -169,9 +206,7 @@ const Settings = ({ token, currentUserId, setCurrentView }) => {
               <input
                 type="checkbox"
                 checked={profileSettings.show_first_name}
-                onChange={(e) =>
-                  handleToggleSetting("show_first_name", e.target.checked)
-                }
+                onChange={(e) => handleToggleSetting("show_first_name", e.target.checked)}
               />
               <span className="slider round"></span>
             </label>
@@ -190,11 +225,7 @@ const Settings = ({ token, currentUserId, setCurrentView }) => {
                 onChange={handleChange}
                 disabled={!editMode.last_name}
               />
-              <button
-                type="button"
-                className="edit-btn"
-                onClick={() => toggleEditMode("last_name")}
-              >
+              <button type="button" className="edit-btn" onClick={() => toggleEditMode("last_name")}>
                 &#9998;
               </button>
             </div>
@@ -205,9 +236,7 @@ const Settings = ({ token, currentUserId, setCurrentView }) => {
               <input
                 type="checkbox"
                 checked={profileSettings.show_last_name}
-                onChange={(e) =>
-                  handleToggleSetting("show_last_name", e.target.checked)
-                }
+                onChange={(e) => handleToggleSetting("show_last_name", e.target.checked)}
               />
               <span className="slider round"></span>
             </label>
@@ -226,11 +255,7 @@ const Settings = ({ token, currentUserId, setCurrentView }) => {
                 onChange={handleChange}
                 disabled={!editMode.email}
               />
-              <button
-                type="button"
-                className="edit-btn"
-                onClick={() => toggleEditMode("email")}
-              >
+              <button type="button" className="edit-btn" onClick={() => toggleEditMode("email")}>
                 &#9998;
               </button>
             </div>
@@ -241,9 +266,7 @@ const Settings = ({ token, currentUserId, setCurrentView }) => {
               <input
                 type="checkbox"
                 checked={profileSettings.show_email}
-                onChange={(e) =>
-                  handleToggleSetting("show_email", e.target.checked)
-                }
+                onChange={(e) => handleToggleSetting("show_email", e.target.checked)}
               />
               <span className="slider round"></span>
             </label>
@@ -262,11 +285,7 @@ const Settings = ({ token, currentUserId, setCurrentView }) => {
                 onChange={handleChange}
                 disabled={!editMode.birthday}
               />
-              <button
-                type="button"
-                className="edit-btn"
-                onClick={() => toggleEditMode("birthday")}
-              >
+              <button type="button" className="edit-btn" onClick={() => toggleEditMode("birthday")}>
                 &#9998;
               </button>
             </div>
@@ -277,25 +296,48 @@ const Settings = ({ token, currentUserId, setCurrentView }) => {
               <input
                 type="checkbox"
                 checked={profileSettings.show_birthday}
-                onChange={(e) =>
-                  handleToggleSetting("show_birthday", e.target.checked)
-                }
+                onChange={(e) => handleToggleSetting("show_birthday", e.target.checked)}
               />
               <span className="slider round"></span>
             </label>
           </div>
         </div>
 
-        <button type="submit" className="update-btn">
-          Update Settings
-        </button>
+        <button type="submit" className="update-btn">Update Settings</button>
       </form>
 
       <hr />
 
-      <button onClick={handleDeleteAccount} className="delete-btn">
-        Delete Account
-      </button>
+      {/* Consolidated Block/Unblock Section */}
+      <div className="block-unblock-section">
+        <h3>Manage Blocked Users</h3>
+        <form onSubmit={handleBlockUser} className="block-form">
+          <input
+            type="text"
+            value={blockUsername}
+            onChange={(e) => setBlockUsername(e.target.value)}
+            placeholder="Enter full username"
+          />
+          <button type="submit" className="block-btn">Block User</button>
+        </form>
+        {blockError && <p className="error-message">{blockError}</p>}
+        {blockMessage && <p className="success-message">{blockMessage}</p>}
+        <button className="block-btn" onClick={() => setShowUnblockModal(true)}>
+          Manage Blocked Users
+        </button>
+      </div>
+
+      <hr />
+
+      <button onClick={handleDeleteAccount} className="delete-btn">Delete Account</button>
+
+      {showUnblockModal && (
+        <UnblockUsersModal
+          token={token}
+          currentUserId={currentUserId}
+          onClose={() => setShowUnblockModal(false)}
+        />
+      )}
     </div>
   );
 };

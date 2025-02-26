@@ -1,96 +1,123 @@
-.friends-container {
-    max-width: 600px;
-    margin: 0 auto;
-    padding: 20px;
-    font-family: Arial, sans-serif;
-  }
-  
-  .friends-container h2 {
-    font-size: 24px;
-    margin-bottom: 20px;
-    color: #1877f2;
-  }
-  
-  .error {
-    color: red;
-    margin-bottom: 10px;
-  }
-  
-  .pending-section,
-  .accepted-section {
-    margin-bottom: 30px;
-    background-color: #fff;
-    padding: 15px;
-    border: 1px solid #ddd;
-    border-radius: 8px;
-  }
-  
-  .pending-section h3,
-  .accepted-section h3 {
-    font-size: 18px;
-    margin-bottom: 15px;
-    color: #1877f2;
-  }
-  
-  .friend-card {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    background-color: #f9f9f9;
-    border: 1px solid #ddd;
-    border-radius: 5px;
-    padding: 10px;
-    margin-bottom: 10px;
-  }
-  
-  .friend-card img {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-  }
-  
-  .friend-info {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    margin-left: 10px;
-  }
-  
-  .friend-name {
-    font-weight: 600;
-    font-size: 14px;
-  }
-  
-  .friend-email {
-    font-size: 12px;
-    color: #666;
-  }
-  
-  .friend-actions {
-    display: flex;
-    gap: 8px;
-  }
-  
-  .confirm-btn,
-  .decline-btn,
-  .remove-btn {
-    background-color: #1877f2;
-    color: #fff;
-    border: none;
-    border-radius: 20px;
-    padding: 8px 12px;
-    cursor: pointer;
-    transition: background-color 0.2s ease;
-  }
-  
-  .confirm-btn:hover,
-  .decline-btn:hover,
-  .remove-btn:hover {
-    background-color: #145db2;
-  }
-  
-  .empty {
-    font-style: italic;
-    color: #999;
-  }
-  
+.friends-page {
+  padding: 20px;
+}
+
+.friends-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  grid-gap: 20px;
+}
+
+/* Each section scrolls if overflow is large */
+.friends-section {
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  padding: 10px;
+  background: #fff;
+  display: flex;
+  flex-direction: column;
+  max-height: 400px; /* Adjust as needed */
+  overflow-y: auto;
+}
+
+.friends-section h3 {
+  margin-top: 0;
+  text-align: center;
+}
+
+.search-input {
+  margin: 5px auto 10px auto;
+  padding: 5px;
+  font-size: 14px;
+  width: 90%;
+  display: block;
+}
+
+/* Friend card layout:
+   - "friend-left" shows the avatar and username side-by-side
+   - "friend-right" holds the action button(s)
+   - The card content is centered vertically */
+.friend-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 8px 0;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #eee;
+}
+
+.friend-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.friend-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.friend-name {
+  font-size: 14px;
+  font-weight: 600;
+  margin: 0;
+}
+
+/* The right container for buttons */
+.friend-right {
+  display: flex;
+  align-items: center;
+}
+
+/* In Incoming Requests, stack buttons vertically */
+.friend-right.stacked {
+  flex-direction: column;
+  gap: 4px;
+}
+
+/* Base button style */
+.btn {
+  border: none;
+  border-radius: 4px;
+  padding: 5px 8px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+/* Larger button style for non-stacked buttons */
+.btn-large {
+  padding: 8px 12px;
+  font-size: 14px;
+}
+
+/* Blue button: for the Confirm button */
+.btn.btn-blue {
+  background-color: #007bff;
+  color: #fff;
+}
+
+.btn.btn-blue:hover {
+  background-color: #0056b3;
+}
+
+/* Gray button: for Decline, Unfriend, Cancel, and Add buttons */
+.btn.btn-gray {
+  background-color: #d3d3d3;
+  color: #333;
+}
+
+.btn.btn-gray:hover {
+  background-color: #a9a9a9;
+}
+
+.empty {
+  text-align: center;
+  margin-top: 10px;
+}
+
+.error {
+  color: red;
+  margin-top: 10px;
+}

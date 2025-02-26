@@ -90,11 +90,12 @@ router.post('/', authenticateToken, (req, res) => {
         });
       }
     );
-  });
+});
 
-// POST /events/:eventId/attend
-// Allows a user (not event owner) to set their attendance status.
-// Expects a JSON body with: { status: "going" } or { status: "declined" }
+/**
+ * POST /events/:eventId/attend
+ * Allows a user (not event owner) to set their attendance status.
+ */
 router.post('/:eventId/attend', authenticateToken, (req, res) => {
     const eventId = req.params.eventId;
     const userId = req.user.userId;
@@ -104,7 +105,6 @@ router.post('/:eventId/attend', authenticateToken, (req, res) => {
       return res.status(400).json({ error: "Invalid attendance status." });
     }
     
-    // Upsert attendance using INSERT ... ON DUPLICATE KEY UPDATE
     const upsertQuery = `
       INSERT INTO event_attendees (event_id, user_id, status)
       VALUES (?, ?, ?)
@@ -117,8 +117,7 @@ router.post('/:eventId/attend', authenticateToken, (req, res) => {
       }
       res.json({ message: "Attendance updated", status });
     });
-  });
-  
+});
 
 /**
  * GET event types
@@ -163,6 +162,7 @@ router.post('/:id/upload-image', authenticateToken, upload.single('image'), (req
 /**
  * GET a Single Event by ID
  * GET /events/:id
+ * Excludes events created by users in a blocking relationship with the current user.
  */
 router.get('/:id', authenticateToken, (req, res) => {
     const eventId = req.params.id;
@@ -198,11 +198,16 @@ router.get('/:id', authenticateToken, (req, res) => {
              )
            )
          )
+         AND e.user_id NOT IN (
+           SELECT blocked_id FROM blocked_users WHERE blocker_id = ?
+           UNION
+           SELECT blocker_id FROM blocked_users WHERE blocked_id = ?
+         )
        LIMIT 1
     `;
     connection.query(
       selectQuery,
-      [eventId, userId, userId, userId, userId, userId],
+      [eventId, userId, userId, userId, userId, userId, userId, userId],
       (err, rows) => {
         if (err) {
           console.error('Error fetching event:', err);
@@ -215,11 +220,10 @@ router.get('/:id', authenticateToken, (req, res) => {
     );
 });
 
-
-
 /**
  * LIST / GET All Events
  * GET /events
+ * Excludes events created by users in a blocking relationship with the current user.
  */
 router.get('/', authenticateToken, (req, res) => {
     const userId = req.user.userId;
@@ -252,9 +256,14 @@ router.get('/', authenticateToken, (req, res) => {
            )
          )
        )
+       AND e.user_id NOT IN (
+         SELECT blocked_id FROM blocked_users WHERE blocker_id = ?
+         UNION
+         SELECT blocker_id FROM blocked_users WHERE blocked_id = ?
+       )
        ORDER BY created_at DESC
     `;
-    connection.query(query, [userId, userId, userId, userId, userId], (err, rows) => {
+    connection.query(query, [userId, userId, userId, userId, userId, userId, userId], (err, rows) => {
         if (err) {
             console.error('Error listing events:', err);
             return res.status(500).json({ error: 'Database error.' });
@@ -264,8 +273,7 @@ router.get('/', authenticateToken, (req, res) => {
 });
 
 /**
- * UPDATE an Event (owner only)
- * PATCH /events/:id
+ * PATCH /events/:id - UPDATE an Event (owner only)
  */
 router.patch('/:id', authenticateToken, (req, res) => {
     const eventId = req.params.id;
@@ -315,10 +323,8 @@ router.patch('/:id', authenticateToken, (req, res) => {
     });
 });
 
-
 /**
- * DELETE an Event (owner only) with cascading deletion of attendance records and notifications.
- * DELETE /events/:id
+ * DELETE /events/:id - DELETE an Event (owner only)
  */
 router.delete('/:id', authenticateToken, (req, res) => {
     const eventId = req.params.id;
@@ -349,7 +355,7 @@ router.delete('/:id', authenticateToken, (req, res) => {
         });
       });
     });
-  });
+});
 
 /**
  * INVITE an Attendee to an Event (owner only)
@@ -361,7 +367,6 @@ router.post('/:id/invite', authenticateToken, (req, res) => {
     const userId = req.user.userId;
     if (!invitee_id) return res.status(400).json({ error: 'Invitee user_id required.' });
 
-    // Check ownership and fetch event name for the notification.
     const ownershipQuery = 'SELECT user_id, event_name FROM events WHERE event_id = ? LIMIT 1';
     connection.query(ownershipQuery, [eventId], (err, rows) => {
         if (err) return res.status(500).json({ error: 'Database error.' });
@@ -376,8 +381,6 @@ router.post('/:id/invite', authenticateToken, (req, res) => {
       `;
         connection.query(upsertQuery, [eventId, invitee_id], (err2) => {
             if (err2) return res.status(500).json({ error: 'Database error.' });
-            // Create a notification for the invited user.
-            // Include a URL that points to the event page so the event name can be rendered as a clickable link.
             createNotification({
                 user_id: invitee_id,
                 notification_type: 'EVENT_INVITE',
@@ -396,7 +399,6 @@ router.post('/:id/invite', authenticateToken, (req, res) => {
 /**
  * RESCIND an Event Invitation (owner only)
  * DELETE /events/:id/invite
- * 
  * Expects a JSON body: { invitee_id: <friend's user id> }
  */
 router.delete('/:id/invite', authenticateToken, (req, res) => {
@@ -422,18 +424,14 @@ router.delete('/:id/invite', authenticateToken, (req, res) => {
     });
 });
 
-
 /**
  * ACCEPT an Event Invitation
  * PATCH /events/:eventId/invite/accept
- *
- * The currently authenticated user accepts the invitation to the event.
  */
 router.patch('/:eventId/invite/accept', authenticateToken, (req, res) => {
     const eventId = req.params.eventId;
-    const userId = req.user.userId; // The invitee is the current user
+    const userId = req.user.userId;
 
-    // Update the event_attendees table: set status to "accepted" for this user.
     const updateQuery = `
       UPDATE event_attendees
          SET status = 'accepted'
@@ -447,8 +445,6 @@ router.patch('/:eventId/invite/accept', authenticateToken, (req, res) => {
         if (results.affectedRows === 0) {
             return res.status(404).json({ error: 'Invitation not found or already processed' });
         }
-
-        // Optionally, create a notification for the event owner.
         const getEventQuery = 'SELECT user_id, event_name FROM events WHERE event_id = ? LIMIT 1';
         connection.query(getEventQuery, [eventId], (err2, rows) => {
             if (err2) {
@@ -477,7 +473,7 @@ router.get('/:id/attendees', authenticateToken, (req, res) => {
     const query = `
       SELECT ea.user_id, ea.status,
              u.username, u.profile_picture_url,
-             u.email  /* <-- include email here */
+             u.email
         FROM event_attendees ea
         JOIN users u ON ea.user_id = u.user_id
        WHERE ea.event_id = ? AND ea.status = 'going'
@@ -486,9 +482,8 @@ router.get('/:id/attendees', authenticateToken, (req, res) => {
       if (err) return res.status(500).json({ error: 'Database error' });
       res.json(rows);
     });
-  });
+});
   
-
 /**
  * UPDATE ATTENDEE STATUS
  * PATCH /events/:eventId/attendees/:userId
@@ -523,18 +518,26 @@ router.patch('/:eventId/attendees/:userId', authenticateToken, (req, res) => {
 
 /**
  * GET /events/:eventId/posts - Retrieve all posts for an event
+ * Excludes posts created by users in a blocking relationship with the current user.
  */
 router.get('/:eventId/posts', authenticateToken, (req, res) => {
     const { eventId } = req.params;
+    const userId = req.user.userId;
     const query = `
     SELECT p.post_id, p.user_id, p.content, p.created_at, p.post_type, p.event_id,
            u.username, u.profile_picture_url
       FROM posts p
       JOIN users u ON p.user_id = u.user_id
-     WHERE p.event_id = ? AND p.post_type = 'event'
+     WHERE p.event_id = ? 
+       AND p.post_type = 'event'
+       AND p.user_id NOT IN (
+         SELECT blocked_id FROM blocked_users WHERE blocker_id = ?
+         UNION
+         SELECT blocker_id FROM blocked_users WHERE blocked_id = ?
+       )
      ORDER BY p.created_at DESC
   `;
-    connection.query(query, [eventId], (err, results) => {
+    connection.query(query, [eventId, userId, userId], (err, results) => {
         if (err) {
             console.error("Error fetching event posts:", err);
             return res.status(500).json({ error: "Database error" });
@@ -568,14 +571,18 @@ router.post('/:eventId/posts', authenticateToken, (req, res) => {
         FROM posts p
         JOIN users u ON p.user_id = u.user_id
        WHERE p.post_id = ?
+         AND p.user_id NOT IN (
+           SELECT blocked_id FROM blocked_users WHERE blocker_id = ?
+           UNION
+           SELECT blocker_id FROM blocked_users WHERE blocked_id = ?
+         )
     `;
-        connection.query(selectQuery, [newPostId], (err2, rows) => {
+        connection.query(selectQuery, [newPostId, userId, userId], (err2, rows) => {
             if (err2) {
                 console.error("Error selecting new event post:", err2);
                 return res.status(500).json({ error: 'Database error selecting new event post' });
             }
             if (!rows || rows.length === 0) return res.status(404).json({ error: 'Event post not found after insert' });
-            // Cascade delete notifications for this new post if needed later.
             const eventQuery = 'SELECT user_id, event_name FROM events WHERE event_id = ?';
             connection.query(eventQuery, [eventId], (err3, eventResults) => {
                 if (!err3 && eventResults.length > 0) {
@@ -601,6 +608,7 @@ router.post('/:eventId/posts', authenticateToken, (req, res) => {
 
 /**
  * POST /events/:eventId/posts/:postId/comments - Create a new comment on an event post
+ * (No additional filtering is applied here since the post is already filtered)
  */
 router.post('/:eventId/posts/:postId/comments', authenticateToken, (req, res) => {
     const { eventId, postId } = req.params;
@@ -623,14 +631,18 @@ router.post('/:eventId/posts/:postId/comments', authenticateToken, (req, res) =>
         FROM comments c
         JOIN users u ON c.user_id = u.user_id
        WHERE c.comment_id = ?
+         AND c.user_id NOT IN (
+           SELECT blocked_id FROM blocked_users WHERE blocker_id = ?
+           UNION
+           SELECT blocker_id FROM blocked_users WHERE blocked_id = ?
+         )
     `;
-        connection.query(selectQuery, [newCommentId], (err, rows) => {
+        connection.query(selectQuery, [newCommentId, userId, userId], (err, rows) => {
             if (err) {
                 console.error("Error selecting new event comment:", err);
                 return res.status(500).json({ error: 'Database error during select' });
             }
             if (!rows || rows.length === 0) return res.status(404).json({ error: 'Event comment not found after insert' });
-            // Notify the post owner if not the same as the commenter.
             const getPostQuery = 'SELECT user_id FROM posts WHERE post_id = ?';
             connection.query(getPostQuery, [postId], (err, postResults) => {
                 if (!err && postResults.length > 0) {
@@ -656,7 +668,6 @@ router.post('/:eventId/posts/:postId/comments', authenticateToken, (req, res) =>
 
 /**
  * DELETE /events/:eventId/posts/:postId/comments/:commentId - Delete an event comment
- * Also cascade–delete any notifications referencing this comment.
  */
 router.delete('/:eventId/posts/:postId/comments/:commentId', authenticateToken, (req, res) => {
     const { eventId, postId, commentId } = req.params;
@@ -673,7 +684,6 @@ router.delete('/:eventId/posts/:postId/comments/:commentId', authenticateToken, 
         if (results.affectedRows === 0) {
             return res.status(404).json({ error: "Event comment not found or not authorized" });
         }
-        // Cascade delete notifications referencing this event comment.
         const notifDeleteQuery = `
       DELETE FROM notifications
       WHERE reference_id = ? AND reference_type = 'event_comment'
@@ -773,18 +783,27 @@ router.delete('/:eventId/posts/:postId/comments/:commentId/like', authenticateTo
 
 /**
  * GET /events/:eventId/posts/:postId - Retrieve a single event post by ID
+ * Excludes posts created by users in a blocking relationship with the current user.
  */
 router.get('/:eventId/posts/:postId', authenticateToken, (req, res) => {
     const { eventId, postId } = req.params;
+    const userId = req.user.userId;
     const query = `
     SELECT p.post_id, p.user_id, p.content, p.created_at, p.post_type, p.event_id,
            u.username, u.profile_picture_url
       FROM posts p
       JOIN users u ON p.user_id = u.user_id
-     WHERE p.post_id = ? AND p.event_id = ? AND p.post_type = 'event'
+     WHERE p.post_id = ? 
+       AND p.event_id = ? 
+       AND p.post_type = 'event'
+       AND p.user_id NOT IN (
+         SELECT blocked_id FROM blocked_users WHERE blocker_id = ?
+         UNION
+         SELECT blocker_id FROM blocked_users WHERE blocked_id = ?
+       )
      LIMIT 1
   `;
-    connection.query(query, [postId, eventId], (err, results) => {
+    connection.query(query, [postId, eventId, userId, userId], (err, results) => {
         if (err) {
             console.error("Error fetching single event post:", err);
             return res.status(500).json({ error: 'Database error' });
@@ -799,9 +818,11 @@ router.get('/:eventId/posts/:postId', authenticateToken, (req, res) => {
 /**
  * NEW ROUTE: GET a Single Comment for an Event
  * GET /events/:eventId/comments/:commentId
+ * Excludes comments created by users in a blocking relationship with the current user.
  */
 router.get('/:eventId/comments/:commentId', authenticateToken, (req, res) => {
     const { eventId, commentId } = req.params;
+    const userId = req.user.userId;
     const query = `
     SELECT 
       c.comment_id, 
@@ -815,10 +836,16 @@ router.get('/:eventId/comments/:commentId', authenticateToken, (req, res) => {
     FROM comments c
     JOIN users u ON c.user_id = u.user_id
     JOIN posts p ON c.post_id = p.post_id
-    WHERE c.comment_id = ? AND p.event_id = ?
+    WHERE c.comment_id = ? 
+      AND p.event_id = ?
+      AND c.user_id NOT IN (
+         SELECT blocked_id FROM blocked_users WHERE blocker_id = ?
+         UNION
+         SELECT blocker_id FROM blocked_users WHERE blocked_id = ?
+      )
     LIMIT 1
   `;
-    connection.query(query, [commentId, eventId], (err, results) => {
+    connection.query(query, [commentId, eventId, userId, userId], (err, results) => {
         if (err) {
             console.error("Error fetching single event comment:", err);
             return res.status(500).json({ error: 'Database error' });
@@ -832,9 +859,7 @@ router.get('/:eventId/comments/:commentId', authenticateToken, (req, res) => {
 
 /**
  * DELETE /events/:eventId/posts/:postId - Delete an event post
- * This endpoint now also cascades deletion of notifications for:
- *  - the event post itself (reference_type 'event_post')
- *  - any notifications for child comments (reference_type 'event_comment')
+ * Cascades deletion of notifications for the event post and its child comments.
  */
 router.delete('/:eventId/posts/:postId', authenticateToken, (req, res) => {
     const { eventId, postId } = req.params;
@@ -843,7 +868,6 @@ router.delete('/:eventId/posts/:postId', authenticateToken, (req, res) => {
     connection.beginTransaction(err => {
         if (err) return res.status(500).json({ error: 'Database error' });
 
-        // Delete notifications for the event post itself.
         const deletePostNotifQuery = `
       DELETE FROM notifications
       WHERE reference_id = ? AND reference_type = 'event_post'
@@ -853,7 +877,6 @@ router.delete('/:eventId/posts/:postId', authenticateToken, (req, res) => {
                 return connection.rollback(() => res.status(500).json({ error: 'Error deleting event post notifications' }));
             }
 
-            // Get all comment IDs for the event post.
             const getCommentsQuery = 'SELECT comment_id FROM comments WHERE post_id = ?';
             connection.query(getCommentsQuery, [postId], (err, commentRows) => {
                 if (err) {
@@ -862,7 +885,6 @@ router.delete('/:eventId/posts/:postId', authenticateToken, (req, res) => {
 
                 const commentIds = commentRows.map(row => row.comment_id);
                 if (commentIds.length > 0) {
-                    // Delete notifications for each child comment.
                     const deleteCommentNotifQuery = `
             DELETE FROM notifications
             WHERE reference_id IN (?) AND reference_type = 'event_comment'
@@ -871,7 +893,6 @@ router.delete('/:eventId/posts/:postId', authenticateToken, (req, res) => {
                         if (err) {
                             return connection.rollback(() => res.status(500).json({ error: 'Error deleting comment notifications' }));
                         }
-                        // Now delete the event post.
                         const deletePostQuery = `
               DELETE FROM posts
               WHERE post_id = ? AND event_id = ? AND user_id = ? AND post_type = 'event'
@@ -890,7 +911,6 @@ router.delete('/:eventId/posts/:postId', authenticateToken, (req, res) => {
                         });
                     });
                 } else {
-                    // If no child comments, just delete the event post.
                     const deletePostQuery = `
             DELETE FROM posts
             WHERE post_id = ? AND event_id = ? AND user_id = ? AND post_type = 'event'
@@ -1003,28 +1023,37 @@ router.get('/:eventId/posts/:postId/liked', authenticateToken, (req, res) => {
 });
 
 // GET /events/:eventId/posts/:postId/comments - Retrieve comments for an event post
+// Excludes comments authored by users in a blocking relationship with the current user.
 router.get('/:eventId/posts/:postId/comments', authenticateToken, (req, res) => {
     const { eventId, postId } = req.params;
+    const userId = req.user.userId;
     const query = `
       SELECT c.comment_id, c.post_id, c.user_id, c.content, c.created_at, c.parent_comment_id,
              u.username, u.profile_picture_url
         FROM comments c
         JOIN posts p ON c.post_id = p.post_id
         JOIN users u ON c.user_id = u.user_id
-       WHERE c.post_id = ? AND p.event_id = ?
+       WHERE c.post_id = ? 
+         AND p.event_id = ?
+         AND c.user_id NOT IN (
+           SELECT blocked_id FROM blocked_users WHERE blocker_id = ?
+           UNION
+           SELECT blocker_id FROM blocked_users WHERE blocked_id = ?
+         )
        ORDER BY c.created_at ASC
     `;
-    connection.query(query, [postId, eventId], (err, results) => {
+    connection.query(query, [postId, eventId, userId, userId], (err, results) => {
         if (err) {
             console.error("Error fetching event post comments:", err);
             return res.status(500).json({ error: "Database error" });
         }
-        // Return the comments (an empty array if none are found)
         res.json(results);
     });
 });
 
-// POST /events/:eventId/comments/:commentId/reply - Reply to an existing event comment
+/**
+ * POST /events/:eventId/posts/:postId/comments/:commentId/reply - Reply to an existing event comment
+ */
 router.post('/:eventId/comments/:commentId/reply', authenticateToken, (req, res) => {
     const { eventId, commentId } = req.params;
     const userId = req.user.userId;
@@ -1033,7 +1062,6 @@ router.post('/:eventId/comments/:commentId/reply', authenticateToken, (req, res)
         return res.status(400).json({ error: 'Content is required' });
     }
 
-    // First fetch the parent comment so we know which post it belongs to
     const getParentQuery = 'SELECT post_id FROM comments WHERE comment_id = ?';
     connection.query(getParentQuery, [commentId], (err, parentResults) => {
         if (err) {
@@ -1045,7 +1073,6 @@ router.post('/:eventId/comments/:commentId/reply', authenticateToken, (req, res)
         }
         const parentPostId = parentResults[0].post_id;
 
-        // Insert the reply with parent_comment_id
         const insertQuery = `
         INSERT INTO comments (post_id, parent_comment_id, user_id, content)
         VALUES (?, ?, ?, ?)
@@ -1056,8 +1083,6 @@ router.post('/:eventId/comments/:commentId/reply', authenticateToken, (req, res)
                 return res.status(500).json({ error: 'Database error during insert' });
             }
             const newCommentId = result.insertId;
-
-            // Return the newly inserted reply
             const selectQuery = `
           SELECT c.comment_id, c.post_id, c.parent_comment_id, c.user_id, c.content, c.created_at,
                  u.username, u.profile_picture_url
@@ -1074,7 +1099,6 @@ router.post('/:eventId/comments/:commentId/reply', authenticateToken, (req, res)
                     return res.status(404).json({ error: 'Reply not found after insert' });
                 }
 
-                // Optionally create a notification for the parent comment's owner
                 const getParentAuthorQuery = 'SELECT user_id FROM comments WHERE comment_id = ?';
                 connection.query(getParentAuthorQuery, [commentId], (err4, parentAuthorResults) => {
                     if (!err4 && parentAuthorResults.length > 0) {
@@ -1086,7 +1110,7 @@ router.post('/:eventId/comments/:commentId/reply', authenticateToken, (req, res)
                                 reference_id: newCommentId,
                                 actor_id: userId,
                                 reference_type: 'event_comment',
-                                event_id, // so we know which event
+                                event_id,
                                 message: 'Someone replied to your event comment'
                             });
                         }
@@ -1098,6 +1122,5 @@ router.post('/:eventId/comments/:commentId/reply', authenticateToken, (req, res)
         });
     });
 });
-
 
 export default router;

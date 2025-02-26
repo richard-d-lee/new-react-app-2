@@ -19,6 +19,7 @@ import mentionsRouter from './routes/mentions.js';
 import eventRoutes from './routes/events.js';
 import { authenticateToken } from './middleware/auth.js';
 import multer from 'multer';
+import rateLimit from 'express-rate-limit';
 
 // Setup __dirname for ES modules
 const __filename = fileURLToPath(import.meta.url);
@@ -29,6 +30,22 @@ console.log('__dirname:', __dirname);
 const app = express();
 app.use(cors());
 app.use(bodyParser.json());
+
+// Short-term limiter: 100 requests per 15 minutes per IP
+const shortTermLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 300, // limit each IP to 100 requests per window
+  message: "Too many requests from this IP, please try again after 15 minutes."
+});
+app.use(shortTermLimiter);
+
+// Daily limiter: 10,000 requests per day per IP using the default memory store
+const dailyLimiter = rateLimit({
+  windowMs: 24 * 60 * 60 * 1000, // 24 hours
+  max: 10000, // maximum of 10,000 requests per IP per day
+  message: "Daily API limit exceeded. Please try again tomorrow."
+});
+app.use(dailyLimiter);
 
 // Mount routes
 app.use('/auth', authRoutes);
@@ -61,7 +78,6 @@ const storage = multer.diskStorage({
   },
   filename: (req, file, cb) => {
     const ext = path.extname(file.originalname);
-    // Generate a unique filename; you can use Date.now and random number or uuid
     const uniqueName = `${Date.now()}-${Math.round(Math.random() * 1e9)}${ext}`;
     cb(null, uniqueName);
   }
@@ -87,7 +103,6 @@ app.post('/upload-profile-pic', authenticateToken, upload.single('profilePic'), 
   connection.query(getPicQuery, [userId], (err, results) => {
     if (err) return res.status(500).json({ error: 'Database error' });
     if (results.length > 0 && results[0].profile_picture_url) {
-      // Construct the absolute path to the old file (using uploadsDir)
       const oldFilePath = path.join(uploadsDir, path.basename(results[0].profile_picture_url));
       if (fs.existsSync(oldFilePath)) {
         fs.unlink(oldFilePath, err => {
