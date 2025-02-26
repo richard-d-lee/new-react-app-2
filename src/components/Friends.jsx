@@ -153,41 +153,8 @@ const Friends = ({ refreshFriendRequestsCount }) => {
       {error && <p className="error">{error}</p>}
 
       <div className="friends-grid">
-        {/* Incoming Requests Section */}
-        <div className="friends-section">
-          <h3>Incoming Requests</h3>
-          {pendingRequests.length === 0 ? (
-            <p className="empty">No pending requests</p>
-          ) : (
-            pendingRequests.map(user => (
-              <div className="friend-card" key={user.user_id}>
-                <div className="friend-left">
-                  <img
-                    src={
-                      user.profile_picture_url
-                        ? `${baseURL}${user.profile_picture_url}`
-                        : 'https://t3.ftcdn.net/jpg/10/29/65/84/360_F_1029658445_rfwMzxeuqrvm7GTY4Yr9WaBbYKlXIRs7.jpg'
-                    }
-                    alt={user.username}
-                    className="friend-avatar"
-                  />
-                  <p className="friend-name">{user.username}</p>
-                </div>
-                <div className="friend-right stacked">
-                  <button className="btn btn-blue" onClick={() => handleConfirm(user.user_id)}>
-                    Confirm
-                  </button>
-                  <button className="btn btn-gray" onClick={() => handleDecline(user.user_id)}>
-                    Decline
-                  </button>
-                </div>
-              </div>
-            ))
-          )}
-        </div>
-
-        {/* Current Friends Section with search */}
-        <div className="friends-section">
+        {/* Current Friends Section - Top Right */}
+        <div className="friends-section current">
           <h3>Current Friends</h3>
           <input
             type="text"
@@ -222,39 +189,8 @@ const Friends = ({ refreshFriendRequestsCount }) => {
             ))
           )}
         </div>
-
-        {/* Outgoing Requests Section */}
-        <div className="friends-section">
-          <h3>Outgoing Requests</h3>
-          {outboundRequests.length === 0 ? (
-            <p className="empty">No pending requests</p>
-          ) : (
-            outboundRequests.map(friend => (
-              <div className="friend-card" key={friend.user_id}>
-                <div className="friend-left">
-                  <img
-                    src={
-                      friend.profile_picture_url
-                        ? `${baseURL}${friend.profile_picture_url}`
-                        : 'https://t3.ftcdn.net/jpg/10/29/65/84/360_F_1029658445_rfwMzxeuqrvm7GTY4Yr9WaBbYKlXIRs7.jpg'
-                    }
-                    alt={friend.username}
-                    className="friend-avatar"
-                  />
-                  <p className="friend-name">{friend.username}</p>
-                </div>
-                <div className="friend-right">
-                  <button className="btn btn-large btn-gray" onClick={() => handleCancel(friend.user_id)}>
-                    Cancel
-                  </button>
-                </div>
-              </div>
-            ))
-          )}
-        </div>
-
-        {/* Suggested Friends Section */}
-        <div className="friends-section">
+        {/* Suggested Friends Section - Top Left */}
+        <div className="friends-section suggested">
           <h3>Suggested Friends</h3>
           {suggestedFriends.length === 0 ? (
             <p className="empty">No suggestions available</p>
@@ -279,6 +215,70 @@ const Friends = ({ refreshFriendRequestsCount }) => {
                     onClick={() => handleAddFriend(friend.email)}
                   >
                     Add
+                  </button>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+
+
+        {/* Incoming Requests Section - Bottom Left */}
+        <div className="friends-section incoming">
+          <h3>Incoming Requests</h3>
+          {pendingRequests.length === 0 ? (
+            <p className="empty">No pending requests</p>
+          ) : (
+            pendingRequests.map(user => (
+              <div className="friend-card" key={user.user_id}>
+                <div className="friend-left">
+                  <img
+                    src={
+                      user.profile_picture_url
+                        ? `${baseURL}${user.profile_picture_url}`
+                        : 'https://t3.ftcdn.net/jpg/10/29/65/84/360_F_1029658445_rfwMzxeuqrvm7GTY4Yr9WaBbYKlXIRs7.jpg'
+                    }
+                    alt={user.username}
+                    className="friend-avatar"
+                  />
+                  <p className="friend-name">{user.username}</p>
+                </div>
+                <div className="friend-right stacked">
+                  <button className="btn btn-blue" onClick={() => handleConfirm(user.user_id)}>
+                    Confirm
+                  </button>
+                  <button className="btn btn-gray" onClick={() => handleDecline(user.user_id)}>
+                    Decline
+                  </button>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+
+        {/* Outgoing Requests Section - Bottom Right */}
+        <div className="friends-section outgoing">
+          <h3>Outgoing Requests</h3>
+          {outboundRequests.length === 0 ? (
+            <p className="empty">No pending requests</p>
+          ) : (
+            outboundRequests.map(friend => (
+              <div className="friend-card" key={friend.user_id}>
+                <div className="friend-left">
+                  <img
+                    src={
+                      friend.profile_picture_url
+                        ? `${baseURL}${friend.profile_picture_url}`
+                        : 'https://t3.ftcdn.net/jpg/10/29/65/84/360_F_1029658445_rfwMzxeuqrvm7GTY4Yr9WaBbYKlXIRs7.jpg'
+                    }
+                    alt={friend.username}
+                    className="friend-avatar"
+                  />
+                  <p className="friend-name">{friend.username}</p>
+                </div>
+                <div className="friend-right">
+                  <button className="btn btn-large btn-gray" onClick={() => handleCancel(friend.user_id)}>
+                    Cancel
                   </button>
                 </div>
               </div>

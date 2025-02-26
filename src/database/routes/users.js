@@ -145,31 +145,56 @@ router.delete('/block', authenticateToken, (req, res) => {
 });
 
 /**
- * GET /users/profile-settings/:id - Retrieve profile settings for a user.
- * (Assumed to be accessible only by the user themselves; no block filtering applied.)
+ * GET /users/profile-settings/:id
+ * Retrieves profile settings for the given user.
+ * If no settings exist yet, return default settings (all "true").
  */
 router.get('/profile-settings/:id', authenticateToken, (req, res) => {
   const userId = req.params.id;
-  const sql = `
-    SELECT setting_key, setting_value 
-    FROM user_settings
-    WHERE user_id = ?
-  `;
-  connection.query(sql, [userId], (err, results) => {
+
+  // Optional: First check if the user actually exists in the `users` table.
+  const checkUserQuery = 'SELECT user_id FROM users WHERE user_id = ? LIMIT 1';
+  connection.query(checkUserQuery, [userId], (err, userRows) => {
     if (err) {
-      console.error("Error fetching profile settings:", err);
+      console.error("Error checking user existence:", err);
       return res.status(500).json({ error: "Database error" });
     }
-    if (results.length === 0) {
-      return res.status(404).json({ error: "No profile settings found for this user" });
+    if (userRows.length === 0) {
+      return res.status(404).json({ error: "User not found" });
     }
-    const settings = {};
-    results.forEach(row => {
-      settings[row.setting_key] = row.setting_value;
+
+    // If user exists, fetch profile settings from `user_settings`.
+    const settingsQuery = `
+      SELECT setting_key, setting_value
+      FROM user_settings
+      WHERE user_id = ?
+    `;
+    connection.query(settingsQuery, [userId], (err2, results) => {
+      if (err2) {
+        console.error("Error fetching profile settings:", err2);
+        return res.status(500).json({ error: "Database error" });
+      }
+
+      // If no settings exist, return defaults.
+      if (results.length === 0) {
+        return res.json({
+          show_first_name: "true",
+          show_last_name: "true",
+          show_email: "true",
+          show_birthday: "true"
+        });
+      }
+
+      // Otherwise, build an object from the results and return it.
+      const settings = {};
+      results.forEach(row => {
+        settings[row.setting_key] = row.setting_value;
+      });
+      res.json(settings);
     });
-    res.json(settings);
   });
 });
+
 
 /**
  * GET /users/search-all - Combined search endpoint.

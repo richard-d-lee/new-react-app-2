@@ -4,9 +4,9 @@ import '../styles/CreateAccount.css';
 
 const CreateAccount = ({ setCreating }) => {
   const [tosModalOpen, setTosModalOpen] = useState(false);
-  const [hasReadTOS, setHasReadTOS] = useState(false); // True if user accepted TOS in the modal
-  const [tosChecked, setTosChecked] = useState(false); // Actual checkbox state
-  const [showHelper, setShowHelper] = useState(false); // Helper text if user tries to check box prematurely
+  const [hasReadTOS, setHasReadTOS] = useState(false);  // True if user accepted TOS in the modal
+  const [tosChecked, setTosChecked] = useState(false);  // Actual checkbox state
+  const [showHelper, setShowHelper] = useState(false);   // Helper text if user checks box prematurely
 
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName]   = useState('');
@@ -20,9 +20,9 @@ const CreateAccount = ({ setCreating }) => {
   // Called when user clicks "I Accept" in the TOS modal
   const handleAcceptTOS = () => {
     setHasReadTOS(true);
-    setTosChecked(true);   // Automatically check the box
+    setTosChecked(true);    // Automatically check the box
     setTosModalOpen(false);
-    setShowHelper(false);  // Hide helper if it was showing
+    setShowHelper(false);   // Hide helper if it was showing
   };
 
   // Close the TOS modal without accepting
@@ -64,8 +64,8 @@ const CreateAccount = ({ setCreating }) => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          firstName,
-          lastName,
+          first_name: firstName,  // Note the key conversion here
+          last_name: lastName,    // from camelCase to snake_case
           username,
           email,
           password
@@ -170,8 +170,8 @@ const CreateAccount = ({ setCreating }) => {
           />
         </div>
 
-        {/* TOS Checkbox & Link in one line */}
-        <div className="tos-checkbox">
+        {/* TOS Checkbox & Link aligned flush left */}
+        <div className="form-group tos-checkbox">
           <input
             type="checkbox"
             id="tos"
@@ -188,7 +188,7 @@ const CreateAccount = ({ setCreating }) => {
         {/* Helper text if user tries to check box too soon */}
         {showHelper && (
           <div className="tos-helper">
-            Please read and accept the Terms of Service by clicking the link above.
+            Please read and accept the Terms of Service by clicking the link.
           </div>
         )}
 

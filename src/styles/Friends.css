@@ -1,14 +1,35 @@
+.friends-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: auto auto;
+  grid-template-areas:
+    "current suggested"
+    "incoming outgoing";
+  grid-gap: 20px;
+}
+
+/* Assign grid areas to each section */
+.friends-section.suggested {
+  grid-area: suggested;
+}
+
+.friends-section.current {
+  grid-area: current;
+}
+
+.friends-section.incoming {
+  grid-area: incoming;
+}
+
+.friends-section.outgoing {
+  grid-area: outgoing;
+}
+
+/* The rest of your CSS remains unchanged */
 .friends-page {
   padding: 20px;
 }
 
-.friends-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  grid-gap: 20px;
-}
-
-/* Each section scrolls if overflow is large */
 .friends-section {
   border: 1px solid #ccc;
   border-radius: 4px;
@@ -16,7 +37,7 @@
   background: #fff;
   display: flex;
   flex-direction: column;
-  max-height: 400px; /* Adjust as needed */
+  max-height: 400px;
   overflow-y: auto;
 }
 
@@ -33,10 +54,6 @@
   display: block;
 }
 
-/* Friend card layout:
-   - "friend-left" shows the avatar and username side-by-side
-   - "friend-right" holds the action button(s)
-   - The card content is centered vertically */
 .friend-card {
   display: flex;
   align-items: center;
@@ -65,19 +82,16 @@
   margin: 0;
 }
 
-/* The right container for buttons */
 .friend-right {
   display: flex;
   align-items: center;
 }
 
-/* In Incoming Requests, stack buttons vertically */
 .friend-right.stacked {
   flex-direction: column;
   gap: 4px;
 }
 
-/* Base button style */
 .btn {
   border: none;
   border-radius: 4px;
@@ -86,13 +100,11 @@
   font-size: 12px;
 }
 
-/* Larger button style for non-stacked buttons */
 .btn-large {
   padding: 8px 12px;
   font-size: 14px;
 }
 
-/* Blue button: for the Confirm button */
 .btn.btn-blue {
   background-color: #007bff;
   color: #fff;
@@ -102,7 +114,6 @@
   background-color: #0056b3;
 }
 
-/* Gray button: for Decline, Unfriend, Cancel, and Add buttons */
 .btn.btn-gray {
   background-color: #d3d3d3;
   color: #333;
