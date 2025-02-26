@@ -6,13 +6,17 @@
   border-radius: 10px;
   border: 1px solid #e0e0e0;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+
+  /* Larger text for readability */
+  font-size: 16px;
+  line-height: 1.6;
 }
 
 .create-account h2 {
   text-align: center;
   margin-bottom: 20px;
   color: #1877f2;
-  font-size: 24px;
+  font-size: 26px;
 }
 
 .create-account .create-account-form {
@@ -57,7 +61,7 @@
   transition: background-color 0.2s ease;
 }
 
-.create-account .submit-btn:hover {
+.create-account .submit-btn:hover:not(:disabled) {
   background-color: #45a049;
 }
 
@@ -96,4 +100,32 @@
 
 .create-account .toggle-login a:hover {
   color: #0056b3;
+}
+
+/* Keep the same general styling, focusing on .tos-checkbox for single-line layout */
+
+.tos-checkbox {
+  display: inline-flex; /* inline-flex to ensure it can wrap if needed but keep on one line */
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 10px;
+  white-space: nowrap; /* prevents line break inside */
+}
+
+.tos-checkbox label {
+  margin: 0;
+  font-size: 15px;
+}
+
+.tos-link {
+  color: #007bff;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+/* Helper text style */
+.tos-helper {
+  font-size: 14px;
+  color: #d9534f;
+  margin-bottom: 10px;
 }
