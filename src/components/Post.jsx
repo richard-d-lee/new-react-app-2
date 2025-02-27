@@ -57,6 +57,7 @@ const Post = ({
   onProfileClick = () => {},
   groupId,
   eventId,
+  marketplaceId, // new prop for marketplace posts
   expandedCommentId       // optional ID to highlight & scroll to
 }) => {
   const [comments, setComments] = useState([]);
@@ -74,29 +75,30 @@ const Post = ({
   const commentRefs = useRef({});
 
   const effectivePostId = post.post_id || post.postId;
-
-  // 1) Build base URLs for post calls. (Group vs feed vs event)
+  const baseURL = 'http://localhost:5000';
   let basePostUrl = '';
   let commentsUrl = '';
 
-  if (post.event_id) {
-    // For an event post, use the unified endpoint including the post ID
-    basePostUrl = `http://localhost:5000/events/${post.event_id}/posts/${effectivePostId}`;
-    commentsUrl = `http://localhost:5000/events/${post.event_id}/posts/${effectivePostId}/comments`;
+  // Determine base endpoints based on context priority: marketplace > event > group > feed
+  if (marketplaceId) {
+    basePostUrl = `${baseURL}/marketplace/${marketplaceId}/posts/${effectivePostId}`;
+    commentsUrl = `${baseURL}/marketplace/${marketplaceId}/posts/${effectivePostId}/comments`;
+  } else if (post.event_id || eventId) {
+    const evId = post.event_id || eventId;
+    basePostUrl = `${baseURL}/events/${evId}/posts/${effectivePostId}`;
+    commentsUrl = `${baseURL}/events/${evId}/posts/${effectivePostId}/comments`;
   } else if (groupId) {
-    // Group post endpoints
-    basePostUrl = `http://localhost:5000/groups/${groupId}/posts/${effectivePostId}`;
-    commentsUrl = `http://localhost:5000/groups/${groupId}/posts/${effectivePostId}/comments`;
+    basePostUrl = `${baseURL}/groups/${groupId}/posts/${effectivePostId}`;
+    commentsUrl = `${baseURL}/groups/${groupId}/posts/${effectivePostId}/comments`;
   } else {
-    // Regular feed post endpoints
-    basePostUrl = `http://localhost:5000/feed/${effectivePostId}`;
-    commentsUrl = `http://localhost:5000/feed/${effectivePostId}/comments`;
+    basePostUrl = `${baseURL}/feed/${effectivePostId}`;
+    commentsUrl = `${baseURL}/feed/${effectivePostId}/comments`;
   }
 
-  // 2) Fetch author info if not provided
+  // Fetch author info if not provided
   useEffect(() => {
     if (!effectivePostId || post.username || !post.user_id) return;
-    axios.get(`http://localhost:5000/users/${post.user_id}`, {
+    axios.get(`${baseURL}/users/${post.user_id}`, {
       headers: { Authorization: `Bearer ${token}` }
     })
       .then(res => {
@@ -108,7 +110,7 @@ const Post = ({
       .catch(err => console.error("Error fetching post author:", err));
   }, [effectivePostId, post.user_id, post.username, token]);
 
-  // 3) Fetch comments for this post using the updated commentsUrl
+  // Fetch comments for this post using the appropriate commentsUrl
   useEffect(() => {
     if (!effectivePostId) return;
     axios.get(commentsUrl, { headers: { Authorization: `Bearer ${token}` } })
@@ -135,15 +137,13 @@ const Post = ({
     }, 100);
   }, [expandedCommentId, comments, showAllComments]);
 
-  // 4) Fetch like count and liked status for this post
+  // Fetch like count and liked status for this post
   useEffect(() => {
     if (!token || !effectivePostId) return;
-    // GET like count
     axios.get(`${basePostUrl}/likes/count`, { headers: { Authorization: `Bearer ${token}` } })
       .then(res => setLikeCount(res.data.likeCount))
       .catch(err => console.error("Error fetching like count:", err));
 
-    // GET liked status
     axios.get(`${basePostUrl}/liked`, { headers: { Authorization: `Bearer ${token}` } })
       .then(res => setLiked(res.data.liked))
       .catch(err => console.error("Error fetching liked status:", err));
@@ -173,7 +173,7 @@ const Post = ({
     }
   };
 
-  // 5) Delete post
+  // Delete post
   const handleDeletePost = async () => {
     if (!window.confirm("Are you sure you want to delete this post?")) return;
     try {
@@ -186,7 +186,7 @@ const Post = ({
     }
   };
 
-  // Update comments state when a new top-level comment or reply is added
+  // Add new comment (or reply)
   const handleAddComment = (newCommentObj) => {
     if (newCommentObj.parent_comment_id) {
       setComments(prev =>
@@ -236,7 +236,7 @@ const Post = ({
     }
   };
 
-  // 6) Post a new top-level comment using the updated endpoint
+  // Post a new top-level comment
   const handlePostNewComment = async () => {
     if (!newComment.trim()) return;
     if (!effectivePostId) {
@@ -273,7 +273,6 @@ const Post = ({
     }
   };
 
-  // Render section
   const finalUsername = author.username || 'Unknown User';
   const finalProfilePic = author.profile_picture_url
     ? `http://localhost:5000${author.profile_picture_url}`

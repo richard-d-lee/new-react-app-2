@@ -15,7 +15,8 @@ import groupRoutes from './routes/groups.js';
 import friendRoutes from './routes/friends.js';
 import messageRoutes from './routes/messages.js';
 import notificationsRoutes from './routes/notifications.js';
-import mentionsRouter from './routes/mentions.js';
+import mentionsRoutes from './routes/mentions.js';
+import marketplaceRoutes from './routes/marketplace.js';
 import eventRoutes from './routes/events.js';
 import { authenticateToken } from './middleware/auth.js';
 import multer from 'multer';
@@ -49,6 +50,7 @@ app.use(dailyLimiter);
 
 // Mount routes
 app.use('/auth', authRoutes);
+app.use('/marketplace', marketplaceRoutes);
 app.use('/users', userRoutes);
 app.use('/feed', feedRoutes);
 app.use('/comments', commentRoutes);
@@ -56,7 +58,7 @@ app.use('/groups', groupRoutes);
 app.use('/friends', friendRoutes);
 app.use('/messages', messageRoutes);
 app.use('/notifications', notificationsRoutes);
-app.use('/mentions', mentionsRouter);
+app.use('/mentions', mentionsRoutes);
 app.use('/events', eventRoutes);
 
 // Use your absolute path for uploads (profile pics & event images)

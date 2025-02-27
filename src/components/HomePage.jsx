@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { jwtDecode } from 'jwt-decode';
 import axios from 'axios';
+import { jwtDecode } from 'jwt-decode';
 import Navbar from './Navbar.jsx';
 import Sidebar from './Sidebar.jsx';
 import Feed from './Feed.jsx';
@@ -12,6 +12,8 @@ import Settings from './Settings.jsx';
 import Event from './Event.jsx';
 import Messenger from './Messenger.jsx';
 import Events from './Events.jsx';
+import Marketplace from './Marketplace.jsx';
+import Listing from './Listing.jsx';
 import Notifications from './Notifications.jsx';
 import '../styles/HomePage.css';
 
@@ -128,97 +130,83 @@ const HomePage = ({ updateLogged, email }) => {
 
         {/* Main content area */}
         <div className="feed-container">
-          {/* Feed */}
-          {((typeof currentView === 'string' && currentView === 'feed') ||
-            (typeof currentView === 'object' && currentView.view === 'feed')) && (
-            <Feed
-              token={token}
-              currentUserId={userId}
-              currentUsername={currentUsername}
-              currentUserProfilePic={currentUserProfilePic}
-              setCurrentView={setCurrentView}
-              postId={currentView.postId}
-              expandedCommentId={currentView.expandedCommentId}
-            />
-          )}
-
-          {/* Friends */}
-          {currentView === 'friends' && (
-            <Friends refreshFriendRequestsCount={refreshFriendRequestsCount} />
-          )}
-
-          {/* Events List */}
-          {currentView === 'events' && (
-            <Events token={token} currentUserId={userId} setCurrentView={setCurrentView} />
-          )}
-
-          {/* Single Event */}
-          {typeof currentView === 'object' && currentView.view === 'event' && (
-            <Event
-              token={token}
-              currentUserId={userId}
-              // We can pass eventId or eventData, whichever is available
-              eventId={currentView.eventId}
-              eventData={currentView.eventData} // optional if we already have the data
-              onBack={() => setCurrentView('events')}
-              setCurrentView={setCurrentView}
-              refreshEvents={() => {}}
-              postId={currentView.postId}
-              expandedCommentId={currentView.expandedCommentId}
-            />
-          )}
-
-          {/* Notifications */}
-          {currentView === 'notifications' && (
-            <Notifications
-              token={token}
-              onMarkAllRead={() => setUnreadCount(0)}
-              onProfileClick={(actorId) => setCurrentView({ view: 'profile', userId: actorId })}
-              onPostClick={(payload) => setCurrentView(payload)}
-              onUnreadCountChange={refreshUnreadCount}
-            />
-          )}
-
-          {/* Profile */}
-          {typeof currentView === 'object' && currentView.view === 'profile' && (
-            <Profile
-              token={token}
-              userId={currentView.userId}
-              currentUserId={userId}
-              setCurrentView={setCurrentView}
-            />
-          )}
-
-          {/* Settings */}
-          {currentView === 'settings' && (
-            <Settings
-              token={token}
-              currentUserId={userId}
-              setCurrentView={setCurrentView}
-            />
-          )}
-
-          {/* Groups List */}
-          {currentView === 'groups' && (
-            <Groups
-              token={token}
-              currentUserId={userId}
-              setCurrentView={setCurrentView}
-            />
-          )}
-
-          {/* Single Group Page */}
-          {typeof currentView === 'object' && currentView.view === 'group' && (
-            <GroupPage
-              token={token}
-              currentUserId={userId}
-              currentUserProfilePic={currentUserProfilePic}
-              groupId={currentView.groupId}
-              setCurrentView={setCurrentView}
-              postId={currentView.postId}
-              expandedCommentId={currentView.expandedCommentId}
-            />
-          )}
+          {(() => {
+            // Render views based on currentView
+            if (typeof currentView === 'string') {
+              if (currentView === 'feed') {
+                return (
+                  <Feed
+                    token={token}
+                    currentUserId={userId}
+                    currentUsername={currentUsername}
+                    currentUserProfilePic={currentUserProfilePic}
+                    setCurrentView={setCurrentView}
+                  />
+                );
+              } else if (currentView === 'friends') {
+                return <Friends refreshFriendRequestsCount={refreshFriendRequestsCount} />;
+              } else if (currentView === 'events') {
+                return <Events token={token} currentUserId={userId} setCurrentView={setCurrentView} />;
+              } else if (currentView === 'marketplace') {
+                return <Marketplace token={token} currentUserId={userId} setCurrentView={setCurrentView} />;
+              } else if (currentView === 'notifications') {
+                return (
+                  <Notifications
+                    token={token}
+                    onMarkAllRead={() => setUnreadCount(0)}
+                    onProfileClick={(actorId) => setCurrentView({ view: 'profile', userId: actorId })}
+                    onPostClick={(payload) => setCurrentView(payload)}
+                    onUnreadCountChange={refreshUnreadCount}
+                  />
+                );
+              } else if (currentView === 'settings') {
+                return <Settings token={token} currentUserId={userId} setCurrentView={setCurrentView} />;
+              } else if (currentView === 'groups') {
+                return <Groups token={token} currentUserId={userId} setCurrentView={setCurrentView} />;
+              }
+            } else if (typeof currentView === 'object') {
+              if (currentView.view === 'event') {
+                return (
+                  <Event
+                    token={token}
+                    currentUserId={userId}
+                    eventId={currentView.eventId}
+                    eventData={currentView.eventData}
+                    onBack={() => setCurrentView('events')}
+                    setCurrentView={setCurrentView}
+                  />
+                );
+              } else if (currentView.view === 'listing') {
+                return (
+                  <Listing
+                    token={token}
+                    listingId={currentView.listingId}
+                    setCurrentView={setCurrentView}
+                  />
+                );
+              } else if (currentView.view === 'profile') {
+                return (
+                  <Profile
+                    token={token}
+                    userId={currentView.userId}
+                    currentUserId={userId}
+                    setCurrentView={setCurrentView}
+                  />
+                );
+              } else if (currentView.view === 'group') {
+                return (
+                  <GroupPage
+                    token={token}
+                    currentUserId={userId}
+                    groupId={currentView.groupId}
+                    setCurrentView={setCurrentView}
+                  />
+                );
+              }
+            }
+            // Default fallback:
+            return <Feed token={token} currentUserId={userId} setCurrentView={setCurrentView} />;
+          })()}
         </div>
       </div>
 

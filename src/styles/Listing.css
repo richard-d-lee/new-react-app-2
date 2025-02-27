@@ -1,0 +1,116 @@
+/* Listing.css */
+
+.listing-page {
+    padding: 20px;
+    background: #f9f9f9;
+    min-height: 100vh;
+}
+
+.back-btn {
+    background: none;
+    border: none;
+    font-size: 16px;
+    color: #007bff;
+    cursor: pointer;
+    margin-bottom: 20px;
+}
+
+.back-btn:hover {
+    text-decoration: underline;
+}
+
+.listing-details {
+    background: #fff;
+    padding: 20px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    margin-bottom: 20px;
+}
+
+.listing-details h2 {
+    margin-top: 0;
+    font-size: 24px;
+}
+
+.listing-details .price {
+    color: #007bff;
+    font-weight: bold;
+    font-size: 20px;
+    margin: 10px 0;
+}
+
+.listing-details .description {
+    font-size: 16px;
+    color: #555;
+    margin-bottom: 20px;
+}
+
+.listing-image {
+    max-width: 100%;
+    height: auto;
+    border-radius: 4px;
+    margin-top: 10px;
+}
+
+/* Posts section styling */
+.listing-posts {
+    background: #fff;
+    padding: 15px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+.listing-posts h3 {
+    margin-top: 0;
+    font-size: 20px;
+    margin-bottom: 15px;
+}
+
+.loading-text {
+    font-style: italic;
+    color: #777;
+}
+
+.empty {
+    color: #777;
+    font-style: italic;
+}
+
+.listing-poster {
+    display: flex;
+    align-items: center;
+    margin: 10px 0;
+    cursor: pointer;
+}
+
+.poster-pic {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.poster-name {
+    margin-left: 8px;
+    color: #1877f2;
+    font-weight: bold;
+}
+
+/* Marketplace.css or Listing.css */
+
+/* Container for "posted by" info that aligns profile pic + name in a row */
+.listing-author {
+    margin-top: 10px;
+}
+
+.listing-author-info {
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+}
+
+.listing-author-name {
+    margin-left: 8px;
+    color: #1877f2;
+    font-weight: bold;
+}

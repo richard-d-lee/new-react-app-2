@@ -45,6 +45,9 @@ const Sidebar = ({ collapsed, toggleSidebar, setCurrentView, token, currentUserI
       <div className="shortcuts">
         <h3>Shortcuts</h3>
         <Shortcut icon="📌" text="Saved Posts" />
+        <div onClick={() => setCurrentView('marketplace')}>
+          <Shortcut icon="🛒" text="Marketplace" />
+        </div>
         {/* (2) Wrap the Shortcut in a clickable div to set currentView */}
         <div onClick={handleEventsClick}>
           <Shortcut icon="📅" text="Events" />
