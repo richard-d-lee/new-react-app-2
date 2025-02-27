@@ -91,7 +91,7 @@ const Listing = ({ token, listingId, setCurrentView, currentUserId, currentUserP
   // e.g., listing.poster_username, listing.poster_profile_pic, listing.user_id
   const finalProfilePic = listing.poster_profile_pic
     ? `${baseURL}${listing.poster_profile_pic}`
-    : 'https://via.placeholder.com/40';
+    : 'https://t3.ftcdn.net/jpg/10/29/65/84/360_F_1029658445_rfwMzxeuqrvm7GTY4Yr9WaBbYKlXIRs7.jpg';
 
   const posterName = listing.poster_username || 'User';
 

@@ -348,30 +348,35 @@ router.put('/settings/:id', authenticateToken, (req, res) => {
   connection.query(updateUserQuery, [first_name, last_name, email, userId], (err) => {
     if (err) return res.status(500).json({ error: 'Database error updating user details' });
 
-    const checkBirthdayQuery = 'SELECT * FROM birthdays WHERE user_id = ?';
-    connection.query(checkBirthdayQuery, [userId], (err, results) => {
-      if (err) return res.status(500).json({ error: 'Database error checking birthdays' });
-      if (results.length > 0) {
-        const updateBirthdayQuery = `
-          UPDATE birthdays
-          SET date_of_birth = COALESCE(?, date_of_birth)
-          WHERE user_id = ?
-        `;
-        connection.query(updateBirthdayQuery, [birthday, userId], (err) => {
-          if (err) return res.status(500).json({ error: 'Database error updating birthday' });
-          updateProfileSettings();
-        });
-      } else {
-        const insertBirthdayQuery = `
-          INSERT INTO birthdays (user_id, date_of_birth)
-          VALUES (?, ?)
-        `;
-        connection.query(insertBirthdayQuery, [userId, birthday], (err) => {
-          if (err) return res.status(500).json({ error: 'Database error inserting birthday' });
-          updateProfileSettings();
-        });
-      }
-    });
+    // If birthday is not provided (null, undefined, or empty string), skip birthday logic
+    if (birthday === undefined || birthday === null || birthday === '') {
+      updateProfileSettings();
+    } else {
+      const checkBirthdayQuery = 'SELECT * FROM birthdays WHERE user_id = ?';
+      connection.query(checkBirthdayQuery, [userId], (err, results) => {
+        if (err) return res.status(500).json({ error: 'Database error checking birthdays' });
+        if (results.length > 0) {
+          const updateBirthdayQuery = `
+            UPDATE birthdays
+            SET date_of_birth = COALESCE(?, date_of_birth)
+            WHERE user_id = ?
+          `;
+          connection.query(updateBirthdayQuery, [birthday, userId], (err) => {
+            if (err) return res.status(500).json({ error: 'Database error updating birthday' });
+            updateProfileSettings();
+          });
+        } else {
+          const insertBirthdayQuery = `
+            INSERT INTO birthdays (user_id, date_of_birth)
+            VALUES (?, ?)
+          `;
+          connection.query(insertBirthdayQuery, [userId, birthday], (err) => {
+            if (err) return res.status(500).json({ error: 'Database error inserting birthday' });
+            updateProfileSettings();
+          });
+        }
+      });
+    }
 
     function updateProfileSettings() {
       if (
@@ -408,6 +413,7 @@ router.put('/settings/:id', authenticateToken, (req, res) => {
     }
   });
 });
+
 
 /**
  * DELETE /users/settings/:id - Delete user account

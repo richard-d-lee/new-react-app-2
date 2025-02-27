@@ -162,7 +162,7 @@ const GroupPage = ({
               style={{ cursor: canUpdateLogo ? 'pointer' : 'default' }}
             >
               <img
-                src={group.icon ? `http://localhost:5000${group.icon}` : "https://via.placeholder.com/80"}
+                src={group.icon ? `http://localhost:5000${group.icon}` : "https://t3.ftcdn.net/jpg/10/29/65/84/360_F_1029658445_rfwMzxeuqrvm7GTY4Yr9WaBbYKlXIRs7.jpg"}
                 alt={group.group_name}
                 className="group-logo"
               />

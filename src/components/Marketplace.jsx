@@ -361,7 +361,7 @@ const Marketplace = ({ token, currentUserId, setCurrentView }) => {
           listings.map((listing) => {
             const finalProfilePic = listing.poster_profile_pic
               ? `http://localhost:5000${listing.poster_profile_pic}`
-              : 'https://via.placeholder.com/40';
+              : 'https://t3.ftcdn.net/jpg/10/29/65/84/360_F_1029658445_rfwMzxeuqrvm7GTY4Yr9WaBbYKlXIRs7.jpg';
 
             return (
               <div
