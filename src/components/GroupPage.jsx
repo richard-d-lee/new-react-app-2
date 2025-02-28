@@ -175,7 +175,7 @@ const GroupPage = ({
               />
             </div>
             <div className="group-details">
-              <h2>{group.group_name}</h2>
+              <h2>{group.group_name}</h2> 
               <p>{group.group_description}</p>
             </div>
             <div className="view-members-link">
