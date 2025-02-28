@@ -29,9 +29,9 @@ const Sidebar = ({ collapsed, toggleSidebar, setCurrentView, token, currentUserI
     setCurrentView({ view: 'group', groupId });
   };
 
-  // (1) handleEventsClick: sets currentView to "events"
+  // Update the events shortcut so that it always navigates to events.
   const handleEventsClick = () => {
-    setCurrentView('events');
+    setCurrentView({ view: 'events', key: Date.now() });
   };
 
   return (
@@ -44,15 +44,15 @@ const Sidebar = ({ collapsed, toggleSidebar, setCurrentView, token, currentUserI
 
       <div className="shortcuts">
         <h3>Shortcuts</h3>
-        <Shortcut icon="📌" text="Saved Posts" />
+        <Shortcut icon="📌" text="Saved Content" />
         <div onClick={() => setCurrentView('marketplace')}>
           <Shortcut icon="🛒" text="Marketplace" />
         </div>
-        {/* (2) Wrap the Shortcut in a clickable div to set currentView */}
+        {/* Updated events shortcut */}
         <div onClick={handleEventsClick}>
           <Shortcut icon="📅" text="Events" />
         </div>
-        <Shortcut icon="📸" text="Memories" />
+        <Shortcut icon="📸" text="Uploads" />
       </div>
 
       <div className="groups">

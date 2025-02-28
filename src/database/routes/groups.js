@@ -49,9 +49,7 @@ router.get('/:groupId/comments/:commentId/liked', authenticateToken, (req, res) 
   });
 });
 
-/**
- * DELETE /groups/:groupId/comments/:commentId/like - Unlike a group comment
- */
+// DELETE /groups/:groupId/comments/:commentId/like - Unlike a group comment and remove its notification
 router.delete('/:groupId/comments/:commentId/like', authenticateToken, (req, res) => {
   const { groupId, commentId } = req.params;
   const userId = req.user.userId;
@@ -67,7 +65,18 @@ router.delete('/:groupId/comments/:commentId/like', authenticateToken, (req, res
     if (results.affectedRows === 0) {
       return res.status(404).json({ error: 'Like not found or already removed' });
     }
-    res.json({ message: 'Group comment like removed successfully' });
+    // Delete associated notification (assumes notification_type is 'GROUP_COMMENT_LIKE' and reference_id is the commentId)
+    const deleteNotificationQuery = `
+      DELETE FROM notifications
+      WHERE reference_id = ? AND notification_type = 'GROUP_COMMENT_LIKE' AND actor_id = ?
+    `;
+    connection.query(deleteNotificationQuery, [commentId, userId], (err2) => {
+      if (err2) {
+        console.error("Error deleting notification for group comment like:", err2);
+        // Proceed even if notification deletion fails
+      }
+      res.json({ message: 'Group comment like removed successfully' });
+    });
   });
 });
 
@@ -612,7 +621,7 @@ router.post('/:groupId/posts/:postId/comments', authenticateToken, (req, res) =>
               actor_id: currentUser,
               reference_type: 'group_comment',
               group_id: groupId,
-              message: 'Someone commented on your group post'
+              message: 'commented on your group post'
             });
           }
         }
@@ -1605,11 +1614,11 @@ router.post('/:groupId/posts/:postId/comments', authenticateToken, (req, res) =>
   });
 });
 
-// DELETE /groups/:groupId/posts/:postId/like - Unlike a group post
+// DELETE /groups/:groupId/posts/:postId/like - Unlike a group post and remove its notification
 router.delete('/:groupId/posts/:postId/like', authenticateToken, (req, res) => {
   const { groupId, postId } = req.params;
   const currentUser = req.user.userId;
-  // Verify the post exists and that its author is not blocked by the current user.
+  // Verify the post exists and isn't from a blocked user.
   const postCheckQuery = `
     SELECT post_id FROM posts
     WHERE post_id = ? AND group_id = ?
@@ -1637,12 +1646,24 @@ router.delete('/:groupId/posts/:postId/like', authenticateToken, (req, res) => {
       if (results.affectedRows === 0) {
         return res.status(404).json({ error: 'Like not found or already removed' });
       }
-      res.json({ message: 'Group post unliked successfully' });
+      // Delete associated notification (assumes notification_type is 'GROUP_POST_LIKE')
+      const deleteNotificationQuery = `
+        DELETE FROM notifications
+        WHERE reference_id = ? AND notification_type = 'GROUP_POST_LIKE' AND actor_id = ?
+      `;
+      connection.query(deleteNotificationQuery, [postId, currentUser], (err2) => {
+        if (err2) {
+          console.error("Error deleting notification for group post like:", err2);
+          // Proceed even if notification deletion fails
+        }
+        res.json({ message: 'Group post unliked successfully' });
+      });
     });
   });
 });
 
-// DELETE /groups/:groupId/comments/:commentId - Delete a comment on a group post
+
+// DELETE /groups/:groupId/comments/:commentId - Delete a comment on a group post and remove its notifications
 router.delete('/:groupId/comments/:commentId', authenticateToken, (req, res) => {
   const { groupId, commentId } = req.params;
   const currentUser = req.user.userId;
@@ -1661,11 +1682,23 @@ router.delete('/:groupId/comments/:commentId', authenticateToken, (req, res) => 
     if (results.affectedRows === 0) {
       return res.status(404).json({ error: 'Comment not found or not authorized' });
     }
-    res.json({ message: 'Group comment deleted successfully' });
+    // Delete all notifications attached to this comment (covers likes, replies, or the original comment notification)
+    const deleteNotificationQuery = `
+      DELETE FROM notifications
+      WHERE reference_id = ? AND reference_type = 'group_comment'
+    `;
+    connection.query(deleteNotificationQuery, [commentId], (err2) => {
+      if (err2) {
+        console.error("Error deleting notifications for group comment:", err2);
+        // Proceed even if notification deletion fails
+      }
+      res.json({ message: 'Group comment deleted successfully' });
+    });
   });
 });
 
-// DELETE /groups/:groupId/posts/:postId - Delete a group post
+
+// DELETE /groups/:groupId/posts/:postId - Delete a group post and remove its notifications
 router.delete('/:groupId/posts/:postId', authenticateToken, (req, res) => {
   const { groupId, postId } = req.params;
   const currentUser = req.user.userId;
@@ -1698,10 +1731,22 @@ router.delete('/:groupId/posts/:postId', authenticateToken, (req, res) => {
       if (results.affectedRows === 0) {
         return res.status(404).json({ error: 'Group post not found or not authorized' });
       }
-      res.json({ message: 'Group post deleted successfully' });
+      // Delete notifications attached to this group post (e.g. likes or comments notifications)
+      const deleteNotificationQuery = `
+        DELETE FROM notifications
+        WHERE reference_id = ? AND reference_type = 'group_post'
+      `;
+      connection.query(deleteNotificationQuery, [postId], (err2) => {
+        if (err2) {
+          console.error("Error deleting notifications for group post:", err2);
+          // Proceed even if notification deletion fails
+        }
+        res.json({ message: 'Group post deleted successfully' });
+      });
     });
   });
 });
+
 
 
 
@@ -1961,7 +2006,7 @@ router.put('/:groupId/members/:userId/demote', authenticateToken, (req, res) => 
   });
 });
 
-// DELETE /groups/:groupId/members/:userId/posts - Remove all posts by a member in a group
+// DELETE /groups/:groupId/members/:userId/posts - Remove all posts by a member in a group and delete their notifications
 router.delete('/:groupId/members/:userId/posts', authenticateToken, (req, res) => {
   const { groupId, userId: targetUserId } = req.params;
   const requesterId = req.user.userId;
@@ -1974,15 +2019,47 @@ router.delete('/:groupId/members/:userId/posts', authenticateToken, (req, res) =
     if (results.length === 0 || (results[0].role !== 'owner' && results[0].role !== 'admin')) {
       return res.status(403).json({ error: 'Not authorized' });
     }
-    const deleteQuery = 'DELETE FROM posts WHERE group_id = ? AND user_id = ? AND post_type = "group"';
-    connection.query(deleteQuery, [groupId, targetUserId], (err, results2) => {
+    // First, select all post IDs that will be deleted
+    const selectPostsQuery = `
+      SELECT post_id FROM posts
+      WHERE group_id = ? AND user_id = ? AND post_type = "group"
+    `;
+    connection.query(selectPostsQuery, [groupId, targetUserId], (err, posts) => {
       if (err) {
-        console.error('Error deleting group posts:', err);
+        console.error('Error selecting group posts:', err);
         return res.status(500).json({ error: 'Database error' });
       }
-      res.json({ message: 'All posts by member removed from group' });
+      const postIds = posts.map(p => p.post_id);
+      // Delete the posts
+      const deleteQuery = `
+        DELETE FROM posts
+        WHERE group_id = ? AND user_id = ? AND post_type = "group"
+      `;
+      connection.query(deleteQuery, [groupId, targetUserId], (err, results2) => {
+        if (err) {
+          console.error('Error deleting group posts:', err);
+          return res.status(500).json({ error: 'Database error' });
+        }
+        // If there were posts deleted, remove all notifications associated with those post IDs
+        if (postIds.length > 0) {
+          const deleteNotificationQuery = `
+            DELETE FROM notifications
+            WHERE reference_id IN (?) AND reference_type = 'group_post'
+          `;
+          connection.query(deleteNotificationQuery, [postIds], (err2) => {
+            if (err2) {
+              console.error("Error deleting notifications for group posts:", err2);
+              // Proceed even if notification deletion fails
+            }
+            res.json({ message: 'All posts by member removed from group' });
+          });
+        } else {
+          res.json({ message: 'All posts by member removed from group' });
+        }
+      });
     });
   });
 });
+
 
 export default router;

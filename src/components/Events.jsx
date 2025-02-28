@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import Event from './Event.jsx'; // Single event detail view
 import '../styles/Events.css';
 import EventModal from './EventModal.jsx';
 
@@ -9,7 +8,6 @@ const Events = ({ token, currentUserId, setCurrentView }) => {
   const [myEvents, setMyEvents] = useState([]);
   const [upcomingEvents, setUpcomingEvents] = useState([]);
   const [recentEvents, setRecentEvents] = useState([]);
-  const [selectedEvent, setSelectedEvent] = useState(null);
   const [showModal, setShowModal] = useState(false);
 
   const baseURL = 'http://localhost:5000';
@@ -26,7 +24,7 @@ const Events = ({ token, currentUserId, setCurrentView }) => {
     return `${formattedTime} ${formattedDate}`;
   };
 
-  // Fetch all events, then split into My, Upcoming, and Recent events
+  // Fetch events data and categorize them
   const fetchEventsData = async () => {
     if (!token) return;
     try {
@@ -35,7 +33,6 @@ const Events = ({ token, currentUserId, setCurrentView }) => {
       });
       const events = res.data;
       setAllEvents(events);
-
       const now = new Date();
       setMyEvents(events.filter(ev => ev.user_id === currentUserId));
       setUpcomingEvents(events.filter(ev => new Date(ev.start_time) > now));
@@ -49,29 +46,12 @@ const Events = ({ token, currentUserId, setCurrentView }) => {
     if (token) fetchEventsData();
   }, [token]);
 
+  // When an event card is clicked, change HomePage's currentView
   const handleViewEvent = (ev) => {
-    setSelectedEvent(ev);
+    setCurrentView({ view: 'event', eventData: ev, eventId: ev.event_id });
   };
 
-  const handleCloseEvent = () => {
-    setSelectedEvent(null);
-  };
-
-  // If a single event is selected, show the detail view
-  if (selectedEvent) {
-    return (
-      <Event
-        token={token}
-        currentUserId={currentUserId}
-        eventData={selectedEvent}
-        onBack={handleCloseEvent}
-        refreshEvents={fetchEventsData}
-        setCurrentView={setCurrentView}
-      />
-    );
-  }
-
-  // Render each event card
+  // Render an individual event card
   const renderEventCard = (ev) => {
     const formattedStart = formatDateTime(ev.start_time);
     const eventImageUrl = ev.event_image_url ? `${baseURL}${ev.event_image_url}` : null;

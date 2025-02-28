@@ -149,9 +149,12 @@ const GroupPage = ({
 
   return (
     <div className="group-page">
-      <button className="back-button" onClick={() => setCurrentView('groups')}>
-        &larr; Back to Groups
-      </button>
+      {/* Back button similar to Event component */}
+      <div className="back-button-container">
+        <button className="back-btn" onClick={() => setCurrentView('groups')}>
+          ← Back
+        </button>
+      </div>
 
       {group ? (
         <>
@@ -162,7 +165,11 @@ const GroupPage = ({
               style={{ cursor: canUpdateLogo ? 'pointer' : 'default' }}
             >
               <img
-                src={group.icon ? `http://localhost:5000${group.icon}` : "https://t3.ftcdn.net/jpg/10/29/65/84/360_F_1029658445_rfwMzxeuqrvm7GTY4Yr9WaBbYKlXIRs7.jpg"}
+                src={
+                  group.icon
+                    ? `http://localhost:5000${group.icon}`
+                    : "https://t3.ftcdn.net/jpg/10/29/65/84/360_F_1029658445_rfwMzxeuqrvm7GTY4Yr9WaBbYKlXIRs7.jpg"
+                }
                 alt={group.group_name}
                 className="group-logo"
               />

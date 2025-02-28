@@ -18,6 +18,23 @@
   margin-bottom: 10px;
 }
 
+.back-button-container {
+  margin-bottom: 20px;
+}
+
+.back-btn {
+  background: none;
+  border: none;
+  font-size: 16px;
+  color: #007bff;
+  cursor: pointer;
+}
+
+.back-btn:hover {
+  text-decoration: underline;
+}
+
+
 /* New "Create New Group" button styling */
 .create-group-btn {
   background-color: #1877f2;

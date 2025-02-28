@@ -174,10 +174,10 @@ router.get('/possible-friends', authenticateToken, (req, res) => {
   });
 });
 
-// POST /friends/decline - Decline a friend request
+// POST /friends/decline - Decline a friend request and remove its notification
 router.post('/decline', authenticateToken, (req, res) => {
   const me = req.user.userId;
-  const { friendId } = req.body;
+  const { friendId } = req.body; // friendId is the sender of the request
   const query = `
     DELETE FROM friends
     WHERE user_id_1 = ? AND user_id_2 = ? AND status = 'pending'
@@ -190,11 +190,25 @@ router.post('/decline', authenticateToken, (req, res) => {
     if (results.affectedRows === 0) {
       return res.status(404).json({ error: 'No pending friend request found' });
     }
-    res.json({ message: 'Friend request declined' });
+    // Delete associated notification where the request was sent to me
+    const deleteNotifQuery = `
+      DELETE FROM notifications
+      WHERE reference_id = ? 
+        AND notification_type = 'FRIEND_REQUEST_SENT'
+        AND actor_id = ?
+    `;
+    connection.query(deleteNotifQuery, [me, friendId], (err2) => {
+      if (err2) {
+        console.error('Error deleting notification for declined friend request:', err2);
+        // Proceed even if notification deletion fails
+      }
+      res.json({ message: 'Friend request declined' });
+    });
   });
 });
 
-// POST /friends/remove - Remove an accepted friend
+
+// POST /friends/remove - Remove an accepted friend and remove its notification
 router.post('/remove', authenticateToken, (req, res) => {
   const userId = req.user.userId;
   const { friendId } = req.body;
@@ -211,9 +225,24 @@ router.post('/remove', authenticateToken, (req, res) => {
     if (results.affectedRows === 0) {
       return res.status(404).json({ error: 'No friendship found' });
     }
-    res.json({ message: 'Friend removed successfully' });
+    // Delete associated friendship notification (assumes it was created with type FRIEND_REQUEST_ACCEPTED)
+    // Here we assume that when the friendship was confirmed, a notification was sent to one party.
+    const deleteNotifQuery = `
+      DELETE FROM notifications
+      WHERE reference_id = ? 
+        AND notification_type = 'FRIEND_REQUEST_ACCEPTED'
+        AND actor_id = ?
+    `;
+    connection.query(deleteNotifQuery, [userId, friendId], (err2) => {
+      if (err2) {
+        console.error('Error deleting friendship notification:', err2);
+        // Proceed even if notification deletion fails
+      }
+      res.json({ message: 'Friend removed successfully' });
+    });
   });
 });
+
 
 // POST /friends/confirm - Confirm an inbound friend request and notify the requester
 router.post('/confirm', authenticateToken, (req, res) => {
@@ -244,10 +273,10 @@ router.post('/confirm', authenticateToken, (req, res) => {
   });
 });
 
-// POST /friends/cancel - Cancel an outbound friend request
+// POST /friends/cancel - Cancel an outbound friend request and remove its notification
 router.post('/cancel', authenticateToken, (req, res) => {
   const userId = req.user.userId;
-  const { friendId } = req.body;
+  const { friendId } = req.body; // friendId is the recipient of the friend request
   const query = `
     DELETE FROM friends
     WHERE user_id_1 = ? AND user_id_2 = ? AND status = 'pending'
@@ -260,9 +289,23 @@ router.post('/cancel', authenticateToken, (req, res) => {
     if (results.affectedRows === 0) {
       return res.status(404).json({ error: 'No pending friend request found' });
     }
-    res.json({ message: 'Friend request cancelled' });
+    // Delete associated notification for the outbound request
+    const deleteNotifQuery = `
+      DELETE FROM notifications
+      WHERE reference_id = ? 
+        AND notification_type = 'FRIEND_REQUEST_SENT'
+        AND actor_id = ?
+    `;
+    connection.query(deleteNotifQuery, [friendId, userId], (err2) => {
+      if (err2) {
+        console.error('Error deleting notification for cancelled friend request:', err2);
+        // Proceed even if notification deletion fails
+      }
+      res.json({ message: 'Friend request cancelled' });
+    });
   });
 });
+
 
 // GET /friends/possible-friends - Retrieve possible friends (users not already friends or pending)
 router.get('/possible-friends', authenticateToken, (req, res) => {

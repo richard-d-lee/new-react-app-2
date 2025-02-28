@@ -183,6 +183,21 @@ router.get('/:id/likes/count', authenticateToken, (req, res) => {
   });
 });
 
+// NEW: GET /feed/:id/liked - Check if the current user has liked the post
+router.get('/:id/liked', authenticateToken, (req, res) => {
+  const postId = req.params.id;
+  const userId = req.user.userId;
+  const query = 'SELECT COUNT(*) AS count FROM likes WHERE post_id = ? AND user_id = ?';
+  connection.query(query, [postId, userId], (err, results) => {
+    if (err) {
+      console.error("Error checking if post is liked:", err);
+      return res.status(500).json({ error: 'Database error' });
+    }
+    const liked = results[0].count > 0;
+    res.json({ liked });
+  });
+});
+
 // POST /feed/:id/like - Like a feed post and notify the post owner
 router.post('/:id/like', authenticateToken, (req, res) => {
   const postId = req.params.id;
@@ -212,29 +227,36 @@ router.post('/:id/like', authenticateToken, (req, res) => {
   });
 });
 
-// DELETE /feed/:id/like - Unlike a feed post
+// DELETE /feed/:id/like - Unlike a feed post and remove its notification
 router.delete('/:id/like', authenticateToken, (req, res) => {
   const postId = req.params.id;
   const userId = req.user.userId;
-  const query = 'DELETE FROM likes WHERE post_id = ? AND user_id = ?';
-  connection.query(query, [postId, userId], (err, results) => {
-    if (err) return res.status(500).json({ error: 'Error unliking post' });
-    res.json({ message: 'Post unliked successfully' });
+  const deleteQuery = 'DELETE FROM likes WHERE post_id = ? AND user_id = ?';
+  connection.query(deleteQuery, [postId, userId], (err, results) => {
+    if (err) {
+      console.error("Error unliking post:", err);
+      return res.status(500).json({ error: 'Error unliking post' });
+    }
+    if (results.affectedRows === 0) {
+      return res.status(404).json({ error: 'No like found to remove' });
+    }
+    const deleteNotificationQuery = `
+      DELETE FROM notifications
+      WHERE reference_id = ? 
+        AND notification_type = 'POST_LIKE'
+        AND reference_type = 'post'
+        AND actor_id = ?
+    `;
+    connection.query(deleteNotificationQuery, [postId, userId], (err2) => {
+      if (err2) {
+        console.error("Error deleting notification for post like:", err2);
+      }
+      res.json({ message: 'Post unliked successfully' });
+    });
   });
 });
 
-// GET /feed/:id/liked - Get like status for a feed post
-router.get('/:id/liked', authenticateToken, (req, res) => {
-  const postId = req.params.id;
-  const userId = req.user.userId;
-  const query = 'SELECT COUNT(*) AS liked FROM likes WHERE post_id = ? AND user_id = ?';
-  connection.query(query, [postId, userId], (err, results) => {
-    if (err) return res.status(500).json({ error: 'Error checking like status' });
-    res.json({ liked: results[0].liked > 0 });
-  });
-});
-
-// DELETE /feed/:postId - Delete a feed post (with cascading deletion)
+// DELETE /feed/:postId - Delete a feed post (with cascading deletion) and remove its notifications
 router.delete('/:postId', authenticateToken, (req, res) => {
   const postId = req.params.postId;
   const userId = req.user.userId;
@@ -262,7 +284,16 @@ router.delete('/:postId', authenticateToken, (req, res) => {
               if (err5) {
                 return connection.rollback(() => res.status(500).json({ error: 'Error committing transaction' }));
               }
-              res.json({ message: 'Post deleted successfully' });
+              const deleteNotificationQuery = `
+                DELETE FROM notifications
+                WHERE reference_id = ? AND reference_type = 'post'
+              `;
+              connection.query(deleteNotificationQuery, [postId], (err6) => {
+                if (err6) {
+                  console.error("Error deleting notifications for feed post:", err6);
+                }
+                res.json({ message: 'Post deleted successfully' });
+              });
             });
           }
         );

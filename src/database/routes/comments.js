@@ -164,14 +164,12 @@ router.get('/:commentId', authenticateToken, (req, res) => {
   });
 });
 
-/**
- * DELETE /comments/:commentId/like - Unlike a comment
- */
+// DELETE /comments/:commentId/like - Unlike a comment and remove its notification
 router.delete('/:commentId/like', authenticateToken, (req, res) => {
   const commentId = req.params.commentId;
   const userId = req.user.userId;
-  const query = 'DELETE FROM comment_likes WHERE comment_id = ? AND user_id = ?';
-  connection.query(query, [commentId, userId], (err, results) => {
+  const deleteQuery = 'DELETE FROM comment_likes WHERE comment_id = ? AND user_id = ?';
+  connection.query(deleteQuery, [commentId, userId], (err, results) => {
     if (err) {
       console.error('Error unliking comment:', err);
       return res.status(500).json({ error: 'Database error' });
@@ -179,14 +177,24 @@ router.delete('/:commentId/like', authenticateToken, (req, res) => {
     if (results.affectedRows === 0) {
       return res.status(404).json({ error: 'No like found to remove' });
     }
-    res.json({ message: 'Comment unliked successfully' });
+    // Delete associated notification (assumes notification_type is 'COMMENT_LIKE'
+    // and that actor_id matches the user who liked the comment)
+    const deleteNotificationQuery = `
+      DELETE FROM notifications
+      WHERE reference_id = ? AND notification_type = 'COMMENT_LIKE' AND actor_id = ?
+    `;
+    connection.query(deleteNotificationQuery, [commentId, userId], (err2) => {
+      if (err2) {
+        console.error("Error deleting notification for comment like:", err2);
+        // Proceed even if notification deletion fails
+      }
+      res.json({ message: 'Comment unliked successfully' });
+    });
   });
 });
 
-/**
- * DELETE /comments/:commentId
- * Deletes a comment if the logged-in user is the author and removes any notifications stemming from that comment.
- */
+
+// DELETE /comments/:commentId - Delete a comment and remove its notifications
 router.delete('/:commentId', authenticateToken, (req, res) => {
   const commentId = req.params.commentId;
   const userId = req.user.userId;
@@ -208,7 +216,7 @@ router.delete('/:commentId', authenticateToken, (req, res) => {
       if (delResults.affectedRows === 0) {
         return res.status(404).json({ error: 'Comment not found or already deleted' });
       }
-      // Cascade delete notifications referencing this comment.
+      // Cascade delete notifications attached to this comment.
       const notifDeleteQuery = `
         DELETE FROM notifications 
         WHERE reference_id = ? AND reference_type IN ('comment', 'event_comment')
@@ -216,12 +224,14 @@ router.delete('/:commentId', authenticateToken, (req, res) => {
       connection.query(notifDeleteQuery, [commentId], (err, notifResults) => {
         if (err) {
           console.error("Error deleting notifications:", err);
+          // Proceed even if notification deletion fails
         }
         res.json({ message: 'Comment deleted successfully' });
       });
     });
   });
 });
+
 
 /**
  * GET /comments/:postId/comments

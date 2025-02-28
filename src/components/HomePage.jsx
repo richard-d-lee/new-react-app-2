@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { jwtDecode } from 'jwt-decode';
+import {jwtDecode} from 'jwt-decode';
 import Navbar from './Navbar.jsx';
 import Sidebar from './Sidebar.jsx';
 import Feed from './Feed.jsx';
@@ -9,9 +9,9 @@ import Groups from './Groups.jsx';
 import GroupPage from './GroupPage.jsx';
 import Profile from './Profile.jsx';
 import Settings from './Settings.jsx';
-import Event from './Event.jsx';
+import Event from './Event.jsx'; // Single event detail view
 import Messenger from './Messenger.jsx';
-import Events from './Events.jsx';
+import Events from './Events.jsx'; // Used to list events
 import Marketplace from './Marketplace.jsx';
 import Listing from './Listing.jsx';
 import Notifications from './Notifications.jsx';
@@ -42,7 +42,7 @@ const HomePage = ({ updateLogged, email }) => {
     }
   }, [token, updateLogged]);
 
-  // Fetch current user's profile (avatar, username, etc.)
+  // Fetch current user's profile
   useEffect(() => {
     if (token && userId) {
       axios
@@ -63,7 +63,7 @@ const HomePage = ({ updateLogged, email }) => {
     }
   }, [token, userId, updateLogged]);
 
-  // Fetch unread notifications count
+  // Refresh counts
   const refreshUnreadCount = () => {
     if (!token || !userId) return;
     axios
@@ -78,7 +78,6 @@ const HomePage = ({ updateLogged, email }) => {
       });
   };
 
-  // Fetch friend requests count
   const refreshFriendRequestsCount = () => {
     if (!token || !userId) return;
     axios
@@ -93,7 +92,6 @@ const HomePage = ({ updateLogged, email }) => {
       });
   };
 
-  // On mount or when userId changes, fetch both unreadCount & friendRequestsCount
   useEffect(() => {
     if (token && userId) {
       refreshUnreadCount();
@@ -131,9 +129,10 @@ const HomePage = ({ updateLogged, email }) => {
         {/* Main content area */}
         <div className="feed-container">
           {(() => {
-            // Render views based on currentView
-            if (typeof currentView === 'string') {
-              if (currentView === 'feed') {
+            // Normalize view: if currentView is null, default to "events"
+            const view = currentView === null ? 'events' : currentView;
+            if (typeof view === 'string') {
+              if (view === 'feed') {
                 return (
                   <Feed
                     token={token}
@@ -143,69 +142,78 @@ const HomePage = ({ updateLogged, email }) => {
                     setCurrentView={setCurrentView}
                   />
                 );
-              } else if (currentView === 'friends') {
+              } else if (view === 'friends') {
                 return <Friends refreshFriendRequestsCount={refreshFriendRequestsCount} />;
-              } else if (currentView === 'events') {
+              } else if (view === 'events') {
                 return <Events token={token} currentUserId={userId} setCurrentView={setCurrentView} />;
-              } else if (currentView === 'marketplace') {
+              } else if (view === 'marketplace') {
                 return <Marketplace token={token} currentUserId={userId} setCurrentView={setCurrentView} />;
-              } else if (currentView === 'notifications') {
+              } else if (view === 'notifications') {
                 return (
                   <Notifications
                     token={token}
                     onMarkAllRead={() => setUnreadCount(0)}
-                    onProfileClick={(actorId) => setCurrentView({ view: 'profile', userId: actorId })}
+                    onProfileClick={(actorId) =>
+                      setCurrentView({ view: 'profile', userId: actorId })
+                    }
                     onPostClick={(payload) => setCurrentView(payload)}
                     onUnreadCountChange={refreshUnreadCount}
                   />
                 );
-              } else if (currentView === 'settings') {
+              } else if (view === 'settings') {
                 return <Settings token={token} currentUserId={userId} setCurrentView={setCurrentView} />;
-              } else if (currentView === 'groups') {
+              } else if (view === 'groups') {
                 return <Groups token={token} currentUserId={userId} setCurrentView={setCurrentView} />;
               }
-            } else if (typeof currentView === 'object') {
-              if (currentView.view === 'event') {
+            } else if (typeof view === 'object' && view !== null) {
+              if (view.view === 'event') {
                 return (
                   <Event
                     token={token}
                     currentUserId={userId}
-                    eventId={currentView.eventId}
-                    eventData={currentView.eventData}
+                    eventId={view.eventId}
+                    eventData={view.eventData}
                     onBack={() => setCurrentView('events')}
                     setCurrentView={setCurrentView}
                   />
                 );
-              } else if (currentView.view === 'listing') {
+              } else if (view.view === 'listing') {
                 return (
                   <Listing
                     token={token}
-                    listingId={currentView.listingId}
+                    listingId={view.listingId}
                     setCurrentView={setCurrentView}
+                    currentUserId={userId}
+                    currentUserProfilePic={currentUserProfilePic}
                   />
                 );
-              } else if (currentView.view === 'profile') {
+              } else if (view.view === 'profile') {
                 return (
                   <Profile
                     token={token}
-                    userId={currentView.userId}
+                    userId={view.userId}
                     currentUserId={userId}
                     setCurrentView={setCurrentView}
                   />
                 );
-              } else if (currentView.view === 'group') {
+              } else if (view.view === 'group') {
                 return (
                   <GroupPage
                     token={token}
                     currentUserId={userId}
-                    groupId={currentView.groupId}
+                    groupId={view.groupId}
                     setCurrentView={setCurrentView}
                   />
                 );
+              } else if (view.view === 'events') {
+                // When currentView is an object with view "events", render the events list.
+                return <Events token={token} currentUserId={userId} setCurrentView={setCurrentView} />;
               }
             }
-            // Default fallback:
-            return <Feed token={token} currentUserId={userId} setCurrentView={setCurrentView} />;
+            // Fallback:
+            return (
+              <Feed token={token} currentUserId={userId} setCurrentView={setCurrentView} />
+            );
           })()}
         </div>
       </div>

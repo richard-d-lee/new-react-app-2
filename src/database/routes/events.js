@@ -419,7 +419,18 @@ router.delete('/:id/invite', authenticateToken, (req, res) => {
             if (results.affectedRows === 0) {
                 return res.status(404).json({ error: 'Invitation not found.' });
             }
-            res.json({ message: 'Invitation rescinded successfully.' });
+            // Also delete associated invitation notifications.
+            const notifDeleteQuery = `
+              DELETE FROM notifications
+              WHERE reference_id = ? 
+                AND notification_type = 'EVENT_INVITE'
+                AND actor_id = ?
+                AND user_id = ?
+            `;
+            connection.query(notifDeleteQuery, [eventId, userId, invitee_id], (err3) => {
+                if (err3) console.error("Error deleting invitation notifications:", err3);
+                res.json({ message: 'Invitation rescinded successfully.' });
+            });
         });
     });
 });
@@ -777,7 +788,17 @@ router.delete('/:eventId/posts/:postId/comments/:commentId/like', authenticateTo
         if (results.affectedRows === 0) {
             return res.status(404).json({ error: 'Like not found or already removed' });
         }
-        res.json({ message: 'Event comment unliked successfully' });
+        // Also delete notifications for this comment like.
+        const notifDeleteQuery = `
+            DELETE FROM notifications 
+            WHERE reference_id = ? 
+              AND notification_type = 'EVENT_COMMENT_LIKE'
+              AND actor_id = ?
+        `;
+        connection.query(notifDeleteQuery, [commentId, userId], (err2) => {
+            if (err2) console.error("Error deleting event comment like notifications:", err2);
+            res.json({ message: 'Event comment unliked successfully' });
+        });
     });
 });
 
@@ -967,8 +988,18 @@ router.post('/:eventId/posts/:postId/like', authenticateToken, (req, res) => {
                     });
                 }
             }
+            // Delete any existing like notifications from this user if needed.
+            const deleteNotifQuery = `
+              DELETE FROM notifications 
+              WHERE reference_id = ? 
+                AND notification_type = 'EVENT_POST_LIKE'
+                AND actor_id = ?
+            `;
+            connection.query(deleteNotifQuery, [postId, userId], (err2) => {
+                if (err2) console.error("Error deleting old event post like notifications:", err2);
+                res.json({ message: 'Event post liked successfully' });
+            });
         });
-        res.json({ message: 'Event post liked successfully' });
     });
 });
 
@@ -983,7 +1014,17 @@ router.delete('/:eventId/posts/:postId/like', authenticateToken, (req, res) => {
             return res.status(500).json({ error: 'Database error' });
         }
         if (results.affectedRows === 0) return res.status(404).json({ error: 'Like not found or already removed' });
-        res.json({ message: 'Event post unliked successfully' });
+        // Delete associated like notification.
+        const deleteNotifQuery = `
+            DELETE FROM notifications 
+            WHERE reference_id = ? 
+              AND notification_type = 'EVENT_POST_LIKE'
+              AND actor_id = ?
+        `;
+        connection.query(deleteNotifQuery, [postId, userId], (err2) => {
+            if (err2) console.error("Error deleting event post like notifications:", err2);
+            res.json({ message: 'Event post unliked successfully' });
+        });
     });
 });
 
@@ -1052,75 +1093,76 @@ router.get('/:eventId/posts/:postId/comments', authenticateToken, (req, res) => 
 });
 
 /**
- * POST /events/:eventId/posts/:postId/comments/:commentId/reply - Reply to an existing event comment
+ * POST /events/:eventId/comments/:commentId/reply - Reply to an existing event comment
  */
 router.post('/:eventId/comments/:commentId/reply', authenticateToken, (req, res) => {
-    const { eventId, commentId } = req.params;
-    const userId = req.user.userId;
-    const { content } = req.body;
-    if (!content || !content.trim()) {
-        return res.status(400).json({ error: 'Content is required' });
-    }
+  const { eventId, commentId } = req.params;
+  const userId = req.user.userId;
+  const { content } = req.body;
+  if (!content || !content.trim()) {
+      return res.status(400).json({ error: 'Content is required' });
+  }
 
-    const getParentQuery = 'SELECT post_id FROM comments WHERE comment_id = ?';
-    connection.query(getParentQuery, [commentId], (err, parentResults) => {
-        if (err) {
-            console.error("Error fetching parent comment's post_id:", err);
-            return res.status(500).json({ error: 'Database error retrieving parent comment' });
-        }
-        if (!parentResults || parentResults.length === 0) {
-            return res.status(404).json({ error: 'Parent comment not found' });
-        }
-        const parentPostId = parentResults[0].post_id;
+  const getParentQuery = 'SELECT post_id FROM comments WHERE comment_id = ?';
+  connection.query(getParentQuery, [commentId], (err, parentResults) => {
+      if (err) {
+          console.error("Error fetching parent comment's post_id:", err);
+          return res.status(500).json({ error: 'Database error retrieving parent comment' });
+      }
+      if (!parentResults || parentResults.length === 0) {
+          return res.status(404).json({ error: 'Parent comment not found' });
+      }
+      const parentPostId = parentResults[0].post_id;
 
-        const insertQuery = `
+      const insertQuery = `
         INSERT INTO comments (post_id, parent_comment_id, user_id, content)
         VALUES (?, ?, ?, ?)
       `;
-        connection.query(insertQuery, [parentPostId, commentId, userId, content], (err2, result) => {
-            if (err2) {
-                console.error("Error inserting event reply:", err2);
-                return res.status(500).json({ error: 'Database error during insert' });
-            }
-            const newCommentId = result.insertId;
-            const selectQuery = `
-          SELECT c.comment_id, c.post_id, c.parent_comment_id, c.user_id, c.content, c.created_at,
-                 u.username, u.profile_picture_url
-          FROM comments c
-          JOIN users u ON c.user_id = u.user_id
-          WHERE c.comment_id = ?
-        `;
-            connection.query(selectQuery, [newCommentId], (err3, rows) => {
-                if (err3) {
-                    console.error("Error selecting new event reply:", err3);
-                    return res.status(500).json({ error: 'Database error during select' });
-                }
-                if (!rows || rows.length === 0) {
-                    return res.status(404).json({ error: 'Reply not found after insert' });
-                }
+      connection.query(insertQuery, [parentPostId, commentId, userId, content], (err2, result) => {
+          if (err2) {
+              console.error("Error inserting event reply:", err2);
+              return res.status(500).json({ error: 'Database error during insert' });
+          }
+          const newCommentId = result.insertId;
+          const selectQuery = `
+            SELECT c.comment_id, c.post_id, c.parent_comment_id, c.user_id, c.content, c.created_at,
+                   u.username, u.profile_picture_url
+            FROM comments c
+            JOIN users u ON c.user_id = u.user_id
+            WHERE c.comment_id = ?
+          `;
+          connection.query(selectQuery, [newCommentId], (err3, rows) => {
+              if (err3) {
+                  console.error("Error selecting new event reply:", err3);
+                  return res.status(500).json({ error: 'Database error during select' });
+              }
+              if (!rows || rows.length === 0) {
+                  return res.status(404).json({ error: 'Reply not found after insert' });
+              }
 
-                const getParentAuthorQuery = 'SELECT user_id FROM comments WHERE comment_id = ?';
-                connection.query(getParentAuthorQuery, [commentId], (err4, parentAuthorResults) => {
-                    if (!err4 && parentAuthorResults.length > 0) {
-                        const parentOwner = parentAuthorResults[0].user_id;
-                        if (parentOwner !== userId) {
-                            createNotification({
-                                user_id: parentOwner,
-                                notification_type: 'EVENT_COMMENT_REPLY',
-                                reference_id: newCommentId,
-                                actor_id: userId,
-                                reference_type: 'event_comment',
-                                event_id,
-                                message: 'Someone replied to your event comment'
-                            });
-                        }
-                    }
-                });
+              const getParentAuthorQuery = 'SELECT user_id FROM comments WHERE comment_id = ?';
+              connection.query(getParentAuthorQuery, [commentId], (err4, parentAuthorResults) => {
+                  if (!err4 && parentAuthorResults.length > 0) {
+                      const parentOwner = parentAuthorResults[0].user_id;
+                      if (parentOwner !== userId) {
+                          createNotification({
+                              user_id: parentOwner,
+                              notification_type: 'EVENT_COMMENT_REPLY',
+                              reference_id: newCommentId,
+                              actor_id: userId,
+                              reference_type: 'event_comment',
+                              event_id: eventId, // Fixed: passing eventId from req.params
+                              message: 'Someone replied to your event comment'
+                          });
+                      }
+                  }
+              });
 
-                res.json(rows[0]);
-            });
-        });
-    });
+              res.json(rows[0]);
+          });
+      });
+  });
 });
+
 
 export default router;

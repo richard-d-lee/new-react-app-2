@@ -104,4 +104,50 @@ router.post('/comment', authenticateToken, (req, res) => {
   });
 });
 
+// DELETE /comment/:mentionId - Undo a comment mention (delete mention and its notification)
+router.delete('/comment/:mentionId', authenticateToken, (req, res) => {
+  const mentionId = req.params.mentionId;
+  const currentUser = req.user.userId;
+  // Retrieve the mention record to get comment_id, mentioned_user_id, and group_id (if any)
+  const selectQuery = `SELECT * FROM comment_mentions WHERE mention_id = ?`;
+  connection.query(selectQuery, [mentionId], (err, results) => {
+    if (err) {
+      console.error("Error fetching comment mention:", err);
+      return res.status(500).json({ error: 'Database error' });
+    }
+    if (results.length === 0) {
+      return res.status(404).json({ error: 'Comment mention not found' });
+    }
+    const mention = results[0];
+    // Optionally, you could check that currentUser is authorized to undo this mention.
+    // Delete the mention record
+    const deleteQuery = `DELETE FROM comment_mentions WHERE mention_id = ?`;
+    connection.query(deleteQuery, [mentionId], (err, deleteResults) => {
+      if (err) {
+        console.error("Error deleting comment mention:", err);
+        return res.status(500).json({ error: 'Database error' });
+      }
+      // Delete associated notification.
+      // Notification was created with:
+      //   notification_type: group_id ? 'GROUP_COMMENT_MENTION' : 'COMMENT_MENTION'
+      //   reference_id: comment_id, and actor_id: currentUser.
+      const notifType = mention.group_id ? 'GROUP_COMMENT_MENTION' : 'COMMENT_MENTION';
+      const deleteNotifQuery = `
+        DELETE FROM notifications
+        WHERE reference_id = ? 
+          AND notification_type = ?
+          AND actor_id = ?
+      `;
+      connection.query(deleteNotifQuery, [mention.comment_id, notifType, currentUser], (err2) => {
+        if (err2) {
+          console.error("Error deleting notification for comment mention:", err2);
+          // Proceed even if notification deletion fails.
+        }
+        res.json({ message: 'Comment mention undone successfully' });
+      });
+    });
+  });
+});
+
+
 export default router;

@@ -4,7 +4,7 @@ import Post from './Post.jsx';
 import CreatePost from './CreatePost.jsx';
 import EventInviteModal from './EventInviteModal.jsx';
 import EventModal from './EventModal.jsx';
-import MembersModal from './MembersModal.jsx'; 
+import MembersModal from './MembersModal.jsx';
 import '../styles/Event.css';
 
 const Event = ({
@@ -28,7 +28,6 @@ const Event = ({
   const [loadingEvent, setLoadingEvent] = useState(false);
   const [posts, setPosts] = useState([]);
   const [loadingPosts, setLoadingPosts] = useState(false);
-  // "going" or "declined" or null
   const [attendanceStatus, setAttendanceStatus] = useState(null);
 
   const [showInviteModal, setShowInviteModal] = useState(false);
@@ -52,12 +51,8 @@ const Event = ({
   const realEventId = eventData?.event_id || propEventId;
   const isOwner = currentUserId && eventData && eventData.user_id === currentUserId;
 
-  // Possibly show event image
-  const eventImageUrl = eventData?.event_image_url
-    ? `${baseURL}${eventData.event_image_url}`
-    : null;
+  const eventImageUrl = eventData?.event_image_url ? `${baseURL}${eventData.event_image_url}` : null;
 
-  // Toggling the event description
   const fullDescription = eventData?.event_description || '';
   const shouldTruncate = fullDescription.length > 200;
   const displayedDescription = shouldTruncate && !showFullDescription
@@ -66,7 +61,6 @@ const Event = ({
 
   const toggleDescription = () => setShowFullDescription(prev => !prev);
 
-  // Format date/time
   const formatDateTime = (dateStr) => {
     if (!dateStr) return '';
     const date = new Date(dateStr);
@@ -79,7 +73,6 @@ const Event = ({
     return `${formattedTime} ${formattedDate}`;
   };
 
-  // Fetch event data
   const fetchEventData = async () => {
     if (!token || !realEventId) return;
     setLoadingEvent(true);
@@ -95,7 +88,6 @@ const Event = ({
     }
   };
 
-  // Fetch event posts
   const fetchEventPosts = async () => {
     if (!token || !realEventId) return;
     setLoadingPosts(true);
@@ -119,7 +111,6 @@ const Event = ({
     }
   };
 
-  // Fetch user attendance status
   const fetchAttendanceStatus = async () => {
     if (!token || !realEventId) return;
     try {
@@ -133,7 +124,6 @@ const Event = ({
     }
   };
 
-  // Load data
   useEffect(() => {
     if (realEventId) {
       fetchEventData();
@@ -147,19 +137,16 @@ const Event = ({
     }
   }, [realEventId, token, postId]);
 
-  // Scroll if postRef
   useEffect(() => {
     if (postRef.current) {
       postRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
   }, [posts]);
 
-  // Delete post from local
   const handleDeletePost = (deletedPostId) => {
     setPosts(prev => prev.filter(post => post.post_id !== deletedPostId));
   };
 
-  // Delete event
   const handleDeleteEvent = async () => {
     if (!window.confirm('Are you sure you want to delete this event?')) return;
     try {
@@ -178,7 +165,6 @@ const Event = ({
     }
   };
 
-  // Toggle attendance
   const toggleAttendance = async () => {
     if (isOwner) return;
     const newStatus = attendanceStatus === 'going' ? 'declined' : 'going';
@@ -195,14 +181,12 @@ const Event = ({
     }
   };
 
-  // Invite modal
   const handleOpenInviteModal = () => {
     setShowMenu(false);
     setShowInviteModal(true);
   };
   const handleCloseInviteModal = () => setShowInviteModal(false);
 
-  // Edit event modal
   const handleOpenEditModal = () => {
     setShowMenu(false);
     if (eventData) {
@@ -218,7 +202,6 @@ const Event = ({
   };
   const handleCloseEditModal = () => setShowEditModal(false);
 
-  // For datetime-local
   const formatDateTimeLocal = (dateStr) => {
     if (!dateStr) return '';
     const date = new Date(dateStr);
@@ -231,7 +214,6 @@ const Event = ({
     return `${year}-${month}-${day}T${hours}:${minutes}`;
   };
 
-  // Update event
   const handleUpdateEvent = async (e) => {
     e.preventDefault();
     try {
@@ -274,27 +256,23 @@ const Event = ({
 
   return (
     <div className="event-container">
-      {/* Top "Back to Events" */}
       <div className="back-button-container">
         <button
-          className="common-button"
+          className="back-btn"
           onClick={onBack || (() => setCurrentView('events'))}
         >
-          Back to Events
+          ← Back
         </button>
       </div>
 
-      {/* Event image */}
       {eventImageUrl && (
         <div className="event-image">
           <img src={eventImageUrl} alt="Event" />
         </div>
       )}
 
-      {/* Action row: left side has Attend (if not owner) + View Attendees, right side has 3-dot if owner */}
       <div className="action-row">
         <div className="left-actions">
-          {/* If not owner => Attend Event button */}
           {!isOwner && (
             <button
               onClick={toggleAttendance}
@@ -303,8 +281,6 @@ const Event = ({
               {attendanceStatus === 'going' ? 'Cancel Attendance' : 'Attend Event'}
             </button>
           )}
-
-          {/* If owner or user is going => View Attendees */}
           {(isOwner || attendanceStatus === 'going') && (
             <button
               className="common-button"
@@ -376,7 +352,6 @@ const Event = ({
         {postId ? 'Viewing Post' : `Posts for ${eventData.event_name}`}
       </h3>
 
-      {/* Create post if owner or user is "going" */}
       {(!postId && (isOwner || attendanceStatus === 'going')) && (
         <CreatePost
           token={token}
@@ -408,7 +383,6 @@ const Event = ({
         ))}
       </div>
 
-      {/* Invite Attendees Modal */}
       {showInviteModal && (
         <EventInviteModal
           token={token}
@@ -418,7 +392,6 @@ const Event = ({
         />
       )}
 
-      {/* Edit Event Modal */}
       {showEditModal && (
         <EventModal
           token={token}
@@ -428,7 +401,6 @@ const Event = ({
         />
       )}
 
-      {/* Members Modal for viewing attendees */}
       {showAttendeesModal && (
         <MembersModal
           token={token}

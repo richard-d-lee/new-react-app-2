@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react'; 
 import axios from 'axios';
 import ProfilePic from './ProfilePic.jsx';
 import '../styles/Marketplace.css';
@@ -42,8 +42,6 @@ const Marketplace = ({ token, currentUserId, setCurrentView }) => {
 
   /**
    * 1) Fetch listing types, users, and listings.
-   *    - We chain these calls so that we only fetch listings
-   *      after we have the default selectedUsers set.
    */
   useEffect(() => {
     fetchMarketplaceTypes();
@@ -55,22 +53,23 @@ const Marketplace = ({ token, currentUserId, setCurrentView }) => {
       })
       .then((res) => {
         setAllUsers(res.data || []);
-        // If we got some users, select them all by default
-        if (res.data && res.data.length > 0) {
-          const defaultSelected = res.data.map((u) => u.user_id);
-          setSelectedUsers(defaultSelected);
-          // Now fetch listings using these selected users
-          fetchListings(defaultSelected);
-        } else {
-          // No users => no listings
-          setListings([]);
+        // Select all fetched users by default
+        const defaultSelected = res.data && res.data.length > 0
+          ? res.data.map((u) => u.user_id)
+          : [];
+        // Ensure the current user is included.
+        if (!defaultSelected.includes(currentUserId)) {
+          defaultSelected.push(currentUserId);
         }
+        setSelectedUsers(defaultSelected);
+        // Now fetch listings using these selected users
+        fetchListings(defaultSelected);
       })
       .catch((err) => {
         console.error('Error fetching marketplace users:', err);
         setListings([]); // fallback
       });
-  }, [token]);
+  }, [token, currentUserId]);
 
   // 2) Fetch listing types
   const fetchMarketplaceTypes = () => {
@@ -85,8 +84,8 @@ const Marketplace = ({ token, currentUserId, setCurrentView }) => {
   };
 
   /**
-   * 3) Actually fetch listings, optionally with an array of user IDs
-   *    (to handle the default scenario).
+   * 3) Actually fetch listings, optionally with an array of user IDs.
+   * Ensure the current user is always included.
    */
   const fetchListings = (usersArray) => {
     const { minPrice, maxPrice, type, search } = filters;
@@ -97,8 +96,10 @@ const Marketplace = ({ token, currentUserId, setCurrentView }) => {
     if (type) params.type = type;
     if (search) params.search = search;
 
-    // If usersArray is given (initial load), use that. Otherwise use selectedUsers.
-    const effectiveUsers = usersArray || selectedUsers;
+    // Use provided array or selectedUsers, and ensure currentUserId is included.
+    const effectiveUsers = usersArray 
+      ? (usersArray.includes(currentUserId) ? usersArray : [currentUserId, ...usersArray])
+      : (selectedUsers.includes(currentUserId) ? selectedUsers : [currentUserId, ...selectedUsers]);
 
     if (effectiveUsers.length === 0) {
       setListings([]);
@@ -121,10 +122,9 @@ const Marketplace = ({ token, currentUserId, setCurrentView }) => {
 
   /**
    * 4) If selectedUsers changes (due to user toggles), refetch listings
-   *    so that the page updates immediately.
+   * so that the page updates immediately.
    */
   useEffect(() => {
-    // If we haven't fetched users yet, do nothing.
     if (allUsers.length === 0) return;
     fetchListings();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -159,29 +159,24 @@ const Marketplace = ({ token, currentUserId, setCurrentView }) => {
     fetchListings();
   };
 
-  // Toggle the entire filter section
   const toggleFiltersOpen = () => {
     setFiltersOpen((prev) => !prev);
   };
 
-  // Toggle user dropdown
   const toggleUserDropdown = () => {
     setUserDropdownOpen((prev) => !prev);
   };
 
-  // Search within user dropdown
   const handleUserSearchChange = (e) => {
     setUserSearch(e.target.value);
   };
 
-  // Toggle a user's selection
   const handleToggleUser = (userId) => {
     setSelectedUsers((prev) =>
       prev.includes(userId) ? prev.filter((id) => id !== userId) : [...prev, userId]
     );
   };
 
-  // Filter displayed users based on search text
   const filteredUsers = allUsers.filter((u) =>
     u.username.toLowerCase().includes(userSearch.toLowerCase())
   );
@@ -210,7 +205,12 @@ const Marketplace = ({ token, currentUserId, setCurrentView }) => {
       })
       .then(() => {
         closeModal();
+        // Option 1: Re-fetch listings
         fetchListings();
+        // Option 2 (optional): Update selectedUsers to include currentUserId
+        if (!selectedUsers.includes(currentUserId)) {
+          setSelectedUsers((prev) => [...prev, currentUserId]);
+        }
         setNewListing({
           title: '',
           description: '',
@@ -249,18 +249,14 @@ const Marketplace = ({ token, currentUserId, setCurrentView }) => {
 
       {/* Collapsible Filter Section */}
       <div className="filter-section">
-        {/* Filter Section Header */}
         <div className="filter-section-header">
           <h4>Filters</h4>
           <button className="collapse-filters-btn" onClick={toggleFiltersOpen}>
             {filtersOpen ? '▲' : '▼'}
           </button>
         </div>
-
-        {/* Animated Content */}
         <div className={`filter-section-content ${filtersOpen ? '' : 'collapsed'}`}>
           <div className="filters-row">
-            {/* Price Range */}
             <div className="filter-group">
               <label>Min Price</label>
               <input
@@ -281,8 +277,6 @@ const Marketplace = ({ token, currentUserId, setCurrentView }) => {
                 placeholder="9999"
               />
             </div>
-
-            {/* Listing Type */}
             <div className="filter-group">
               <label>Listing Type</label>
               <select name="type" value={filters.type} onChange={handleFilterChange}>
@@ -294,8 +288,6 @@ const Marketplace = ({ token, currentUserId, setCurrentView }) => {
                 ))}
               </select>
             </div>
-
-            {/* Search Title/Desc */}
             <div className="filter-group search-group">
               <label>Search Title/Desc</label>
               <input
@@ -308,7 +300,6 @@ const Marketplace = ({ token, currentUserId, setCurrentView }) => {
             </div>
           </div>
 
-          {/* User Filter Dropdown */}
           <div className="user-filter-section" ref={userFilterRef}>
             <label>Filter by Users:</label>
             <div className="user-filter-toggle" onClick={toggleUserDropdown}>
@@ -329,9 +320,7 @@ const Marketplace = ({ token, currentUserId, setCurrentView }) => {
                 </div>
                 <div className="checkbox-list">
                   {filteredUsers.length === 0 ? (
-                    <p style={{ fontStyle: 'italic', color: '#666' }}>
-                      No users found
-                    </p>
+                    <p style={{ fontStyle: 'italic', color: '#666' }}>No users found</p>
                   ) : (
                     filteredUsers.map((u) => (
                       <label key={u.user_id} className="user-item">
@@ -386,11 +375,7 @@ const Marketplace = ({ token, currentUserId, setCurrentView }) => {
                   className="listing-author-info"
                   onClick={(e) => handlePosterClick(e, listing.user_id)}
                 >
-                  <ProfilePic
-                    imageUrl={finalProfilePic}
-                    alt={listing.poster_username || 'User'}
-                    size={35}
-                  />
+                  <ProfilePic imageUrl={finalProfilePic} alt={listing.poster_username || 'User'} size={35} />
                   <span className="listing-author-name">
                     {listing.poster_username || 'User'}
                   </span>
@@ -451,7 +436,7 @@ const Marketplace = ({ token, currentUserId, setCurrentView }) => {
 
               <div className="modal-buttons">
                 <button type="submit">Create Listing</button>
-                <button type="button" onClick={closeModal}>
+                <button type="button" onClick={() => setModalOpen(false)}>
                   Cancel
                 </button>
               </div>
