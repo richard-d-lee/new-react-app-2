@@ -1,9 +1,36 @@
 import express from 'express';
+import path from 'path';
+import { v4 as uuidv4 } from 'uuid';
+import multer from 'multer';
 import connection from '../db.js';
 import { authenticateToken } from '../middleware/auth.js';
 import { createNotification } from '../helpers/notificationsSideEffect.js';
 
 const router = express.Router();
+
+// Configure Multer for marketplace image uploads.
+const absoluteUploadsPath = "C:\\Users\\rever\\react-app\\src\\database\\uploads";
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, absoluteUploadsPath);
+  },
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname);
+    const uniqueName = uuidv4() + ext;
+    cb(null, uniqueName);
+  }
+});
+const upload = multer({
+  storage,
+  limits: { fileSize: 5 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    const fileTypes = /jpeg|jpg|png|gif/;
+    const extName = fileTypes.test(path.extname(file.originalname).toLowerCase());
+    const mimeType = fileTypes.test(file.mimetype);
+    if (extName && mimeType) return cb(null, true);
+    cb(new Error('Only image files (jpg, png, gif) are allowed'));
+  }
+});
 
 /**
  * GET all marketplace listing types
@@ -41,11 +68,7 @@ router.get('/users', authenticateToken, (req, res) => {
   });
 });
 
-/**
- * LIST All Marketplace Listings
- * GET /marketplace
- * Accepts query params: minPrice, maxPrice, type, search, users (CSV list of user IDs)
- */
+// LIST All Marketplace Listings
 router.get('/', authenticateToken, (req, res) => {
   const { minPrice, maxPrice, type, search, users } = req.query;
   let conditions = ['l.listing_type_id = 1'];
@@ -77,26 +100,52 @@ router.get('/', authenticateToken, (req, res) => {
   }
   const whereClause = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
 
+  // NEW: Left join listing_images and group them by listing ID
   const query = `
     SELECT
-      l.*,
+      l.id,
+      l.user_id,
+      l.listing_type_id,
+      l.marketplace_listing_type_id,
+      l.title,
+      l.description,
+      l.price,
+      l.created_at,
+      l.updated_at,
       u.username AS poster_username,
       u.profile_picture_url AS poster_profile_pic,
-      mlt.name AS marketplace_listing_type_name
+      mlt.name AS marketplace_listing_type_name,
+      GROUP_CONCAT(li.image_url) AS images
     FROM listings l
     JOIN users u ON l.user_id = u.user_id
-    LEFT JOIN marketplace_listing_types mlt ON l.marketplace_listing_type_id = mlt.id
+    LEFT JOIN marketplace_listing_types mlt 
+           ON l.marketplace_listing_type_id = mlt.id
+    LEFT JOIN listing_images li 
+           ON l.id = li.listing_id
     ${whereClause}
+    GROUP BY l.id
     ORDER BY l.created_at DESC
   `;
+
   connection.query(query, params, (err, rows) => {
     if (err) {
       console.error('Error listing marketplace listings:', err);
       return res.status(500).json({ error: 'Database error.' });
     }
+
+    // Convert the comma-separated string of images into an array
+    rows.forEach((row) => {
+      if (row.images) {
+        row.images = row.images.split(',');
+      } else {
+        row.images = [];
+      }
+    });
+
     res.json(rows || []);
   });
 });
+
 
 /**
  * CREATE a Marketplace Listing
@@ -137,30 +186,42 @@ router.post('/', authenticateToken, (req, res) => {
 });
 
 /**
- * (Optional) UPLOAD an Image for a Marketplace Listing (owner only)
- * POST /marketplace/:id/upload-image
+ * UPLOAD Images for a Marketplace Listing (owner only)
+ * POST /marketplace/:id/upload-images
+ * Accepts up to 5 images under the field name "images"
  */
-router.post('/:id/upload-image', authenticateToken, (req, res) => {
+router.post('/:id/upload-images', authenticateToken, upload.array('images', 5), (req, res) => {
   const listingId = req.params.id;
   const userId = req.user.userId;
+  
+  if (!req.files || req.files.length === 0) {
+    return res.status(400).json({ error: 'No images uploaded or invalid file types.' });
+  }
+  
+  // Check that the listing exists and belongs to the user.
   const ownershipQuery = 'SELECT user_id FROM listings WHERE id = ? LIMIT 1';
   connection.query(ownershipQuery, [listingId], (err, rows) => {
     if (err) return res.status(500).json({ error: 'Database error' });
     if (!rows.length) return res.status(404).json({ error: 'Listing not found' });
-    if (rows[0].user_id !== userId) return res.status(403).json({ error: 'Not listing owner.' });
+    if (rows[0].user_id !== userId) {
+      return res.status(403).json({ error: 'Not authorized to upload images for this listing' });
+    }
 
-    const filename = req.file.filename;
-    const imagePath = `/uploads/${filename}`;
-    const updateQuery = 'UPDATE listings SET image_url = ? WHERE id = ?';
-    connection.query(updateQuery, [imagePath, listingId], (err2) => {
-      if (err2) return res.status(500).json({ error: 'Database error' });
-      res.json({ message: 'Listing image uploaded.', image_url: imagePath });
+    // Prepare an array of [listing_id, image_url] values.
+    const values = req.files.map(file => [listingId, `/uploads/${file.filename}`]);
+    const insertImageQuery = 'INSERT INTO listing_images (listing_id, image_url) VALUES ?';
+    connection.query(insertImageQuery, [values], (err2, result) => {
+      if (err2) {
+        console.error('Error inserting listing images:', err2);
+        return res.status(500).json({ error: 'Database error while saving images' });
+      }
+      res.json({ message: 'Images uploaded successfully', images: values.map(v => v[1]) });
     });
   });
 });
 
 /**
- * GET a Single Marketplace Listing
+ * GET a Single Marketplace Listing (with images)
  * GET /marketplace/:id
  */
 router.get('/:id', authenticateToken, (req, res) => {
@@ -170,20 +231,24 @@ router.get('/:id', authenticateToken, (req, res) => {
       l.*,
       u.username AS poster_username,
       u.profile_picture_url AS poster_profile_pic,
-      mlt.name AS marketplace_listing_type_name
+      mlt.name AS marketplace_listing_type_name,
+      GROUP_CONCAT(li.image_url) AS images
     FROM listings l
     JOIN users u ON l.user_id = u.user_id
     LEFT JOIN marketplace_listing_types mlt ON l.marketplace_listing_type_id = mlt.id
+    LEFT JOIN listing_images li ON l.id = li.listing_id
     WHERE l.id = ?
-    LIMIT 1
+    GROUP BY l.id
   `;
   connection.query(query, [listingId], (err, rows) => {
     if (err) {
       console.error('Error fetching listing:', err);
       return res.status(500).json({ error: 'Database error.' });
     }
-    if (!rows.length) return res.status(404).json({ error: 'Listing not found.' });
-    res.json(rows[0]);
+    if (!rows.length) return res.status(404).json({ error: 'Listing not found' });
+    const listing = rows[0];
+    listing.images = listing.images ? listing.images.split(',') : [];
+    res.json(listing);
   });
 });
 
@@ -241,8 +306,8 @@ router.delete('/:id', authenticateToken, (req, res) => {
 
     const deleteQuery = 'DELETE FROM listings WHERE id = ? AND user_id = ?';
     connection.query(deleteQuery, [listingId, userId], (err2, results) => {
-      if (err2) return res.status(500).json({ error: 'Database error.' });
-      if (!results.affectedRows) return res.status(404).json({ error: 'Listing not found.' });
+      if (err2) return res.status(500).json({ error: 'Database error deleting listing' });
+      if (!results.affectedRows) return res.status(404).json({ error: 'Listing not found or not authorized' });
       // Delete associated notifications for this listing.
       const deleteNotifQuery = `
         DELETE FROM notifications
@@ -549,8 +614,231 @@ router.post('/:listingId/posts/:postId/comments', authenticateToken, (req, res) 
         console.error("Error selecting new marketplace comment:", err2);
         return res.status(500).json({ error: 'Database error during select' });
       }
-      if (!rows || rows.length === 0)
-        return res.status(404).json({ error: 'Marketplace comment not found after insert' });
+      if (!rows || rows.length === 0) return res.status(404).json({ error: 'Marketplace comment not found after insert' });
+      res.json(rows[0]);
+    });
+  });
+});
+
+/**
+ * GET a Single Marketplace Post by ID
+ * GET /marketplace/:listingId/posts/:postId
+ */
+router.get('/:listingId/posts/:postId', authenticateToken, (req, res) => {
+  const { listingId, postId } = req.params;
+  const userId = req.user.userId;
+  const query = `
+    SELECT p.post_id, p.user_id, p.content, p.created_at, p.post_type, p.marketplace_id,
+           u.username, u.profile_picture_url
+      FROM posts p
+      JOIN users u ON p.user_id = u.user_id
+     WHERE p.post_id = ?
+       AND p.marketplace_id = ?
+       AND p.post_type = 'marketplace'
+       AND p.user_id NOT IN (
+         SELECT blocked_id FROM blocked_users WHERE blocker_id = ?
+         UNION
+         SELECT blocker_id FROM blocked_users WHERE blocked_id = ?
+       )
+     LIMIT 1
+  `;
+  connection.query(query, [postId, listingId, userId, userId], (err, results) => {
+    if (err) {
+      console.error("Error fetching single marketplace post:", err);
+      return res.status(500).json({ error: 'Database error' });
+    }
+    if (!results || results.length === 0) return res.status(404).json({ error: 'Marketplace post not found' });
+    res.json(results[0]);
+  });
+});
+
+/**
+ * DELETE a Marketplace Post (owner only)
+ * DELETE /marketplace/:listingId/posts/:postId
+ * Also removes notifications with reference_type 'marketplace_post'
+ */
+router.delete('/:listingId/posts/:postId', authenticateToken, (req, res) => {
+  const { listingId, postId } = req.params;
+  const userId = req.user.userId;
+  const deleteQuery = `
+    DELETE FROM posts
+    WHERE post_id = ? AND marketplace_id = ? AND user_id = ? AND post_type = 'marketplace'
+  `;
+  connection.query(deleteQuery, [postId, listingId, userId], (err, results) => {
+    if (err) {
+      console.error("Error deleting marketplace post:", err);
+      return res.status(500).json({ error: "Database error" });
+    }
+    if (results.affectedRows === 0) return res.status(404).json({ error: 'Marketplace post not found or not authorized' });
+    // Delete notifications attached to this post.
+    const deleteNotifQuery = `
+      DELETE FROM notifications
+      WHERE reference_id = ? AND reference_type = 'marketplace_post'
+    `;
+    connection.query(deleteNotifQuery, [postId], (err2) => {
+      if (err2) console.error("Error deleting post notifications:", err2);
+      res.json({ message: 'Marketplace post deleted successfully' });
+    });
+  });
+});
+
+/**
+ * LIKE a Marketplace Post
+ * POST /marketplace/:listingId/posts/:postId/like
+ * Creates a notification for the post owner if they are not the liker.
+ */
+router.post('/:listingId/posts/:postId/like', authenticateToken, (req, res) => {
+  const { listingId, postId } = req.params;
+  const userId = req.user.userId;
+  const insertLikeQuery = `
+    INSERT INTO likes (post_id, user_id)
+    VALUES (?, ?)
+  `;
+  connection.query(insertLikeQuery, [postId, userId], (err) => {
+    if (err) {
+      if (err.code === 'ER_DUP_ENTRY')
+        return res.status(400).json({ error: 'Post already liked by this user' });
+      console.error("Error liking marketplace post:", err);
+      return res.status(500).json({ error: 'Database error' });
+    }
+    const getPostQuery = 'SELECT user_id FROM posts WHERE post_id = ?';
+    connection.query(getPostQuery, [postId], (err2, results) => {
+      if (err2) console.error("Error fetching post owner:", err2);
+      if (results && results.length > 0) {
+        const postOwner = results[0].user_id;
+        if (postOwner !== userId) {
+          createNotification({
+            user_id: postOwner,
+            notification_type: 'MARKETPLACE_POST_LIKE',
+            reference_id: postId,
+            actor_id: userId,
+            reference_type: 'marketplace_post',
+            message: 'liked your marketplace post',
+            url: `/marketplace/${listingId}?post=${postId}`
+          });
+        }
+      }
+      res.json({ message: 'Marketplace post liked successfully' });
+    });
+  });
+});
+
+/**
+ * UNLIKE a Marketplace Post
+ * DELETE /marketplace/:listingId/posts/:postId/like
+ * Also deletes the notification associated with the like.
+ */
+router.delete('/:listingId/posts/:postId/like', authenticateToken, (req, res) => {
+  const { listingId, postId } = req.params;
+  const userId = req.user.userId;
+  const query = `
+    DELETE FROM likes
+    WHERE post_id = ? AND user_id = ?
+  `;
+  connection.query(query, [postId, userId], (err, results) => {
+    if (err) {
+      console.error("Error unliking marketplace post:", err);
+      return res.status(500).json({ error: 'Database error' });
+    }
+    if (results.affectedRows === 0)
+      return res.status(404).json({ error: 'Like not found or already removed' });
+    // Delete associated notification.
+    const deleteNotifQuery = `
+      DELETE FROM notifications
+      WHERE reference_id = ? 
+        AND notification_type = 'MARKETPLACE_POST_LIKE'
+        AND reference_type = 'marketplace_post'
+        AND actor_id = ?
+    `;
+    connection.query(deleteNotifQuery, [postId, userId], (err2) => {
+      if (err2) console.error("Error deleting notification for post like:", err2);
+      res.json({ message: 'Marketplace post unliked successfully' });
+    });
+  });
+});
+
+/**
+ * GET like count for a marketplace post
+ * GET /marketplace/:listingId/posts/:postId/likes/count
+ */
+router.get('/:listingId/posts/:postId/likes/count', authenticateToken, (req, res) => {
+  const { postId } = req.params;
+  const query = `
+    SELECT COUNT(*) AS likeCount
+    FROM likes
+    WHERE post_id = ?
+  `;
+  connection.query(query, [postId], (err, results) => {
+    if (err) {
+      console.error('Error fetching marketplace post like count:', err);
+      return res.status(500).json({ error: 'Database error' });
+    }
+    res.json({ likeCount: results[0].likeCount });
+  });
+});
+
+/**
+ * Check if a marketplace post is liked by the user
+ * GET /marketplace/:listingId/posts/:postId/liked
+ */
+router.get('/:listingId/posts/:postId/liked', authenticateToken, (req, res) => {
+  const { postId } = req.params;
+  const userId = req.user.userId;
+  const query = `
+    SELECT COUNT(*) AS liked
+    FROM likes
+    WHERE post_id = ? AND user_id = ?
+  `;
+  connection.query(query, [postId, userId], (err, results) => {
+    if (err) {
+      console.error("Error checking marketplace post like status:", err);
+      return res.status(500).json({ error: 'Database error' });
+    }
+    res.json({ liked: results[0].liked > 0 });
+  });
+});
+
+/**
+ * --- Marketplace Comments Endpoints ---
+ */
+
+/**
+ * CREATE a Comment on a Marketplace Post
+ * POST /marketplace/:listingId/posts/:postId/comments
+ */
+router.post('/:listingId/posts/:postId/comments', authenticateToken, (req, res) => {
+  const { listingId, postId } = req.params;
+  const userId = req.user.userId;
+  const { content } = req.body;
+  if (!content || !content.trim()) return res.status(400).json({ error: 'Content is required' });
+  const insertQuery = `
+    INSERT INTO comments (post_id, user_id, content)
+    VALUES (?, ?, ?)
+  `;
+  connection.query(insertQuery, [postId, userId, content], (err, result) => {
+    if (err) {
+      console.error("Error inserting marketplace comment:", err);
+      return res.status(500).json({ error: 'Database error during insert' });
+    }
+    const newCommentId = result.insertId;
+    const selectQuery = `
+      SELECT c.comment_id, c.post_id, c.user_id, c.content, c.created_at, c.parent_comment_id,
+             u.username, u.profile_picture_url
+        FROM comments c
+        JOIN users u ON c.user_id = u.user_id
+       WHERE c.comment_id = ?
+         AND c.user_id NOT IN (
+           SELECT blocked_id FROM blocked_users WHERE blocker_id = ?
+           UNION
+           SELECT blocker_id FROM blocked_users WHERE blocked_id = ?
+         )
+    `;
+    connection.query(selectQuery, [newCommentId, userId, userId], (err2, rows) => {
+      if (err2) {
+        console.error("Error selecting new marketplace comment:", err2);
+        return res.status(500).json({ error: 'Database error during select' });
+      }
+      if (!rows || rows.length === 0) return res.status(404).json({ error: 'Marketplace comment not found after insert' });
       res.json(rows[0]);
     });
   });
@@ -683,7 +971,10 @@ router.delete('/:listingId/posts/:postId/comments/:commentId/like', authenticate
   });
 });
 
-// GET /marketplace/:listingId/posts/:postId/comments - Retrieve all comments for a marketplace post
+/**
+ * GET all comments for a marketplace post
+ * GET /marketplace/:listingId/posts/:postId/comments
+ */
 router.get('/:listingId/posts/:postId/comments', authenticateToken, (req, res) => {
   const { listingId, postId } = req.params;
   const userId = req.user.userId;
@@ -709,7 +1000,6 @@ router.get('/:listingId/posts/:postId/comments', authenticateToken, (req, res) =
   });
 });
 
-
 /**
  * REPLY to a Marketplace Comment
  * POST /marketplace/:listingId/comments/:commentId/reply
@@ -722,7 +1012,6 @@ router.post('/:listingId/comments/:commentId/reply', authenticateToken, (req, re
   if (!content || !content.trim()) {
     return res.status(400).json({ error: 'Content is required' });
   }
-  // First, fetch the parent comment's post_id
   const getParentQuery = 'SELECT post_id FROM comments WHERE comment_id = ?';
   connection.query(getParentQuery, [commentId], (err, parentResults) => {
     if (err) {
@@ -758,7 +1047,6 @@ router.post('/:listingId/comments/:commentId/reply', authenticateToken, (req, re
         if (!rows || rows.length === 0) {
           return res.status(404).json({ error: 'Reply not found after insert' });
         }
-        // Notify the owner of the parent comment if applicable.
         const getParentAuthorQuery = 'SELECT user_id FROM comments WHERE comment_id = ?';
         connection.query(getParentAuthorQuery, [commentId], (err4, parentAuthorResults) => {
           if (!err4 && parentAuthorResults.length > 0) {

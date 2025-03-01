@@ -12,7 +12,7 @@ const Listing = ({ token, listingId, setCurrentView, currentUserId, currentUserP
   const postRef = useRef(null);
   const baseURL = 'http://localhost:5000';
 
-  // State for owner dropdown and edit modal
+  // Owner dropdown & edit modal
   const [showMenu, setShowMenu] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
 
@@ -21,8 +21,17 @@ const Listing = ({ token, listingId, setCurrentView, currentUserId, currentUserP
   const [editDescription, setEditDescription] = useState('');
   const [editPrice, setEditPrice] = useState('');
   const [editMarketplaceType, setEditMarketplaceType] = useState('');
-  const [editImageFile, setEditImageFile] = useState(null);
+
+  // For editing images (up to 5)
+  const [editListingImages, setEditListingImages] = useState([]);
+  const [editImagePreviews, setEditImagePreviews] = useState([]);
+  const fileInputRef = useRef(null);
+
+  // For listing types
   const [marketplaceTypes, setMarketplaceTypes] = useState([]);
+
+  // For the "view full image" modal
+  const [previewSrc, setPreviewSrc] = useState(null);
 
   // Fetch listing details
   useEffect(() => {
@@ -82,15 +91,12 @@ const Listing = ({ token, listingId, setCurrentView, currentUserId, currentUserP
     setCurrentView({ view: 'profile', userId });
   };
 
-  // Toggle the dropdown menu (with debug logging)
+  // Toggle the owner dropdown menu
   const toggleMenu = () => {
-    setShowMenu((prev) => {
-      const newVal = !prev;
-      console.log('Toggling owner menu, new value:', newVal);
-      return newVal;
-    });
+    setShowMenu((prev) => !prev);
   };
 
+  // Open the edit modal, pre-fill fields
   const openEditModal = () => {
     setShowMenu(false);
     if (listing) {
@@ -98,7 +104,12 @@ const Listing = ({ token, listingId, setCurrentView, currentUserId, currentUserP
       setEditDescription(listing.description || '');
       setEditPrice(listing.price || '');
       setEditMarketplaceType(listing.marketplace_listing_type_id || '');
-      setEditImageFile(null);
+      // Clear any previous images
+      setEditListingImages([]);
+      setEditImagePreviews([]);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
     }
     fetchMarketplaceTypes();
     setShowEditModal(true);
@@ -106,6 +117,7 @@ const Listing = ({ token, listingId, setCurrentView, currentUserId, currentUserP
 
   const closeEditModal = () => setShowEditModal(false);
 
+  // Fetch listing types for the edit modal
   const fetchMarketplaceTypes = () => {
     axios
       .get(`${baseURL}/marketplace/marketplace_listing_types`, {
@@ -117,6 +129,7 @@ const Listing = ({ token, listingId, setCurrentView, currentUserId, currentUserP
       });
   };
 
+  // Delete the entire listing
   const handleDeleteListing = async () => {
     if (!window.confirm('Are you sure you want to delete this listing?')) return;
     try {
@@ -130,15 +143,34 @@ const Listing = ({ token, listingId, setCurrentView, currentUserId, currentUserP
     }
   };
 
-  const handleEditImageChange = (e) => {
-    if (e.target.files && e.target.files[0]) {
-      setEditImageFile(e.target.files[0]);
+  // Handle multiple images for editing
+  const handleEditImagesChange = (e) => {
+    const files = Array.from(e.target.files).slice(0, 5);
+    setEditListingImages(files);
+
+    const previews = files.map((file) => URL.createObjectURL(file));
+    setEditImagePreviews(previews);
+  };
+
+  const handleRemoveEditImage = (index) => {
+    const updatedFiles = editListingImages.filter((_, i) => i !== index);
+    const updatedPreviews = editImagePreviews.filter((_, i) => i !== index);
+    setEditListingImages(updatedFiles);
+    setEditImagePreviews(updatedPreviews);
+
+    // Rebuild file input
+    const dataTransfer = new DataTransfer();
+    updatedFiles.forEach((file) => dataTransfer.items.add(file));
+    if (fileInputRef.current) {
+      fileInputRef.current.files = dataTransfer.files;
     }
   };
 
+  // Save changes in the edit modal
   const handleUpdateListing = async (e) => {
     e.preventDefault();
     try {
+      // 1) Update the listing's text fields
       const payload = {
         title: editTitle,
         description: editDescription,
@@ -148,17 +180,26 @@ const Listing = ({ token, listingId, setCurrentView, currentUserId, currentUserP
       await axios.patch(`${baseURL}/marketplace/${listingId}`, payload, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      if (editImageFile) {
+
+      // 2) If new images were selected, upload them
+      if (editListingImages.length > 0) {
         const formData = new FormData();
-        formData.append('image', editImageFile);
-        await axios.post(`${baseURL}/marketplace/${listingId}/upload-image`, formData, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'multipart/form-data'
-          }
+        editListingImages.forEach((file) => {
+          formData.append('images', file);
         });
+        await axios.post(
+          `${baseURL}/marketplace/${listingId}/upload-images`,
+          formData,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              'Content-Type': 'multipart/form-data'
+            }
+          }
+        );
       }
-      // Refresh listing data after update.
+
+      // 3) Refresh listing data
       const res = await axios.get(`${baseURL}/marketplace/${listingId}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -170,6 +211,14 @@ const Listing = ({ token, listingId, setCurrentView, currentUserId, currentUserP
     }
   };
 
+  // For the "view full image" modal
+  const openPreviewModal = (imgPath) => {
+    setPreviewSrc(imgPath);
+  };
+  const closePreviewModal = () => {
+    setPreviewSrc(null);
+  };
+
   if (!listing) return <p>Loading listing...</p>;
 
   const finalProfilePic = listing.poster_profile_pic
@@ -179,6 +228,9 @@ const Listing = ({ token, listingId, setCurrentView, currentUserId, currentUserP
   const posterName = listing.poster_username || 'User';
   const isOwner = listing.user_id === currentUserId;
 
+  // Up to 5 images from the listing (if any)
+  const images = listing.images || [];
+
   return (
     <div className="listing-page">
       <button className="back-btn" onClick={handleBack}>
@@ -186,39 +238,69 @@ const Listing = ({ token, listingId, setCurrentView, currentUserId, currentUserP
       </button>
 
       <div className="listing-details">
-        {/* Listing header: title on left; if owner, three-dot menu on right */}
-        <div className="listing-header">
-          <h2>{listing.title}</h2>
-          {isOwner && (
-            <div className="owner-dropdown-container">
-              <button className="owner-dropdown" onClick={toggleMenu}>
-                &#x22EE;
-              </button>
-              {showMenu && (
-                <div className="listing-dropdown-menu">
-                  <button onClick={openEditModal}>Edit Listing</button>
-                  <button onClick={handleDeleteListing}>Delete Listing</button>
+        {/* Top row: left info + right images */}
+        <div className="listing-details-top">
+          <div className="listing-details-left">
+            <div className="listing-header">
+              <h2>{listing.title}</h2>
+              {isOwner && (
+                <div className="owner-dropdown-container">
+                  <button className="owner-dropdown" onClick={toggleMenu}>
+                    &#x22EE;
+                  </button>
+                  {showMenu && (
+                    <div className="listing-dropdown-menu">
+                      <button onClick={openEditModal}>Edit Listing</button>
+                      <button onClick={handleDeleteListing}>Delete Listing</button>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
+
+            {listing.marketplace_listing_type_name && (
+              <p className="listing-category">{listing.marketplace_listing_type_name}</p>
+            )}
+            <p className="price">${listing.price}</p>
+            <p className="description">{listing.description}</p>
+
+            <div
+              className="listing-author"
+              onClick={() => handlePosterClick(listing.user_id)}
+            >
+              <ProfilePic imageUrl={finalProfilePic} alt={posterName} size={35} />
+              <span className="listing-author-name">{posterName}</span>
+            </div>
+          </div>
+
+          {/* Right column: up to 5 images (thumbnails) */}
+          {images.length > 0 && (
+            <div className="listing-details-right">
+              {images.map((imgPath, idx) => (
+                <div
+                  className="image-thumbnail"
+                  key={idx}
+                  onClick={() => openPreviewModal(`${baseURL}${imgPath}`)}
+                >
+                  <img src={`${baseURL}${imgPath}`} alt="Listing" />
+                </div>
+              ))}
+            </div>
           )}
         </div>
-
-        {listing.marketplace_listing_type_name && (
-          <p className="listing-category">{listing.marketplace_listing_type_name}</p>
-        )}
-        <p className="price">${listing.price}</p>
-        <p className="description">{listing.description}</p>
-        {listing.image_url && (
-          <img src={listing.image_url} alt={listing.title} className="listing-image" />
-        )}
-
-        {/* Poster row: profile pic left, username to right */}
-        <div className="listing-author" onClick={() => handlePosterClick(listing.user_id)}>
-          <ProfilePic imageUrl={finalProfilePic} alt={posterName} size={35} />
-          <span className="listing-author-name">{posterName}</span>
-        </div>
       </div>
+
+      {/* If the user clicks on a thumbnail, show a modal with the full image */}
+      {previewSrc && (
+        <div className="preview-overlay" onClick={closePreviewModal}>
+          <div className="preview-modal" onClick={(e) => e.stopPropagation()}>
+            <img src={previewSrc} alt="Full View" />
+            <button className="close-preview-btn" onClick={closePreviewModal}>
+              &times;
+            </button>
+          </div>
+        </div>
+      )}
 
       <div className="listing-posts">
         <h3>Posts for this listing</h3>
@@ -294,8 +376,27 @@ const Listing = ({ token, listingId, setCurrentView, currentUserId, currentUserP
                 ))}
               </select>
 
-              <label>Image (optional):</label>
-              <input type="file" onChange={handleEditImageChange} />
+              <label>Upload Images (up to 5):</label>
+              <input
+                type="file"
+                name="images"
+                multiple
+                accept="image/*"
+                onChange={handleEditImagesChange}
+                ref={fileInputRef}
+              />
+              {editImagePreviews.length > 0 && (
+                <div className="image-previews">
+                  {editImagePreviews.map((src, idx) => (
+                    <div key={idx} className="image-preview">
+                      <img src={src} alt={`Preview ${idx + 1}`} />
+                      <button type="button" onClick={() => handleRemoveEditImage(idx)}>
+                        ×
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
 
               <div className="modal-buttons">
                 <button type="submit">Save Changes</button>
