@@ -32,6 +32,26 @@
   flex: 0 0 60px; /* Collapsed width */
 }
 
+.bug-report-icon {
+  margin-top: 15px;
+  margin-left: 10px;
+  background-color: #e53935;
+  color: #fff;
+  border: none;
+  border-radius: 5px;
+  padding: 8px 14px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: background-color 0.3s ease, box-shadow 0.3s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.bug-report-icon:hover {
+  background-color: #c62828;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.15);
+}
+
 /* Feed styling */
 .feed-container {
   flex: 1;

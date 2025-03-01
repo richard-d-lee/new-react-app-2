@@ -15,6 +15,7 @@ import Events from './Events.jsx'; // Used to list events
 import Marketplace from './Marketplace.jsx';
 import Listing from './Listing.jsx';
 import Notifications from './Notifications.jsx';
+import BugReportModal from './BugReportModal.jsx'; // New bug report modal component
 import '../styles/HomePage.css';
 
 const HomePage = ({ updateLogged, email }) => {
@@ -25,6 +26,7 @@ const HomePage = ({ updateLogged, email }) => {
   const [currentView, setCurrentView] = useState('feed');
   const [unreadCount, setUnreadCount] = useState(0);
   const [friendRequestsCount, setFriendRequestsCount] = useState(0);
+  const [showBugModal, setShowBugModal] = useState(false);
 
   const token = localStorage.getItem('authToken');
 
@@ -99,6 +101,14 @@ const HomePage = ({ updateLogged, email }) => {
     }
   }, [token, userId]);
 
+  // Smaller ASCII art bug (4 lines tall, roughly half the previous size)
+  const asciiBug = `
+ _ _
+\''o o\ \
+/ \ / \ / \
+ \\_/
+`;
+
   return (
     <div className="home-page">
       {/* Navbar */}
@@ -124,6 +134,10 @@ const HomePage = ({ updateLogged, email }) => {
             token={token}
             currentUserId={userId}
           />
+          {/* Bug icon below Sidebar */}
+          <button className="bug-report-icon" onClick={() => setShowBugModal(true)}>
+            {sidebarCollapsed ? asciiBug : "Report a Bug"}
+          </button>
         </div>
 
         {/* Main content area */}
@@ -206,11 +220,9 @@ const HomePage = ({ updateLogged, email }) => {
                   />
                 );
               } else if (view.view === 'events') {
-                // When currentView is an object with view "events", render the events list.
                 return <Events token={token} currentUserId={userId} setCurrentView={setCurrentView} />;
               }
             }
-            // Fallback:
             return (
               <Feed token={token} currentUserId={userId} setCurrentView={setCurrentView} />
             );
@@ -223,6 +235,15 @@ const HomePage = ({ updateLogged, email }) => {
         <Messenger userId={userId} token={token} />
       ) : (
         <p className="chat-prompt">Please log in to use chat.</p>
+      )}
+
+      {/* Bug Report Modal */}
+      {showBugModal && (
+        <BugReportModal
+          token={token}
+          currentUserId={userId}
+          onClose={() => setShowBugModal(false)}
+        />
       )}
     </div>
   );

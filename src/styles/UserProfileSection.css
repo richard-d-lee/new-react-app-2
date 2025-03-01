@@ -1,0 +1,40 @@
+.user-profile-section {
+    padding: 10px;
+    border-bottom: 1px solid #ddd;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+  }
+  
+  .user-profile-section:hover {
+    background-color: #f0f0f0;
+  }
+  
+  .user-profile-section.error {
+    color: red;
+    font-weight: bold;
+  }
+  
+  .user-profile-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  
+  .user-profile-pic {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    object-fit: cover;
+  }
+  
+  .user-profile-info {
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .user-profile-name {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 600;
+  }
+  

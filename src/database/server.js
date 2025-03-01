@@ -18,6 +18,7 @@ import notificationsRoutes from './routes/notifications.js';
 import mentionsRoutes from './routes/mentions.js';
 import marketplaceRoutes from './routes/marketplace.js';
 import eventRoutes from './routes/events.js';
+import reportRoutes from './routes/reports.js';
 import { authenticateToken } from './middleware/auth.js';
 import multer from 'multer';
 import rateLimit from 'express-rate-limit';
@@ -60,6 +61,7 @@ app.use('/messages', messageRoutes);
 app.use('/notifications', notificationsRoutes);
 app.use('/mentions', mentionsRoutes);
 app.use('/events', eventRoutes);
+app.use('/reports', reportRoutes);
 
 // Use your absolute path for uploads (profile pics & event images)
 const uploadsDir = "C:\\Users\\rever\\react-app\\src\\database\\uploads";
@@ -120,6 +122,18 @@ app.post('/upload-profile-pic', authenticateToken, upload.single('profilePic'), 
     });
   });
 });
+app.get('/uploads/:filename', (req, res) => {
+  const filename = req.params.filename;
+  const filePath = path.join(uploadsDir, filename);
+  res.sendFile(filePath, (err) => {
+    if (err) {
+      console.error("Error sending file:", err);
+      res.status(404).send("File not found");
+    }
+  });
+});
+
+
 
 // Start the server
 const PORT = 5000;

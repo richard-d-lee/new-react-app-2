@@ -40,19 +40,21 @@ const Sidebar = ({ collapsed, toggleSidebar, setCurrentView, token, currentUserI
         {collapsed ? '→' : '←'}
       </button>
 
-      <UserProfileSection setCurrentView={setCurrentView} />
+      <UserProfileSection
+        setCurrentView={setCurrentView}
+        token={token}
+        currentUserId={currentUserId}
+        collapsed={collapsed}
+      />
 
       <div className="shortcuts">
         <h3>Shortcuts</h3>
-        <Shortcut icon="📌" text="Saved Content" />
         <div onClick={() => setCurrentView('marketplace')}>
           <Shortcut icon="🛒" text="Marketplace" />
         </div>
-        {/* Updated events shortcut */}
         <div onClick={handleEventsClick}>
           <Shortcut icon="📅" text="Events" />
         </div>
-        <Shortcut icon="📸" text="Uploads" />
       </div>
 
       <div className="groups">
