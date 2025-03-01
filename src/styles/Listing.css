@@ -1,10 +1,11 @@
-/* Container and page styling */
+/* General page styling */
 .listing-page {
     padding: 20px;
     background: #f9f9f9;
     min-height: 100vh;
   }
   
+  /* Back button */
   .back-btn {
     background: none;
     border: none;
@@ -13,13 +14,13 @@
     cursor: pointer;
     margin-bottom: 20px;
   }
-  
   .back-btn:hover {
     text-decoration: underline;
   }
   
-  /* Listing details styling */
+  /* Listing details container */
   .listing-details {
+    position: relative;
     background: #fff;
     padding: 20px;
     border: 1px solid #ddd;
@@ -27,6 +28,7 @@
     margin-bottom: 20px;
   }
   
+  /* Top section with details */
   .listing-details-top {
     display: flex;
     justify-content: space-between;
@@ -34,61 +36,106 @@
     gap: 20px;
   }
   
+  /* Left side of details */
   .listing-details-left {
     flex: 1;
   }
   
+  /* Right side of details */
   .listing-details-right {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    max-width: 400px;
+    padding-top: 50px;
+  }
+  
+  /* Thumbnails container */
+  .listing-images-wrapper {
     display: flex;
     flex-wrap: wrap;
     gap: 10px;
-    max-width: 400px; /* adjust as desired */
   }
   
-  .listing-header {
+  /* Owner dropdown container */
+  .owner-dropdown-container {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    z-index: 9999;
+    overflow: visible;
+  }
+  .owner-dropdown {
+    background: none;
+    border: none;
+    font-size: 20px;
+    cursor: pointer;
+  }
+  .listing-dropdown-menu {
+    position: absolute;
+    top: 28px;
+    right: 0;
+    z-index: 9999;
+    background-color: #fff;
+    border: 1px solid #ccc;
+    border-radius: 4px;
     display: flex;
-    align-items: center;
-    justify-content: space-between;
+    flex-direction: column;
+    min-width: 120px;
+  }
+  .listing-dropdown-menu button {
+    background: none;
+    border: none;
+    padding: 8px 12px;
+    text-align: left;
+    cursor: pointer;
+    width: 100%;
+  }
+  .listing-dropdown-menu button:hover {
+    background-color: #f0f0f0;
   }
   
+  /* Listing text styles */
   .listing-details h2 {
     margin: 0;
     font-size: 24px;
   }
-  
   .listing-category {
     font-size: 16px;
     color: #555;
     margin-top: 5px;
   }
-  
   .price {
     color: #007bff;
     font-weight: bold;
     font-size: 20px;
     margin: 10px 0;
   }
-  
   .description {
     font-size: 16px;
     color: #555;
     margin-bottom: 20px;
   }
   
+  /* Author info */
   .listing-author {
+    border-radius: 20px;
     display: flex;
     align-items: center;
     margin-top: 10px;
     cursor: pointer;
+    transition: background-color 0.2s;
   }
-  
+  .listing-author:hover {
+    background-color: #f0f0f0;
+  }
   .listing-author-name {
     margin-left: 8px;
     color: #1877f2;
     font-weight: bold;
   }
   
-  /* Thumbnails on the right */
+  /* Image thumbnail styling */
   .image-thumbnail {
     position: relative;
     width: 100px;
@@ -97,7 +144,6 @@
     overflow: hidden;
     cursor: zoom-in;
   }
-  
   .image-thumbnail img {
     width: 100%;
     height: 100%;
@@ -111,13 +157,12 @@
     left: 0;
     width: 100%;
     height: 100%;
-    background: rgba(0,0,0,0.7);
-    z-index: 2000;
+    background: rgba(0, 0, 0, 0.7);
+    z-index: 10000;
     display: flex;
     justify-content: center;
     align-items: center;
   }
-  
   .preview-modal {
     position: relative;
     background: #fff;
@@ -126,13 +171,11 @@
     max-width: 90%;
     max-height: 90%;
   }
-  
   .preview-modal img {
     display: block;
     max-width: 100%;
-    max-height: 80vh; /* so it fits on screen */
+    max-height: 80vh;
   }
-  
   .close-preview-btn {
     position: absolute;
     top: 5px;
@@ -149,70 +192,28 @@
     text-align: center;
   }
   
-  /* Posts section styling */
+  /* Listing posts section */
   .listing-posts {
     background: #fff;
     padding: 15px;
     border: 1px solid #ddd;
     border-radius: 4px;
   }
-  
   .listing-posts h3 {
     margin-top: 0;
     font-size: 20px;
     margin-bottom: 15px;
   }
-  
   .loading-text {
     font-style: italic;
     color: #777;
   }
-  
   .empty {
     color: #777;
     font-style: italic;
   }
   
-  /* Owner dropdown styling */
-  .owner-dropdown-container {
-    position: relative;
-    overflow: visible; /* Ensure the dropdown isn't clipped */
-  }
-  
-  .owner-dropdown {
-    background: none;
-    border: none;
-    font-size: 20px;
-    cursor: pointer;
-  }
-  
-  .listing-dropdown-menu {
-    position: absolute;
-    top: 28px; /* adjust depending on button size */
-    right: 0;
-    z-index: 999;
-    background-color: #fff;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-    display: flex;
-    flex-direction: column;
-    min-width: 120px;
-  }
-  
-  .listing-dropdown-menu button {
-    background: none;
-    border: none;
-    padding: 8px 12px;
-    text-align: left;
-    cursor: pointer;
-    width: 100%;
-  }
-  
-  .listing-dropdown-menu button:hover {
-    background-color: #f0f0f0;
-  }
-  
-  /* Modal styling */
+  /* Modal overlay */
   .modal-overlay {
     position: fixed;
     top: 0;
@@ -225,77 +226,96 @@
     justify-content: center;
     align-items: center;
   }
-  
   .modal {
     background: #fff;
     padding: 20px;
     border-radius: 4px;
     width: 90%;
     max-width: 500px;
-  }
-
-/* Listing author: profile pic left, username right */
-.listing-author {
-    border-radius: 20px;
-    display: flex;
-    align-items: center;
-    margin-top: 10px;
-    cursor: pointer;
-  
-    /* Add a subtle transition for the hover effect */
-    transition: background-color 0.2s;
+    box-sizing: border-box;
   }
   
-  /* Hover background to indicate it's clickable */
-  .listing-author:hover {
-    background-color: #f0f0f0;
-  }
-  
-  .listing-author-name {
-    margin-left: 8px;
-    color: #1877f2;
-    font-weight: bold;
-  }
-  
+  /* Form styling */
   .listing-form {
     display: flex;
     flex-direction: column;
   }
-  
-  .listing-form label {
-    margin-top: 10px;
-    font-weight: bold;
+  .form-group {
+    margin-bottom: 15px;
+    display: flex;
+    flex-direction: column;
   }
-  
-  .listing-form input,
-  .listing-form textarea,
-  .listing-form select {
+  .form-group label {
+    font-weight: bold;
+    margin-bottom: 5px;
+  }
+  .form-control {
     padding: 8px;
-    margin-top: 5px;
     border: 1px solid #ccc;
     border-radius: 4px;
+    width: 100%;
+    box-sizing: border-box;
   }
   
+  /* Modal buttons */
   .modal-buttons {
     margin-top: 20px;
     display: flex;
     justify-content: space-between;
   }
-  
   .modal-buttons button {
     padding: 8px 16px;
     border: none;
     border-radius: 4px;
     cursor: pointer;
   }
-  
-  .modal-buttons button:first-of-type {
+  .save-btn {
     background-color: #007bff;
     color: #fff;
   }
-  
-  .modal-buttons button:last-of-type {
+  .cancel-btn {
     background-color: #ccc;
     color: #333;
+  }
+  
+  /* Existing images styling */
+  .existing-images h4 {
+    margin-top: 10px;
+    font-size: 16px;
+    font-weight: bold;
+  }
+  .image-previews {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 10px;
+  }
+  .image-preview {
+    position: relative;
+    width: 100px;
+    height: 100px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    overflow: hidden;
+  }
+  .image-preview img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  .image-preview button {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    background: rgba(0, 0, 0, 0.6);
+    color: #fff;
+    border: none;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 14px;
+    line-height: 18px;
+    padding: 0;
   }
   

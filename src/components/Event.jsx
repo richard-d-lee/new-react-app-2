@@ -49,17 +49,23 @@ const Event = ({
 
   const baseURL = 'http://localhost:5000';
   const realEventId = eventData?.event_id || propEventId;
-  const isOwner = currentUserId && eventData && eventData.user_id === currentUserId;
+
+  // FIX: Use parseInt to ensure user ID comparison works even if types differ.
+  const isOwner =
+    currentUserId &&
+    eventData &&
+    parseInt(eventData.user_id, 10) === parseInt(currentUserId, 10);
 
   const eventImageUrl = eventData?.event_image_url ? `${baseURL}${eventData.event_image_url}` : null;
 
   const fullDescription = eventData?.event_description || '';
   const shouldTruncate = fullDescription.length > 200;
-  const displayedDescription = shouldTruncate && !showFullDescription
-    ? `${fullDescription.slice(0, 200)}...`
-    : fullDescription;
+  const displayedDescription =
+    shouldTruncate && !showFullDescription
+      ? `${fullDescription.slice(0, 200)}...`
+      : fullDescription;
 
-  const toggleDescription = () => setShowFullDescription(prev => !prev);
+  const toggleDescription = () => setShowFullDescription((prev) => !prev);
 
   const formatDateTime = (dateStr) => {
     if (!dateStr) return '';
@@ -117,7 +123,7 @@ const Event = ({
       const res = await axios.get(`${baseURL}/events/${realEventId}/attendees`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      const myAttendance = res.data.find(att => att.user_id === currentUserId);
+      const myAttendance = res.data.find((att) => att.user_id === currentUserId);
       setAttendanceStatus(myAttendance ? myAttendance.status : null);
     } catch (err) {
       console.error('Error fetching attendance status:', err);
@@ -144,7 +150,7 @@ const Event = ({
   }, [posts]);
 
   const handleDeletePost = (deletedPostId) => {
-    setPosts(prev => prev.filter(post => post.post_id !== deletedPostId));
+    setPosts((prev) => prev.filter((post) => post.post_id !== deletedPostId));
   };
 
   const handleDeleteEvent = async () => {
@@ -296,7 +302,7 @@ const Event = ({
             <div className="owner-dropdown-container">
               <button
                 className="owner-dropdown"
-                onClick={() => setShowMenu(prev => !prev)}
+                onClick={() => setShowMenu((prev) => !prev)}
               >
                 &#x22EE;
               </button>
@@ -356,7 +362,7 @@ const Event = ({
         <CreatePost
           token={token}
           currentUserId={currentUserId}
-          onNewPost={(newPost) => setPosts(prev => [newPost, ...prev])}
+          onNewPost={(newPost) => setPosts((prev) => [newPost, ...prev])}
           eventId={realEventId}
         />
       )}
@@ -367,7 +373,7 @@ const Event = ({
       )}
 
       <div className="event-posts-list">
-        {posts.map(post => (
+        {posts.map((post) => (
           <div key={post.post_id} ref={postId ? postRef : null}>
             <Post
               post={post}

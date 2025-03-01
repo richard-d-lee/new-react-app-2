@@ -1,4 +1,5 @@
 import express from 'express';
+import fs from 'fs';
 import path from 'path';
 import { v4 as uuidv4 } from 'uuid';
 import multer from 'multer';
@@ -30,6 +31,68 @@ const upload = multer({
     if (extName && mimeType) return cb(null, true);
     cb(new Error('Only image files (jpg, png, gif) are allowed'));
   }
+});
+
+/**
+ * DELETE a single image from a marketplace listing
+ * DELETE /marketplace/:id/remove-image?imgPath=/uploads/whatever.jpg
+ */
+router.delete('/:id/remove-image', authenticateToken, (req, res) => {
+  const listingId = req.params.id;
+  const userId = req.user.userId;
+  const { imgPath } = req.query; // e.g. /uploads/da15c54b-77e1-4dc8-bc43-e65dd9c311a5.jpeg
+
+  if (!imgPath) {
+    return res.status(400).json({ error: 'imgPath query parameter is required' });
+  }
+
+  // 1) Check that the listing exists and belongs to the user
+  const ownershipQuery = 'SELECT user_id FROM listings WHERE id = ? LIMIT 1';
+  connection.query(ownershipQuery, [listingId], (err, rows) => {
+    if (err) {
+      console.error('Database error checking listing ownership:', err);
+      return res.status(500).json({ error: 'Database error.' });
+    }
+    if (!rows.length) {
+      return res.status(404).json({ error: 'Listing not found.' });
+    }
+    if (rows[0].user_id !== userId) {
+      return res.status(403).json({ error: 'Not authorized to remove images from this listing.' });
+    }
+
+    // 2) Remove the row from listing_images
+    const deleteQuery = `
+      DELETE FROM listing_images
+       WHERE listing_id = ?
+         AND image_url = ?
+      LIMIT 1
+    `;
+    connection.query(deleteQuery, [listingId, imgPath], (err2, results) => {
+      if (err2) {
+        console.error('Database error removing image from listing_images:', err2);
+        return res.status(500).json({ error: 'Database error removing image.' });
+      }
+      if (results.affectedRows === 0) {
+        return res.status(404).json({ error: 'Image not found on this listing.' });
+      }
+
+      // 3) (Optional) Delete the file from disk if you want to remove it physically
+      //    Only do this if you're sure you want the file gone from /uploads/
+      try {
+        const fileName = path.basename(imgPath); // e.g. da15c54b-77e1-4dc8-bc43-e65dd9c311a5.jpeg
+        const absolutePath = path.join(absoluteUploadsPath, fileName);
+        if (fs.existsSync(absolutePath)) {
+          fs.unlinkSync(absolutePath);
+        }
+      } catch (unlinkErr) {
+        console.error('Error deleting file from disk:', unlinkErr);
+        // Not a fatal error, just log it
+      }
+
+      // Done
+      return res.json({ message: 'Image removed successfully.' });
+    });
+  });
 });
 
 /**
@@ -220,15 +283,21 @@ router.post('/:id/upload-images', authenticateToken, upload.array('images', 5), 
   });
 });
 
-/**
- * GET a Single Marketplace Listing (with images)
- * GET /marketplace/:id
- */
+// GET a Single Marketplace Listing (with images)
+// GET /marketplace/:id
 router.get('/:id', authenticateToken, (req, res) => {
   const listingId = req.params.id;
   const query = `
     SELECT
-      l.*,
+      l.id,
+      l.user_id,
+      l.listing_type_id,
+      l.marketplace_listing_type_id,
+      l.title,
+      l.description,
+      l.price,
+      l.created_at,
+      l.updated_at,
       u.username AS poster_username,
       u.profile_picture_url AS poster_profile_pic,
       mlt.name AS marketplace_listing_type_name,
@@ -252,10 +321,8 @@ router.get('/:id', authenticateToken, (req, res) => {
   });
 });
 
-/**
- * UPDATE a Marketplace Listing (owner only)
- * PATCH /marketplace/:id
- */
+// UPDATE a Marketplace Listing (owner only)
+// PATCH /marketplace/:id
 router.patch('/:id', authenticateToken, (req, res) => {
   const listingId = req.params.id;
   const userId = req.user.userId;
@@ -285,7 +352,37 @@ router.patch('/:id', authenticateToken, (req, res) => {
     ], (err2, results) => {
       if (err2) return res.status(500).json({ error: 'Database error.' });
       if (!results.affectedRows) return res.status(404).json({ error: 'Listing not updated.' });
-      res.json({ message: 'Marketplace listing updated successfully.' });
+      
+      // Return the updated listing
+      const query = `
+        SELECT
+          l.id,
+          l.user_id,
+          l.listing_type_id,
+          l.marketplace_listing_type_id,
+          l.title,
+          l.description,
+          l.price,
+          l.created_at,
+          l.updated_at,
+          u.username AS poster_username,
+          u.profile_picture_url AS poster_profile_pic,
+          mlt.name AS marketplace_listing_type_name,
+          GROUP_CONCAT(li.image_url) AS images
+        FROM listings l
+        JOIN users u ON l.user_id = u.user_id
+        LEFT JOIN marketplace_listing_types mlt ON l.marketplace_listing_type_id = mlt.id
+        LEFT JOIN listing_images li ON l.id = li.listing_id
+        WHERE l.id = ?
+        GROUP BY l.id
+      `;
+      connection.query(query, [listingId], (err3, rows2) => {
+        if (err3) return res.status(500).json({ error: 'Database error fetching updated listing.' });
+        if (!rows2.length) return res.status(404).json({ error: 'Listing not found after update.' });
+        const listing = rows2[0];
+        listing.images = listing.images ? listing.images.split(',') : [];
+        res.json(listing);
+      });
     });
   });
 });

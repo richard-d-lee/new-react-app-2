@@ -102,13 +102,11 @@
 }
 
 .right-actions {
-  display: flex;
-  align-items: center;
+  position: relative;
 }
 
 /* The container for the three-dot button, so the dropdown is absolutely placed below it */
 .owner-dropdown-container {
-  position: relative;
   display: inline-block;
 }
 

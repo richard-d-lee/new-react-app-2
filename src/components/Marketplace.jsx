@@ -15,6 +15,7 @@ const Marketplace = ({ token, currentUserId, setCurrentView }) => {
   const [listingTypeOpen, setListingTypeOpen] = useState(false);
   const [listingTypeRect, setListingTypeRect] = useState(null);
   const listingTypeToggleRef = useRef(null);
+  const listingTypeDropdownPortalRef = useRef(null);
 
   // Create Listing Modal
   const [modalOpen, setModalOpen] = useState(false);
@@ -26,6 +27,7 @@ const Marketplace = ({ token, currentUserId, setCurrentView }) => {
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
   const userFilterRef = useRef(null);
   const userDropdownToggleRef = useRef(null);
+  const userDropdownPortalRef = useRef(null);
 
   // Basic filters
   const [filters, setFilters] = useState({
@@ -162,7 +164,7 @@ const Marketplace = ({ token, currentUserId, setCurrentView }) => {
     } else {
       const rect = e.currentTarget.getBoundingClientRect();
       setUserDropdownOpen(true);
-      // Store toggle rect if needed
+      // Optionally store the rect if needed
     }
   };
 
@@ -198,27 +200,30 @@ const Marketplace = ({ token, currentUserId, setCurrentView }) => {
     }
   }, [filtersOpen]);
 
-  // Close dropdowns if clicking outside
+  // Close dropdowns if clicking outside both the toggle and the dropdown portal
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (
         userDropdownOpen &&
         userDropdownToggleRef.current &&
-        !userDropdownToggleRef.current.contains(event.target)
+        userDropdownPortalRef.current &&
+        !userDropdownToggleRef.current.contains(event.target) &&
+        !userDropdownPortalRef.current.contains(event.target)
       ) {
         setUserDropdownOpen(false);
       }
       if (
         listingTypeOpen &&
         listingTypeToggleRef.current &&
-        !listingTypeToggleRef.current.contains(event.target)
+        listingTypeDropdownPortalRef.current &&
+        !listingTypeToggleRef.current.contains(event.target) &&
+        !listingTypeDropdownPortalRef.current.contains(event.target)
       ) {
         setListingTypeOpen(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
-    return () =>
-      document.removeEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [userDropdownOpen, listingTypeOpen]);
 
   //------------------------------------------------------
@@ -400,6 +405,7 @@ const Marketplace = ({ token, currentUserId, setCurrentView }) => {
         {listingTypeOpen && listingTypeRect && (
           <div
             className="listing-type-dropdown-portal"
+            ref={listingTypeDropdownPortalRef}
             style={{
               position: 'absolute',
               top:
@@ -409,13 +415,7 @@ const Marketplace = ({ token, currentUserId, setCurrentView }) => {
               left:
                 listingTypeRect.left -
                 filterSectionRef.current.getBoundingClientRect().left,
-              width: 200,
-              background: '#fff',
-              border: '1px solid #ddd',
-              borderRadius: 10,
-              boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
-              padding: 10,
-              zIndex: 9999
+              width: 200
             }}
           >
             <div className="type-item" onClick={() => handleListingTypeSelect('')}>
@@ -437,6 +437,7 @@ const Marketplace = ({ token, currentUserId, setCurrentView }) => {
         {userDropdownOpen && userDropdownToggleRef.current && (
           <div
             className="user-dropdown-portal"
+            ref={userDropdownPortalRef}
             style={{
               position: 'absolute',
               top:
@@ -446,13 +447,7 @@ const Marketplace = ({ token, currentUserId, setCurrentView }) => {
               left:
                 userDropdownToggleRef.current.getBoundingClientRect().left -
                 filterSectionRef.current.getBoundingClientRect().left,
-              width: 200,
-              background: '#fff',
-              border: '1px solid #ddd',
-              borderRadius: 10,
-              boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
-              padding: 10,
-              zIndex: 9999
+              width: 200
             }}
           >
             <div className="dropdown-search">
@@ -461,12 +456,6 @@ const Marketplace = ({ token, currentUserId, setCurrentView }) => {
                 placeholder="Search users..."
                 value={userSearch}
                 onChange={handleUserSearchChange}
-                style={{
-                  width: '90%',
-                  padding: 6,
-                  border: '1px solid #ccc',
-                  borderRadius: 10
-                }}
               />
             </div>
             <div className="checkbox-list">
@@ -625,6 +614,10 @@ const Marketplace = ({ token, currentUserId, setCurrentView }) => {
       {modalOpen && (
         <div className="modal-overlay">
           <div className="modal">
+            {/* Black "X" close button */}
+            <button className="close-modal-btn" onClick={closeModal}>
+              &times;
+            </button>
             <h2>Create a New Listing</h2>
             <form onSubmit={handleSubmit} className="listing-form">
               <label>Title:</label>
