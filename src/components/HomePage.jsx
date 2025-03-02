@@ -109,6 +109,7 @@ const HomePage = ({ updateLogged, email }) => {
  \\_/
 `;
 
+
   return (
     <div className="home-page">
       {/* Navbar */}
