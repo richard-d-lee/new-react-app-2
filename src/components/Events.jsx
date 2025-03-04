@@ -46,7 +46,7 @@ const Events = ({ token, currentUserId, setCurrentView }) => {
     if (token) fetchEventsData();
   }, [token]);
 
-  // When an event card is clicked, change HomePage's currentView
+  // When an event card is clicked, change the current view
   const handleViewEvent = (ev) => {
     setCurrentView({ view: 'event', eventData: ev, eventId: ev.event_id });
   };
@@ -59,7 +59,7 @@ const Events = ({ token, currentUserId, setCurrentView }) => {
     return (
       <div
         key={ev.event_id}
-        className="event-card horizontal-layout clickable-event"
+        className="event-card clickable-event horizontal-layout"
         onClick={() => handleViewEvent(ev)}
       >
         {eventImageUrl && (
@@ -77,9 +77,14 @@ const Events = ({ token, currentUserId, setCurrentView }) => {
   };
 
   return (
-    <div className="events-page">
+    <div className="events-container">
       <h2>Events</h2>
-      <button onClick={() => setShowModal(true)}>Create New Event</button>
+      <button 
+        className="create-event-btn" 
+        onClick={() => setShowModal(true)}
+      >
+        Create New Event
+      </button>
 
       {showModal && (
         <EventModal

@@ -68,6 +68,7 @@ const Feed = ({
 
   return (
     <div className="feed">
+      <h2>Feed</h2>
       {/* Only show CreatePost if we are viewing the full feed (not a single post) */}
       {!postId && (
         <CreatePost
