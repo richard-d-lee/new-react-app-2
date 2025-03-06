@@ -42,10 +42,6 @@ const Navbar = ({
           <div onClick={() => setCurrentView('feed')}>
             <NavLink icon={<FaHome />} text="Home" />
           </div>
-          {/* Groups */}
-          <div onClick={() => setCurrentView('groups')}>
-            <NavLink icon={<FaUsers />} text="Groups" />
-          </div>
           {/* Friends with Friend Requests Count */}
           <div
             style={{ cursor: 'pointer', position: 'relative', display: 'flex', alignItems: 'center' }}
